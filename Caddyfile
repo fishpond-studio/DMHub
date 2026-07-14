@@ -1,0 +1,27 @@
+{$DOMAIN} {
+    reverse_proxy web:80
+
+    # 静态资源缓存
+    @static path *.js *.css *.png *.jpg *.svg *.ico *.woff2
+    header @static Cache-Control "public, max-age=31536000, immutable"
+
+    # API 不缓存
+    @api path /api/*
+    header @api Cache-Control "no-store"
+
+    # 上传文件代理
+    handle /uploads/* {
+        reverse_proxy app:3000
+    }
+
+    # SSE 长连接
+    handle /api/notifications/stream {
+        reverse_proxy app:3000 {
+            flush_interval -1
+        }
+    }
+
+    log {
+        output stdout
+    }
+}

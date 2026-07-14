@@ -1,0 +1,39 @@
+{
+  "name": "dmhub",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Domain Management Hub - 域名协作管理工具",
+  "type": "module",
+  "license": "AGPL-3.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @dmhub/web dev",
+    "dev:server": "pnpm --filter @dmhub/server dev",
+    "build": "pnpm --filter @dmhub/shared build && pnpm --filter @dmhub/dns-providers build && pnpm --filter @dmhub/web build && pnpm --filter @dmhub/server build",
+    "build:web": "pnpm --filter @dmhub/web build",
+    "build:server": "pnpm --filter @dmhub/server build",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write \"**/*.{ts,vue,js,json,md}\"",
+    "docs:dev": "cd docs && pnpm vitepress dev",
+    "docs:build": "cd docs && pnpm vitepress build",
+    "docs:preview": "cd docs && pnpm vitepress preview"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "eslint": "^9.15.0",
+    "eslint-plugin-vue": "^10.9.2",
+    "prettier": "^3.3.3",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.15.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "vue-demi",
+      "vitepress"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

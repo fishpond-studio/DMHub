@@ -1,0 +1,69 @@
+# Build output
+dist/
+*.tsbuildinfo
+*.js
+*.js.map
+*.d.ts
+*.d.ts.map
+!**/drizzle.config.ts
+!**/vite.config.ts
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Uploads (user data)
+uploads/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+
+# Cache
+.turbo/
+.vite/
+.cache/
+.vitepress/cache/
+.vitepress/dist/
+.workbuddy/
+plan/
+
+# Docs
+docs/node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
+# Coverage
+coverage/
+
+# Backups
+.backups/
+
+# Database
+*.db
+*.db-journal
+
+# Archive
+*.zip
+*.tar.gz
+*.tgz
+
+# System-specific
+*.local
+*.local.json
+
+# Misc
+*.timestamp-*.mjs

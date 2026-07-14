@@ -1,0 +1,51 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
+COPY apps/server/package.json ./apps/server/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/dns-providers/package.json ./packages/dns-providers/package.json
+
+RUN pnpm install --frozen-lockfile
+
+COPY packages/shared/ ./packages/shared/
+COPY packages/dns-providers/ ./packages/dns-providers/
+COPY apps/server/ ./apps/server/
+
+RUN pnpm --filter @dmhub/shared build && \
+    pnpm --filter @dmhub/dns-providers build && \
+    pnpm --filter @dmhub/server build
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY --from=builder /app/apps/server/dist ./dist
+COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
+COPY --from=builder /app/apps/server/drizzle.config.ts ./apps/server/drizzle.config.ts
+COPY --from=builder /app/apps/server/src/db/schema.ts ./apps/server/src/db/schema.ts
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/server/node_modules ./apps/server/node_modules
+COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/packages/dns-providers ./packages/dns-providers
+COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=builder /app/package.json ./package.json
+
+RUN mkdir -p /app/uploads/logo && \
+    addgroup -S appuser && adduser -S appuser -G appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+ENV NODE_ENV=production
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:3000/api/health || exit 1
+
+CMD ["node", "dist/index.js"]

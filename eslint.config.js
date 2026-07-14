@@ -1,0 +1,82 @@
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import pluginVue from 'eslint-plugin-vue';
+
+export default tseslint.config(
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  ...pluginVue.configs['flat/essential'],
+  {
+    ignores: ['**/dist/**', '**/node_modules/**', '**/.output/**'],
+  },
+  {
+    files: ['**/*.vue'],
+    languageOptions: {
+      parserOptions: {
+        parser: tseslint.parser,
+      },
+    },
+  },
+  {
+    files: ['apps/web/**/*.{vue,ts,tsx,js}'],
+    languageOptions: {
+      globals: {
+        alert: 'readonly',
+        confirm: 'readonly',
+        URL: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        window: 'readonly',
+        File: 'readonly',
+        FormData: 'readonly',
+        DragEvent: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        EventSource: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLSelectElement: 'readonly',
+        HTMLTextAreaElement: 'readonly',
+        MouseEvent: 'readonly',
+        KeyboardEvent: 'readonly',
+        ClipboardEvent: 'readonly',
+        FocusEvent: 'readonly',
+        Event: 'readonly',
+        Blob: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        Headers: 'readonly',
+        JSON: 'readonly',
+        Promise: 'readonly',
+        Array: 'readonly',
+        Object: 'readonly',
+        Map: 'readonly',
+        Set: 'readonly',
+        WeakMap: 'readonly',
+        Symbol: 'readonly',
+        Error: 'readonly',
+        TypeError: 'readonly',
+        btoa: 'readonly',
+        atob: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+        location: 'readonly',
+        history: 'readonly',
+      },
+    },
+  },
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'no-empty': 'warn',
+      'vue/multi-word-component-names': 'off',
+    },
+  },
+);

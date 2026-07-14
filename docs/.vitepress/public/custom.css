@@ -1,0 +1,204 @@
+/* ===== 全局 ===== */
+:root {
+  --vp-c-brand-1: #3b82f6;
+  --vp-c-brand-2: #2563eb;
+  --vp-c-brand-3: #1d4ed8;
+  --vp-c-brand-soft: rgba(59, 130, 246, 0.14);
+  --vp-font-family-base: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+}
+
+/* ===== 表格 ===== */
+.vp-doc table {
+  display: table;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+
+.vp-doc thead {
+  background: var(--vp-c-bg-soft);
+}
+
+.vp-doc th {
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid var(--vp-c-divider);
+  text-align: left;
+}
+
+.vp-doc td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc tbody tr:hover {
+  background: var(--vp-c-bg-soft);
+}
+
+.vp-doc tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ===== 代码块 ===== */
+.vp-code-block {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== 提示框 ===== */
+.vp-doc .tip,
+.vp-doc .warning,
+.vp-doc .danger,
+.vp-doc .info {
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  border-left: 4px solid;
+}
+
+/* ===== 侧边栏 ===== */
+.VPSidebarItem.level-1 > .item .text {
+  font-weight: 600;
+}
+
+/* ===== 搜索框 ===== */
+.DocSearch-Button {
+  border-radius: 8px !important;
+}
+
+/* ===== 顶部导航 ===== */
+.VPNav {
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+.dark .VPNav {
+  background: rgba(20, 20, 30, 0.85) !important;
+}
+
+/* ===== 首页 Hero ===== */
+.VPHome .container {
+  max-width: 960px !important;
+}
+
+.VPHome .name {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== 特性卡片 ===== */
+.VPFeature {
+  border-radius: 12px !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.VPFeature:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== 移动端 ===== */
+@media (max-width: 768px) {
+  .vp-doc table {
+    font-size: 0.8rem;
+  }
+  .vp-doc th,
+  .vp-doc td {
+    padding: 0.5rem 0.6rem;
+  }
+}
+
+/* ===== 滚动条 ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vp-c-divider);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vp-c-text-3);
+}
+
+/* ===== 外部链接图标 ===== */
+.vp-doc a[href^="http"]::after {
+  content: "↗";
+  display: inline-block;
+  margin-left: 2px;
+  font-size: 0.75em;
+  vertical-align: super;
+  opacity: 0.6;
+}
+
+/* ===== 锚点偏移 ===== */
+.vp-doc h2 {
+  scroll-margin-top: 5rem;
+}
+
+/* ===== 解决痛点 ===== */
+.vp-doc h2#解决痛点 + table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  width: 100%;
+}
+
+.vp-doc h2#解决痛点 + table thead {
+  background: var(--vp-c-bg-mute);
+}
+
+.vp-doc h2#解决痛点 + table th {
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 2px solid var(--vp-c-divider);
+}
+
+.vp-doc h2#解决痛点 + table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--vp-c-divider);
+  vertical-align: middle;
+}
+
+.vp-doc h2#解决痛点 + table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.vp-doc h2#解决痛点 + table tbody tr:hover {
+  background: var(--vp-c-bg-soft);
+}
+
+.vp-doc h2#解决痛点 + table td:first-child {
+  color: #dc2626;
+  font-weight: 500;
+  width: 40%;
+}
+
+.vp-doc h2#解决痛点 + table td:last-child {
+  color: #16a34a;
+}
+
+.dark .vp-doc h2#解决痛点 + table td:first-child {
+  color: #f87171;
+}
+
+.dark .vp-doc h2#解决痛点 + table td:last-child {
+  color: #4ade80;
+}
