@@ -25,6 +25,8 @@ export const users = pgTable('users', {
   twoFactorMethods: varchar('two_factor_methods', { length: 64 }).array().notNull().default([]),
   emailVerified: boolean('email_verified').notNull().default(false),
   notificationsEnabled: boolean('notifications_enabled').notNull().default(true),
+  /** 可选：域名分配等事件是否邮件通知（默认关闭） */
+  emailNotificationsEnabled: boolean('email_notifications_enabled').notNull().default(false),
   status: varchar('status', { length: 16 }).notNull().default('active'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -61,6 +63,8 @@ export const teamSettings = pgTable('team_settings', {
   landingBackgroundUrl: varchar('landing_background_url', { length: 512 }),
   footerContent: text('footer_content'),
   footerFormat: varchar('footer_format', { length: 16 }).default('markdown'),
+  /** 操作日志保留天数（0/NULL = 永久保留） */
+  logRetentionDays: integer('log_retention_days'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -78,6 +82,19 @@ export const domains = pgTable('domains', {
   autoCheckExpiry: boolean('auto_check_expiry').notNull().default(true),
   expiryRemindDays: integer('expiry_remind_days').array().notNull().default([30, 14, 7, 3, 1, 0]),
   lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+  /** 域名备注（管理员可写，有权限者可读） */
+  notes: text('notes'),
+  /** HTTPS 证书到期（探测缓存） */
+  sslExpiresAt: timestamp('ssl_expires_at', { withTimezone: true }),
+  sslLastCheckedAt: timestamp('ssl_last_checked_at', { withTimezone: true }),
+  sslIssuer: varchar('ssl_issuer', { length: 255 }),
+  /** 是否启用可用性监控（定时 HTTP 探测） */
+  monitorEnabled: boolean('monitor_enabled').notNull().default(false),
+  /** 最近一次监控状态：up / down / unknown */
+  monitorStatus: varchar('monitor_status', { length: 16 }),
+  /** 最近一次监控响应耗时（毫秒） */
+  monitorResponseMs: integer('monitor_response_ms'),
+  monitorLastCheckedAt: timestamp('monitor_last_checked_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -94,6 +111,8 @@ export const dnsRecords = pgTable('dns_records', {
   providerRecordId: varchar('provider_record_id', { length: 255 }),
   snapshotVersion: integer('snapshot_version').notNull().default(0),
   status: varchar('status', { length: 16 }).notNull().default('active'),
+  /** 记录备注（用途说明） */
+  notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -228,8 +247,13 @@ export const oauthProviders = pgTable('oauth_providers', {
   clientId: varchar('client_id', { length: 512 }).notNull(),
   clientSecret: varchar('client_secret', { length: 512 }).notNull(),
   scope: varchar('scope', { length: 256 }),
+  /** OIDC Discovery 完整地址，如 https://idp/.well-known/openid-configuration */
+  wellKnownUrl: varchar('well_known_url', { length: 512 }),
+  /** 可选覆盖：授权端点（可从 Well-Known 发现） */
   customAuthorizeUrl: varchar('custom_authorize_url', { length: 512 }),
+  /** 可选覆盖：Token 端点 */
   customTokenUrl: varchar('custom_token_url', { length: 512 }),
+  /** 可选覆盖：用户信息端点 */
   customUserInfoUrl: varchar('custom_user_info_url', { length: 512 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -266,4 +290,15 @@ export const userTokens = pgTable('user_tokens', {
   lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const monitorChecks = pgTable('monitor_checks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  domainId: uuid('domain_id').notNull(),
+  checkType: varchar('check_type', { length: 16 }).notNull().default('http'),
+  status: varchar('status', { length: 8 }).notNull(),
+  statusCode: integer('status_code'),
+  responseMs: integer('response_ms'),
+  error: text('error'),
+  checkedAt: timestamp('checked_at', { withTimezone: true }).notNull().defaultNow(),
 });

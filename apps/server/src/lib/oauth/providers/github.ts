@@ -22,6 +22,9 @@ class GitHubOAuthProvider implements OAuthProvider {
   }
 
   async handleCallback(config: OAuthProviderConfig, code: string, redirectUri: string): Promise<OAuthUserInfo> {
+    if (!redirectUri) {
+      throw new Error('GitHub OAuth 缺少 redirect_uri');
+    }
     const tokenUrl = config.tokenUrl || this.DEFAULT_TOKEN_URL;
 
     const tokenResponse = await fetch(tokenUrl, {
@@ -38,13 +41,9 @@ class GitHubOAuthProvider implements OAuthProvider {
       }),
     });
 
-    if (!tokenResponse.ok) {
-      throw new Error('GitHub token exchange failed');
-    }
-
     const tokenData = await tokenResponse.json() as { access_token?: string; error?: string; error_description?: string };
-    if (tokenData.error || !tokenData.access_token) {
-      throw new Error(tokenData.error_description || tokenData.error || 'Failed to obtain access token from GitHub');
+    if (!tokenResponse.ok || tokenData.error || !tokenData.access_token) {
+      throw new Error(tokenData.error_description || tokenData.error || `GitHub token 交换失败 (HTTP ${tokenResponse.status})`);
     }
 
     const accessToken = tokenData.access_token;

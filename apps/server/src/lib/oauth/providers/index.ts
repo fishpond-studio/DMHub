@@ -1,9 +1,19 @@
 export interface OAuthProviderConfig {
   clientId: string;
   clientSecret: string;
+  /** 授权端点（可选，可由 Well-Known 发现） */
   authorizeUrl?: string;
+  /** Token 端点（可选） */
   tokenUrl?: string;
+  /** 用户信息端点（可选） */
   userInfoUrl?: string;
+  /** OIDC Issuer（兼容旧配置） */
+  issuer?: string;
+  /**
+   * Well-Known 完整 URL
+   * 例：https://idp.example.com/realms/x/.well-known/openid-configuration
+   */
+  wellKnownUrl?: string;
   scope?: string;
 }
 
@@ -20,8 +30,11 @@ export interface OAuthProvider {
   id: string;
   name: string;
   type: 'oauth2' | 'oidc';
+  defaultScope?: string;
   getAuthorizationUrl(config: OAuthProviderConfig, state: string, redirectUri: string): string;
   handleCallback(config: OAuthProviderConfig, code: string, redirectUri: string): Promise<OAuthUserInfo>;
+  /** OIDC 等需要预解析 discovery 时实现 */
+  prepareConfig?(config: OAuthProviderConfig): Promise<OAuthProviderConfig>;
 }
 
 const providers: Map<string, OAuthProvider> = new Map();

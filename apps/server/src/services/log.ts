@@ -105,3 +105,38 @@ export async function queryLogs(
 
   return { logs: rows as LogWithUser[], total };
 }
+
+/** 导出操作日志（CSV 文本），最多 5000 条 */
+export async function exportLogsCsv(
+  currentUserId: string,
+  role: string,
+  filters: Omit<LogQueryFilters, 'page' | 'pageSize'>,
+): Promise<string> {
+  const result = await queryLogs(currentUserId, role, {
+    ...filters,
+    page: 1,
+    pageSize: 5000,
+  });
+
+  const escape = (v: unknown) => {
+    const s = v == null ? '' : String(v);
+    if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+
+  const header = ['时间', '用户', '操作', '目标类型', '目标ID', '详情', 'IP', 'UA'].join(',');
+  const lines = result.logs.map((log) =>
+    [
+      escape(log.createdAt instanceof Date ? log.createdAt.toISOString() : log.createdAt),
+      escape(log.username || log.userId),
+      escape(log.action),
+      escape(log.targetType),
+      escape(log.targetId),
+      escape(log.detail ? JSON.stringify(log.detail) : ''),
+      escape(log.ipAddress || ''),
+      escape(log.userAgent || ''),
+    ].join(','),
+  );
+
+  return [header, ...lines].join('\n');
+}

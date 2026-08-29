@@ -192,3 +192,8 @@ function extractPushToken(pushUrl: string): string | null {
   const match = pushUrl.match(/\/api\/push\/([a-zA-Z0-9]+)/);
   return match ? match[1] : null;
 }
+
+/** 供 monitor 服务复用的安全版本 */
+export function extractPushTokenSafe(pushUrl: string): string | null {
+  return extractPushToken(pushUrl);
+}

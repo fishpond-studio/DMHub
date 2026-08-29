@@ -72,6 +72,8 @@ export async function getTeamSettings() {
     landingBackgroundUrl: teamSettings.landingBackgroundUrl,
     footerContent: teamSettings.footerContent,
     footerFormat: teamSettings.footerFormat,
+    logRetentionDays: teamSettings.logRetentionDays,
+    redisUrl: teamSettings.redisUrl,
     createdAt: teamSettings.createdAt,
     updatedAt: teamSettings.updatedAt,
   }).from(teamSettings).where(eq(teamSettings.id, 1));
@@ -97,6 +99,8 @@ export async function updateTeamSettings(
     landingSubtitle?: string;
     footerContent?: string;
     footerFormat?: string;
+    logRetentionDays?: number | null;
+    redisUrl?: string | null;
   },
   ipAddress?: string,
   userAgent?: string,
@@ -125,6 +129,8 @@ export async function updateTeamSettings(
   if (input.landingSubtitle !== undefined) updateData.landingSubtitle = input.landingSubtitle || null;
   if (input.footerContent !== undefined) updateData.footerContent = input.footerContent || null;
   if (input.footerFormat !== undefined) updateData.footerFormat = input.footerFormat;
+  if (input.logRetentionDays !== undefined) updateData.logRetentionDays = input.logRetentionDays;
+  if (input.redisUrl !== undefined) updateData.redisUrl = input.redisUrl || null;
 
   await db.update(teamSettings).set(updateData).where(eq(teamSettings.id, 1));
 
@@ -191,6 +197,8 @@ export async function updateTeamSettings(
     landingBackgroundUrl: teamSettings.landingBackgroundUrl,
     footerContent: teamSettings.footerContent,
     footerFormat: teamSettings.footerFormat,
+    logRetentionDays: teamSettings.logRetentionDays,
+    redisUrl: teamSettings.redisUrl,
     createdAt: teamSettings.createdAt,
     updatedAt: teamSettings.updatedAt,
   }).from(teamSettings).where(eq(teamSettings.id, 1));

@@ -8,11 +8,11 @@ import { signAccessToken, signRefreshToken, sign2FAToken, verifyToken } from '..
 import type { RegisterInput } from '@dmhub/shared';
 import { logOperation } from '../lib/log.js';
 
-function hashToken(token: string): string {
+export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-async function storeRefreshToken(userId: string, rawToken: string, deviceInfo?: string) {
+export async function storeRefreshToken(userId: string, rawToken: string, deviceInfo?: string) {
   const db = getDb();
   const tokenHash = hashToken(rawToken);
   await db.insert(refreshTokens).values({
@@ -239,6 +239,7 @@ export async function getUserById(userId: string) {
     twoFactorMethods: users.twoFactorMethods,
     emailVerified: users.emailVerified,
     notificationsEnabled: users.notificationsEnabled,
+    emailNotificationsEnabled: users.emailNotificationsEnabled,
     status: users.status,
     createdAt: users.createdAt,
     updatedAt: users.updatedAt,
@@ -273,7 +274,13 @@ export async function changePassword(userId: string, oldPassword: string, newPas
   await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
 }
 
-export async function updateProfile(userId: string, input: { displayName?: string; nickname?: string; avatarUrl?: string; notificationsEnabled?: boolean }) {
+export async function updateProfile(userId: string, input: {
+  displayName?: string;
+  nickname?: string;
+  avatarUrl?: string;
+  notificationsEnabled?: boolean;
+  emailNotificationsEnabled?: boolean;
+}) {
   const db = getDb();
 
   const updateData: Record<string, any> = { updatedAt: new Date() };
@@ -281,6 +288,9 @@ export async function updateProfile(userId: string, input: { displayName?: strin
   if (input.nickname !== undefined) updateData.nickname = input.nickname || null;
   if (input.avatarUrl !== undefined) updateData.avatarUrl = input.avatarUrl || null;
   if (input.notificationsEnabled !== undefined) updateData.notificationsEnabled = input.notificationsEnabled;
+  if (input.emailNotificationsEnabled !== undefined) {
+    updateData.emailNotificationsEnabled = input.emailNotificationsEnabled;
+  }
 
   await db.update(users).set(updateData).where(eq(users.id, userId));
 
@@ -296,6 +306,7 @@ export async function updateProfile(userId: string, input: { displayName?: strin
     twoFactorMethods: users.twoFactorMethods,
     emailVerified: users.emailVerified,
     notificationsEnabled: users.notificationsEnabled,
+    emailNotificationsEnabled: users.emailNotificationsEnabled,
     status: users.status,
     createdAt: users.createdAt,
     updatedAt: users.updatedAt,

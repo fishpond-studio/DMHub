@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { cacheGet, cacheSet, cacheDel, cacheKeys } from './cache.js';
 
 interface AdminResetRequest {
   requestId: string;
@@ -17,21 +18,38 @@ interface AdminResetRequest {
   resetAttempts: number;
 }
 
-const requests = new Map<string, AdminResetRequest>();
-
-const REQUEST_EXPIRY_MS = 30 * 60 * 1000;
+const KEY_PREFIX = 'adminreset:';
+const REQUEST_TTL_SECONDS = 30 * 60;
+const REQUEST_EXPIRY_MS = REQUEST_TTL_SECONDS * 1000;
 const MAX_ATTEMPTS = 5;
 
-export function createResetRequest(input: {
+const keyOf = (requestId: string) => `${KEY_PREFIX}${requestId}`;
+
+async function getRequest(requestId: string): Promise<AdminResetRequest | undefined> {
+  const raw = await cacheGet(keyOf(requestId));
+  if (!raw) return undefined;
+  const req = JSON.parse(raw) as AdminResetRequest;
+  if (Date.now() - req.createdAt > REQUEST_EXPIRY_MS) {
+    await cacheDel(keyOf(requestId));
+    return undefined;
+  }
+  return req;
+}
+
+async function saveRequest(req: AdminResetRequest): Promise<void> {
+  await cacheSet(keyOf(req.requestId), JSON.stringify(req), REQUEST_TTL_SECONDS);
+}
+
+export async function createResetRequest(input: {
   userId: string;
   username: string;
   adminId: string;
   adminEmail: string;
   alternateEmail: string;
   emailCode: string;
-}): string {
+}): Promise<string> {
   const requestId = crypto.randomUUID();
-  requests.set(requestId, {
+  const req: AdminResetRequest = {
     requestId,
     userId: input.userId,
     username: input.username,
@@ -44,84 +62,91 @@ export function createResetRequest(input: {
     createdAt: Date.now(),
     emailAttempts: 0,
     resetAttempts: 0,
-  });
+  };
+  await saveRequest(req);
   return requestId;
 }
 
-export function getResetRequest(requestId: string): AdminResetRequest | undefined {
-  const req = requests.get(requestId);
-  if (!req) return undefined;
-  if (Date.now() - req.createdAt > REQUEST_EXPIRY_MS) {
-    requests.delete(requestId);
-    return undefined;
-  }
-  return req;
+export async function getResetRequest(requestId: string): Promise<AdminResetRequest | undefined> {
+  return getRequest(requestId);
 }
 
-export function verifyResetEmail(requestId: string, code: string): boolean {
-  const req = requests.get(requestId);
+export async function verifyResetEmail(requestId: string, code: string): Promise<boolean> {
+  const req = await getRequest(requestId);
   if (!req || req.status !== 'pending_email') return false;
   if (Date.now() - req.createdAt > REQUEST_EXPIRY_MS) {
-    requests.delete(requestId);
+    await cacheDel(keyOf(requestId));
     return false;
   }
   req.emailAttempts++;
   if (req.emailAttempts > MAX_ATTEMPTS) {
-    requests.delete(requestId);
+    await cacheDel(keyOf(requestId));
     return false;
   }
-  if (req.emailCode !== code) return false;
+  if (req.emailCode !== code) {
+    await saveRequest(req);
+    return false;
+  }
   req.emailVerified = true;
   req.status = 'pending_admin';
+  await saveRequest(req);
   return true;
 }
 
-export function approveResetRequest(requestId: string): string | null {
-  const req = requests.get(requestId);
+export async function approveResetRequest(requestId: string): Promise<string | null> {
+  const req = await getRequest(requestId);
   if (!req || req.status !== 'pending_admin') return null;
   const resetCode = crypto.randomBytes(16).toString('hex').toUpperCase();
   req.resetCode = resetCode;
   req.status = 'approved';
+  await saveRequest(req);
   return resetCode;
 }
 
-export function rejectResetRequest(requestId: string, reason?: string): boolean {
-  const req = requests.get(requestId);
+export async function rejectResetRequest(requestId: string, reason?: string): Promise<boolean> {
+  const req = await getRequest(requestId);
   if (!req || req.status !== 'pending_admin') return false;
   req.status = 'rejected';
   req.rejectReason = reason;
+  await saveRequest(req);
   return true;
 }
 
-export function getPendingRequests(): AdminResetRequest[] {
-  const now = Date.now();
+export async function getPendingRequests(): Promise<AdminResetRequest[]> {
+  const keys = await cacheKeys(KEY_PREFIX);
   const pending: AdminResetRequest[] = [];
-  for (const [key, req] of requests) {
-    if (now - req.createdAt > REQUEST_EXPIRY_MS) {
-      requests.delete(key);
+  for (const key of keys) {
+    const raw = await cacheGet(key);
+    if (!raw) continue;
+    const req = JSON.parse(raw) as AdminResetRequest;
+    if (Date.now() - req.createdAt > REQUEST_EXPIRY_MS) {
+      await cacheDel(key);
       continue;
     }
-    if (req.status === 'pending_admin') {
-      pending.push(req);
-    }
+    if (req.status === 'pending_admin') pending.push(req);
   }
   return pending;
 }
 
-export function validateResetCode(userId: string, resetCode: string): AdminResetRequest | null {
-  for (const [key, req] of requests) {
+export async function validateResetCode(userId: string, resetCode: string): Promise<AdminResetRequest | null> {
+  const keys = await cacheKeys(KEY_PREFIX);
+  for (const key of keys) {
+    const raw = await cacheGet(key);
+    if (!raw) continue;
+    const req = JSON.parse(raw) as AdminResetRequest;
     if (Date.now() - req.createdAt > REQUEST_EXPIRY_MS) {
-      requests.delete(key);
+      await cacheDel(key);
       continue;
     }
     if (req.userId === userId && req.status === 'approved') {
       req.resetAttempts++;
       if (req.resetAttempts > MAX_ATTEMPTS) {
-        requests.delete(key);
+        await cacheDel(key);
         return null;
       }
+      await saveRequest(req);
       if (req.resetCode === resetCode) {
-        requests.delete(key);
+        await cacheDel(key);
         return req;
       }
       return null;
@@ -129,14 +154,3 @@ export function validateResetCode(userId: string, resetCode: string): AdminReset
   }
   return null;
 }
-
-function cleanup() {
-  const now = Date.now();
-  for (const [key, req] of requests) {
-    if (now - req.createdAt > REQUEST_EXPIRY_MS) {
-      requests.delete(key);
-    }
-  }
-}
-
-setInterval(cleanup, 60 * 1000);

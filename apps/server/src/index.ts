@@ -25,13 +25,19 @@ import { importRoutes } from './routes/import.js';
 import { dashboardRoutes } from './routes/dashboard.js';
 import { uptimeRoutes } from './routes/uptime.js';
 import { speedtestRoutes } from './routes/speedtest.js';
+import { monitorRoutes } from './routes/monitor.js';
 import { apiKeyRoutes } from './routes/api-keys.js';
 import { openApiRoutes } from './routes/open-api.js';
 import { exportRoutes } from './routes/export.js';
+import { backupRoutes } from './routes/backup.js';
 import { healthCheck } from './routes/health.js';
 import { registerErrorHandler } from './middleware/error-handler.js';
-import { startExpiryCheckCron } from './lib/cron.js';
+import { startExpiryCheckCron, startBackgroundJobs } from './lib/cron.js';
 import { loadProviders } from './lib/oauth/providers/index.js';
+import { ensureSchemaPatches } from './services/setup.js';
+import { processOidcShortCallback } from './routes/oauth.js';
+import { configureCache, initCacheFromEnv } from './lib/cache.js';
+import { getTeamSettings } from './services/team.js';
 
 const isProduction = config.NODE_ENV === 'production';
 
@@ -109,11 +115,16 @@ app.register(oauthRoutes, { prefix: '/api/auth/oauth' });
 app.register(oauthConfigRoutes, { prefix: '/api/oauth' });
 app.register(importRoutes, { prefix: '/api/import' });
 app.register(dashboardRoutes, { prefix: '/api/dashboard' });
-app.register(uptimeRoutes, { prefix: '/api/uptime' });
-app.register(speedtestRoutes, { prefix: '/api/speedtest' });
+  app.register(uptimeRoutes, { prefix: '/api/uptime' });
+  app.register(speedtestRoutes, { prefix: '/api/speedtest' });
+  app.register(monitorRoutes, { prefix: '/api/monitor' });
 app.register(apiKeyRoutes, { prefix: '/api/api-keys' });
-app.register(openApiRoutes, { prefix: '/api/v1' });
-app.register(exportRoutes, { prefix: '/api/export' });
+  app.register(openApiRoutes, { prefix: '/api/v1' });
+  app.register(exportRoutes, { prefix: '/api/export' });
+  app.register(backupRoutes, { prefix: '/api/backup' });
+
+// OIDC 简洁重定向 URL：https://your-domain/oauth/oidc
+app.get('/oauth/oidc', processOidcShortCallback);
 
 // 全局错误处理
 registerErrorHandler(app);
@@ -121,7 +132,16 @@ registerErrorHandler(app);
 await loadProviders();
 
 app.addHook('onReady', async () => {
+  initCacheFromEnv();
   startExpiryCheckCron();
+  // 已初始化实例补齐增量字段（如邮件通知开关）
+  await ensureSchemaPatches();
+  // 从团队设置中读取 Redis URL，若存在则启用 Redis 缓存
+  try {
+    const settings = await getTeamSettings();
+    if (settings?.redisUrl) configureCache(settings.redisUrl);
+  } catch {}
+  startBackgroundJobs();
 });
 
 try {

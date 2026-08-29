@@ -1,15 +1,103 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { requireDomainAccess, requireDomainWriteAccess, requireRecordWriteAccess } from '../middleware/domain-permission.js';
-import { listDomains, createDomain, deleteDomain, getDomain, updateExpiryRemind, checkDomainExpiry, updateDomainExpiry } from '../services/domain.js';
+import {
+  listDomains,
+  createDomain,
+  deleteDomain,
+  getDomain,
+  updateExpiryRemind,
+  checkDomainExpiry,
+  updateDomainExpiry,
+  updateDomainNotes,
+  searchDnsRecords,
+  checkDomainSsl,
+} from '../services/domain.js';
 import { previewDomainExpiry } from '../lib/whois.js';
-import { listRecords, createRecord, updateRecord, deleteRecord, syncRecords } from '../services/dns-record.js';
+import {
+  listRecords,
+  createRecord,
+  updateRecord,
+  deleteRecord,
+  syncRecords,
+  bulkUpdateRecords,
+  bulkDeleteRecords,
+} from '../services/dns-record.js';
+import { checkDnsPropagation, buildFqdn } from '../lib/dns-check.js';
 import { getDb } from '../db/index.js';
-import { domains } from '../db/schema.js';
-import { eq, sql } from 'drizzle-orm';
+import { domains, dnsRecords } from '../db/schema.js';
+import { eq, sql, and } from 'drizzle-orm';
 import { createDnsRecordSchema } from '@dmhub/shared';
 
 export async function domainRoutes(app: FastifyInstance) {
+  /** 全局 DNS 搜索（主机/值/类型/域名） */
+  app.get('/search/records', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
+    const query = request.query as { q?: string; limit?: string };
+    return searchDnsRecords(
+      request.user!.userId,
+      request.user!.role,
+      query.q || '',
+      query.limit ? Number(query.limit) : 50,
+    );
+  });
+
+  /** 管理员：批量 WHOIS 到期检查 */
+  app.post('/check-expiry-batch', { preHandler: [authenticate, requireRole('admin')] }, async (request: FastifyRequest) => {
+    const body = request.body as { domainIds?: string[]; limit?: number };
+    const db = getDb();
+    let ids = body?.domainIds;
+    if (!ids || ids.length === 0) {
+      const rows = await db
+        .select({ id: domains.id })
+        .from(domains)
+        .where(eq(domains.autoCheckExpiry, true))
+        .limit(Math.min(body?.limit || 20, 50));
+      ids = rows.map((r: { id: string }) => r.id);
+    } else {
+      ids = ids.slice(0, 50);
+    }
+
+    const results: Array<{
+      domainId: string;
+      name?: string;
+      success: boolean;
+      expiresAt?: string | null;
+      error?: string;
+    }> = [];
+
+    for (const id of ids ?? []) {
+      try {
+        const r = await checkDomainExpiry(
+          request.user!.userId,
+          id,
+          request.ip,
+          request.headers['user-agent'],
+        );
+        results.push({
+          domainId: id,
+          name: r.name,
+          success: true,
+          expiresAt: r.expiresAt ? new Date(r.expiresAt as Date).toISOString() : null,
+        });
+      } catch (err: any) {
+        const [d] = await db.select({ name: domains.name }).from(domains).where(eq(domains.id, id)).limit(1);
+        results.push({
+          domainId: id,
+          name: d?.name,
+          success: false,
+          error: err.message || '查询失败',
+        });
+      }
+    }
+
+    return {
+      total: results.length,
+      succeeded: results.filter((r) => r.success).length,
+      failed: results.filter((r) => !r.success).length,
+      results,
+    };
+  });
+
   app.post('/check-expiry-preview', { preHandler: [authenticate, requireRole('admin')] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as any;
     if (!body?.domain) {
@@ -125,6 +213,16 @@ export async function domainRoutes(app: FastifyInstance) {
     return updated;
   });
 
+  app.put('/:id/notes', { preHandler: [authenticate, requireRole('admin')] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { notes?: string | null };
+    try {
+      return await updateDomainNotes(id, body?.notes ?? null);
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
+  });
+
   app.get('/:id/records', { preHandler: [authenticate, requireDomainAccess('id')] }, async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
     const query = request.query as { type?: string; search?: string };
@@ -152,6 +250,7 @@ export async function domainRoutes(app: FastifyInstance) {
           ttl: body.ttl,
           priority: body.priority,
           proxied: body.proxied,
+          notes: body.notes,
         },
         request.ip,
         request.headers['user-agent'],
@@ -177,11 +276,72 @@ export async function domainRoutes(app: FastifyInstance) {
           ttl: body?.ttl,
           priority: body?.priority,
           proxied: body?.proxied,
+          notes: body?.notes,
         },
         request.ip,
         request.headers['user-agent'],
       );
       return record;
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
+  });
+
+  /** 多公共 DNS 解析传播检测 */
+  app.post('/:id/records/:recordId/propagate', { preHandler: [authenticate, requireDomainAccess('id')] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id, recordId } = request.params as { id: string; recordId: string };
+    try {
+      const db = getDb();
+      const [domain] = await db.select({ name: domains.name }).from(domains).where(eq(domains.id, id)).limit(1);
+      if (!domain) return reply.status(404).send({ error: '域名不存在' });
+      const [record] = await db
+        .select({
+          recordType: dnsRecords.recordType,
+          name: dnsRecords.name,
+          value: dnsRecords.value,
+        })
+        .from(dnsRecords)
+        .where(and(eq(dnsRecords.id, recordId), eq(dnsRecords.domainId, id)))
+        .limit(1);
+      if (!record) return reply.status(404).send({ error: '记录不存在' });
+
+      const body = (request.body || {}) as { expectedValue?: string };
+      const fqdn = buildFqdn(domain.name, record.name);
+      return await checkDnsPropagation({
+        fqdn,
+        recordType: record.recordType,
+        expectedValue: body.expectedValue ?? record.value,
+      });
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
+  });
+
+  /** 任意主机传播检测（可不依赖已有记录） */
+  app.post('/:id/dns-check', { preHandler: [authenticate, requireDomainAccess('id')] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { name?: string; recordType?: string; expectedValue?: string; fqdn?: string };
+    try {
+      const db = getDb();
+      const [domain] = await db.select({ name: domains.name }).from(domains).where(eq(domains.id, id)).limit(1);
+      if (!domain) return reply.status(404).send({ error: '域名不存在' });
+      const fqdn = body.fqdn || buildFqdn(domain.name, body.name || '@');
+      return await checkDnsPropagation({
+        fqdn,
+        recordType: body.recordType || 'A',
+        expectedValue: body.expectedValue,
+      });
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
+  });
+
+  /** HTTPS 证书检测 */
+  app.post('/:id/ssl-check', { preHandler: [authenticate, requireDomainAccess('id')] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body || {}) as { hostname?: string };
+    try {
+      return await checkDomainSsl(id, body.hostname);
     } catch (err: any) {
       return reply.status(400).send({ error: err.message });
     }
@@ -285,6 +445,47 @@ export async function domainRoutes(app: FastifyInstance) {
     }
 
     return { results, total: results.length, succeeded: results.filter((r) => r.success).length };
+  });
+
+  /** 批量更新记录（TTL / 代理） */
+  app.post('/:id/records/bulk-update', { preHandler: [authenticate, requireDomainWriteAccess('id'), requireRecordWriteAccess({ domainIdParam: 'id' })] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { recordIds?: string[]; ttl?: number; proxied?: boolean };
+    if (!body?.recordIds || !Array.isArray(body.recordIds) || body.recordIds.length === 0) {
+      return reply.status(400).send({ error: 'recordIds 必须是非空数组' });
+    }
+    try {
+      return await bulkUpdateRecords(
+        request.user!.userId,
+        id,
+        body.recordIds,
+        { ttl: body.ttl, proxied: body.proxied },
+        request.ip,
+        request.headers['user-agent'],
+      );
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
+  });
+
+  /** 批量删除记录 */
+  app.post('/:id/records/bulk-delete', { preHandler: [authenticate, requireDomainWriteAccess('id'), requireRecordWriteAccess({ domainIdParam: 'id' })] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { recordIds?: string[] };
+    if (!body?.recordIds || !Array.isArray(body.recordIds) || body.recordIds.length === 0) {
+      return reply.status(400).send({ error: 'recordIds 必须是非空数组' });
+    }
+    try {
+      return await bulkDeleteRecords(
+        request.user!.userId,
+        id,
+        body.recordIds,
+        request.ip,
+        request.headers['user-agent'],
+      );
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
   });
 
   app.put('/:id/expiry', { preHandler: [authenticate, requireRole('admin')] }, async (request: FastifyRequest, reply: FastifyReply) => {

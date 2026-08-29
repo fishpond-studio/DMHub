@@ -253,4 +253,147 @@ export async function dashboardRoutes(app: FastifyInstance) {
 
     return { labels, data };
   });
+
+  /**
+   * 域名健康概览：按到期、记录数、服务商绑定等打分
+   * score 0–100，越高越健康
+   */
+  app.get('/health', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
+    const db = getDb();
+    const userId = request.user!.userId;
+    const role = request.user!.role;
+    const now = Date.now();
+
+    let domainIds: string[] | null = null;
+    if (role !== 'admin') {
+      const assigned = await db
+        .select({ domainId: domainAssignments.domainId })
+        .from(domainAssignments)
+        .where(eq(domainAssignments.userId, userId));
+      const ids = assigned.map((a: { domainId: string }) => a.domainId);
+      if (ids.length === 0) {
+        return { summary: { avgScore: 0, healthy: 0, warning: 0, critical: 0, total: 0 }, domains: [] };
+      }
+      domainIds = ids;
+    }
+
+    const whereClause = domainIds
+      ? sql`${domains.id} IN (${sql.join(domainIds.map((id: string) => sql`${id}`), sql`,`)})`
+      : undefined;
+
+    const rows = await db
+      .select({
+        id: domains.id,
+        name: domains.name,
+        status: domains.status,
+        expiresAt: domains.expiresAt,
+        providerConfigId: domains.providerConfigId,
+        recordCount: sql<number>`(SELECT COUNT(*) FROM ${dnsRecords} WHERE ${dnsRecords.domainId} = ${domains.id})`,
+        hasNs: sql<number>`(SELECT COUNT(*) FROM ${dnsRecords} WHERE ${dnsRecords.domainId} = ${domains.id} AND ${dnsRecords.recordType} = 'NS')`,
+      })
+      .from(domains)
+      .where(whereClause)
+      .limit(200);
+
+    type HealthItem = {
+      domainId: string;
+      name: string;
+      score: number;
+      level: 'healthy' | 'warning' | 'critical';
+      issues: string[];
+      recordCount: number;
+      daysRemaining: number | null;
+    };
+
+    const items: HealthItem[] = rows.map((r: {
+      id: string;
+      name: string;
+      status: string;
+      expiresAt: Date | null;
+      providerConfigId: string | null;
+      recordCount: number;
+      hasNs: number;
+    }) => {
+      let score = 100;
+      const issues: string[] = [];
+      const recordCount = Number(r.recordCount) || 0;
+      let daysRemaining: number | null = null;
+
+      if (r.status === 'expired') {
+        score -= 50;
+        issues.push('域名已过期');
+      } else if (r.status === 'pending') {
+        score -= 10;
+        issues.push('状态为待处理');
+      }
+
+      if (r.expiresAt) {
+        daysRemaining = Math.ceil((new Date(r.expiresAt).getTime() - now) / (1000 * 60 * 60 * 24));
+        if (daysRemaining < 0) {
+          score -= 40;
+          issues.push('到期日已过');
+        } else if (daysRemaining <= 7) {
+          score -= 35;
+          issues.push(`将在 ${daysRemaining} 天内到期`);
+        } else if (daysRemaining <= 30) {
+          score -= 20;
+          issues.push(`将在 ${daysRemaining} 天内到期`);
+        } else if (daysRemaining <= 90) {
+          score -= 8;
+          issues.push(`将在 ${daysRemaining} 天内到期`);
+        }
+      } else {
+        score -= 15;
+        issues.push('未设置到期时间');
+      }
+
+      if (!r.providerConfigId) {
+        score -= 15;
+        issues.push('未关联 DNS 服务商');
+      }
+
+      if (recordCount === 0) {
+        score -= 20;
+        issues.push('无 DNS 记录');
+      } else if (recordCount < 2) {
+        score -= 5;
+        issues.push('记录较少');
+      }
+
+      if (Number(r.hasNs) === 0 && recordCount > 0) {
+        score -= 5;
+        issues.push('未见 NS 记录（可能未同步）');
+      }
+
+      if (score < 0) score = 0;
+      if (score > 100) score = 100;
+
+      const level: HealthItem['level'] =
+        score >= 80 ? 'healthy' : score >= 50 ? 'warning' : 'critical';
+
+      return {
+        domainId: r.id,
+        name: r.name,
+        score,
+        level,
+        issues,
+        recordCount,
+        daysRemaining,
+      };
+    });
+
+    items.sort((a, b) => a.score - b.score);
+
+    const healthy = items.filter((i) => i.level === 'healthy').length;
+    const warning = items.filter((i) => i.level === 'warning').length;
+    const critical = items.filter((i) => i.level === 'critical').length;
+    const avgScore = items.length
+      ? Math.round(items.reduce((s, i) => s + i.score, 0) / items.length)
+      : 0;
+
+    return {
+      summary: { avgScore, healthy, warning, critical, total: items.length },
+      domains: items.slice(0, 50),
+    };
+  });
 }

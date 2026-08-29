@@ -25,6 +25,8 @@ export const users = mysqlTable('users', {
   twoFactorMethods: json('two_factor_methods').$type<string[]>().notNull().default([]),
   emailVerified: boolean('email_verified').notNull().default(false),
   notificationsEnabled: boolean('notifications_enabled').notNull().default(true),
+  /** 可选：域名分配等事件是否邮件通知（默认关闭） */
+  emailNotificationsEnabled: boolean('email_notifications_enabled').notNull().default(false),
   status: varchar('status', { length: 16 }).notNull().default('active'),
   createdAt: tsNow('created_at'),
   updatedAt: tsNow('updated_at'),
@@ -61,6 +63,8 @@ export const teamSettings = mysqlTable('team_settings', {
   landingBackgroundUrl: varchar('landing_background_url', { length: 512 }),
   footerContent: text('footer_content'),
   footerFormat: varchar('footer_format', { length: 16 }).default('markdown'),
+  /** 操作日志保留天数（0/NULL = 永久保留） */
+  logRetentionDays: int('log_retention_days'),
   createdAt: tsNow('created_at'),
   updatedAt: tsNow('updated_at'),
 });
@@ -78,6 +82,14 @@ export const domains = mysqlTable('domains', {
   autoCheckExpiry: boolean('auto_check_expiry').notNull().default(true),
   expiryRemindDays: json('expiry_remind_days').$type<number[]>().notNull().default([30, 14, 7, 3, 1, 0]),
   lastCheckedAt: ts('last_checked_at'),
+  notes: text('notes'),
+  sslExpiresAt: ts('ssl_expires_at'),
+  sslLastCheckedAt: ts('ssl_last_checked_at'),
+  sslIssuer: varchar('ssl_issuer', { length: 255 }),
+  monitorEnabled: boolean('monitor_enabled').notNull().default(false),
+  monitorStatus: varchar('monitor_status', { length: 16 }),
+  monitorResponseMs: int('monitor_response_ms'),
+  monitorLastCheckedAt: ts('monitor_last_checked_at'),
   createdAt: tsNow('created_at'),
   updatedAt: tsNow('updated_at'),
 });
@@ -94,6 +106,7 @@ export const dnsRecords = mysqlTable('dns_records', {
   providerRecordId: varchar('provider_record_id', { length: 255 }),
   snapshotVersion: int('snapshot_version').notNull().default(0),
   status: varchar('status', { length: 16 }).notNull().default('active'),
+  notes: text('notes'),
   createdAt: tsNow('created_at'),
   updatedAt: tsNow('updated_at'),
 });
@@ -228,6 +241,8 @@ export const oauthProviders = mysqlTable('oauth_providers', {
   clientId: varchar('client_id', { length: 512 }).notNull(),
   clientSecret: varchar('client_secret', { length: 512 }).notNull(),
   scope: varchar('scope', { length: 256 }),
+  /** OIDC Discovery 完整地址 */
+  wellKnownUrl: varchar('well_known_url', { length: 512 }),
   customAuthorizeUrl: varchar('custom_authorize_url', { length: 512 }),
   customTokenUrl: varchar('custom_token_url', { length: 512 }),
   customUserInfoUrl: varchar('custom_user_info_url', { length: 512 }),
@@ -266,4 +281,15 @@ export const userTokens = mysqlTable('user_tokens', {
   lastUsedAt: ts('last_used_at'),
   expiresAt: ts('expires_at'),
   createdAt: tsNow('created_at'),
+});
+
+export const monitorChecks = mysqlTable('monitor_checks', {
+  id: uuidPk(),
+  domainId: uuidCol('domain_id').notNull(),
+  checkType: varchar('check_type', { length: 16 }).notNull().default('http'),
+  status: varchar('status', { length: 8 }).notNull(),
+  statusCode: int('status_code'),
+  responseMs: int('response_ms'),
+  error: text('error'),
+  checkedAt: tsNow('checked_at'),
 });

@@ -11,6 +11,11 @@ import {
   addSSEClient,
   removeSSEClient,
   getStoredNotifications,
+  getUnreadCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteStoredNotification,
+  clearStoredNotifications,
   triggerNotification,
   getSSEClientCount,
 } from '../services/notification.js';
@@ -62,7 +67,34 @@ export async function notificationRoutes(app: FastifyInstance) {
   app.get('/', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
     const userId = request.user!.userId;
     const notifications = getStoredNotifications(userId);
-    return { notifications };
+    return {
+      notifications,
+      unreadCount: getUnreadCount(userId),
+    };
+  });
+
+  app.post('/:id/read', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const ok = markNotificationRead(request.user!.userId, id);
+    if (!ok) return reply.status(404).send({ error: '通知不存在' });
+    return { success: true, unreadCount: getUnreadCount(request.user!.userId) };
+  });
+
+  app.post('/read-all', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
+    const count = markAllNotificationsRead(request.user!.userId);
+    return { success: true, marked: count, unreadCount: 0 };
+  });
+
+  app.delete('/:id', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const ok = deleteStoredNotification(request.user!.userId, id);
+    if (!ok) return reply.status(404).send({ error: '通知不存在' });
+    return { success: true, unreadCount: getUnreadCount(request.user!.userId) };
+  });
+
+  app.delete('/', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
+    const cleared = clearStoredNotifications(request.user!.userId);
+    return { success: true, cleared, unreadCount: 0 };
   });
 
   app.post('/', { preHandler: [authenticate, requireRole('admin')] }, async (request: FastifyRequest, reply: FastifyReply) => {

@@ -35,6 +35,7 @@ export async function meRoutes(app: FastifyInstance) {
         nickname: body?.nickname,
         avatarUrl: body?.avatarUrl,
         notificationsEnabled: body?.notificationsEnabled,
+        emailNotificationsEnabled: body?.emailNotificationsEnabled,
       });
       return { user };
     } catch (err: any) {

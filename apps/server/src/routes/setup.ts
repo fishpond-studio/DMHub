@@ -14,6 +14,7 @@ import {
   sendTestEmail,
   verifyEmail,
   getSetupStatus,
+  completeSetup,
 } from '../services/setup.js';
 import type { SmtpConfig } from '../lib/smtp.js';
 import { testSmtpConnection } from '../lib/smtp.js';
@@ -21,14 +22,33 @@ import { getDb } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { readSetupState } from '../lib/setup-state.js';
 
-async function guardNotInitialized(_request: FastifyRequest, reply: FastifyReply) {
+/**
+ * 核心安装步骤保护：已有管理员后禁止重跑数据库/迁移/注册。
+ * 注意：与「前端是否离开引导」不完全同一概念——有管理员即可登录，
+ * 但站点 URL / SMTP 等可选步骤在引导完成前仍可能调用。
+ */
+async function guardCoreSetup(_request: FastifyRequest, reply: FastifyReply) {
   try {
     const status = await getSetupStatus();
-    if (status.initialized) {
+    if (status.adminRegistered || status.initialized) {
       return reply.status(403).send({ error: '系统已初始化，此接口不可用' });
     }
   } catch {
-    // If we can't check status, allow the request (DB may not be configured yet)
+    // DB 尚未配置时放行
+  }
+}
+
+/** 可选配置：仅在完全未安装时通过 setup 接口写入；已初始化请走登录后设置页 */
+async function guardOptionalSetup(_request: FastifyRequest, reply: FastifyReply) {
+  try {
+    const status = await getSetupStatus();
+    // 允许：未初始化，或已有管理员但仍在引导收尾（文件/库标志尚未全部同步时）
+    // 若已有管理员且 DB 明确 initialized，仍允许 complete / 邮箱验证收尾，禁止被滥用改 SMTP 的风险用 complete 后关闭
+    if (status.initialized && status.adminRegistered && status.smtpConfigured && status.siteUrlConfigured) {
+      return reply.status(403).send({ error: '系统已初始化，请登录后在设置中修改' });
+    }
+  } catch {
+    // allow
   }
 }
 
@@ -98,7 +118,7 @@ export async function setupRoutes(app: FastifyInstance) {
     return getSetupStatus();
   });
 
-  app.post('/database', { preHandler: [guardNotInitialized] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/database', { preHandler: [guardCoreSetup] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = databaseConfigSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
@@ -125,7 +145,7 @@ export async function setupRoutes(app: FastifyInstance) {
     return result;
   });
 
-  app.post('/table-prefix', { preHandler: [guardNotInitialized] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/table-prefix', { preHandler: [guardCoreSetup] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = tablePrefixSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
@@ -134,7 +154,7 @@ export async function setupRoutes(app: FastifyInstance) {
     return { prefix };
   });
 
-  app.post('/database/migrate', { preHandler: [guardNotInitialized] }, async () => {
+  app.post('/database/migrate', { preHandler: [guardCoreSetup] }, async () => {
     const result = await runMigration();
     if (!result.success) {
       throw new Error(result.error);
@@ -142,7 +162,7 @@ export async function setupRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  app.post('/register', { preHandler: [guardNotInitialized] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/register', { preHandler: [guardCoreSetup] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = registerSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
@@ -152,7 +172,7 @@ export async function setupRoutes(app: FastifyInstance) {
     return result;
   });
 
-  app.post('/site-url', { preHandler: [guardNotInitialized] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/site-url', { preHandler: [guardOptionalSetup] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = siteUrlSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
@@ -193,7 +213,7 @@ export async function setupRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post('/smtp', { preHandler: [guardNotInitialized] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/smtp', { preHandler: [guardOptionalSetup] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = smtpSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
@@ -241,7 +261,7 @@ export async function setupRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  app.post('/verify-email', { preHandler: [guardNotInitialized] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/verify-email', { preHandler: [guardOptionalSetup] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = verifyEmailSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
@@ -254,7 +274,7 @@ export async function setupRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  app.post('/admin/email', { preHandler: [guardNotInitialized] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/admin/email', { preHandler: [guardOptionalSetup] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const schema = z.object({ email: z.string().email() });
     const parsed = schema.safeParse(request.body);
     if (!parsed.success) {
@@ -270,12 +290,22 @@ export async function setupRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  app.post('/verify-email/send', { preHandler: [guardNotInitialized] }, async (_request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/verify-email/send', { preHandler: [guardOptionalSetup] }, async (_request: FastifyRequest, reply: FastifyReply) => {
     await ensureDb();
     const result = await sendTestEmail(undefined);
     if (!result.success) {
       return reply.status(500).send({ success: false, error: result.error });
     }
     return { success: true };
+  });
+
+  /** 跳过可选步骤，显式完成初始化（需已有管理员） */
+  app.post('/complete', async (_request: FastifyRequest, reply: FastifyReply) => {
+    await ensureDb();
+    const result = await completeSetup();
+    if (!result.success) {
+      return reply.status(400).send({ error: result.error || '完成初始化失败' });
+    }
+    return { success: true, initialized: true };
   });
 }

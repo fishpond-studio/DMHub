@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { apiKeys } from '../db/schema.js';
+import { cacheIncr } from '../lib/cache.js';
 
 export async function generateApiKey(
   userId: string,
@@ -109,27 +110,10 @@ export async function verifyApiKey(rawKey: string): Promise<{
   return { valid: false };
 }
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const MAX_RATE_LIMIT_ENTRIES = 10000;
 
-export function checkRateLimit(keyId: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(keyId);
-
-  if (!entry || now > entry.resetAt) {
-    if (rateLimitMap.size >= MAX_RATE_LIMIT_ENTRIES && !entry) {
-      for (const [k, v] of rateLimitMap) {
-        if (now > v.resetAt) { rateLimitMap.delete(k); break; }
-      }
-    }
-    rateLimitMap.set(keyId, { count: 1, resetAt: now + 60000 });
-    return true;
-  }
-
-  if (entry.count >= 100) {
-    return false;
-  }
-
-  entry.count++;
-  return true;
+export async function checkRateLimit(keyId: string): Promise<boolean> {
+  const count = await cacheIncr(`apikeyrl:${keyId}`, 60);
+  if (count > MAX_RATE_LIMIT_ENTRIES) return false;
+  return count <= 100;
 }

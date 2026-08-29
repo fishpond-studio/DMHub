@@ -289,3 +289,23 @@ export function getDomainTemplate(): string {
 export function getRecordTemplate(): string {
   return 'type,name,value,ttl,priority,proxied\nA,www,192.168.1.1,3600,,false\nCNAME,blog,example.com,3600,,false\nMX,@,mail.example.com,3600,10,false\nTXT,@,v=spf1 include:example.com ~all,3600,,false\n';
 }
+
+/** 将 Excel（.xlsx）第一个工作表解析为 CSV 文本，复用现有 CSV 导入管线 */
+export async function parseExcelToCsv(buffer: Buffer): Promise<string> {
+  const ExcelJS = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer as any);
+  const sheet = workbook.worksheets[0];
+  if (!sheet) return '';
+  const lines: string[] = [];
+  sheet.eachRow((row) => {
+    const vals: string[] = [];
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      const v = cell.value === null || cell.value === undefined ? '' : String(cell.value);
+      const needsQuote = v.includes(',') || v.includes('"') || v.includes('\n');
+      vals.push(needsQuote ? `"${v.replace(/"/g, '""')}"` : v);
+    });
+    lines.push(vals.join(','));
+  });
+  return lines.join('\n');
+}

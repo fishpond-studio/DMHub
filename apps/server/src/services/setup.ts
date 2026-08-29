@@ -17,12 +17,50 @@ function isMysqlDbType(type: string): boolean {
   return t === 'mysql' || t === 'mariadb';
 }
 
+/** 是否已有可用 DB 连接（PG 或 MySQL） */
+function hasDbConnection(): boolean {
+  return !!(getSql() || getMysqlPool());
+}
+
+/**
+ * 确保数据库客户端可用：
+ * 1. 已有连接
+ * 2. ~/.dmhub-setup.json 中的引导配置
+ * 3. 环境变量 DATABASE_URL（Docker / 生产常见）
+ */
 async function ensureDbClient(): Promise<void> {
-  if (!getSql() && !getMysqlPool()) {
-    const state = readSetupState();
-    if (state.dbConfig) {
+  if (hasDbConnection()) return;
+
+  const state = readSetupState();
+  if (state.dbConfig) {
+    try {
       await initializeDatabaseClient(state.dbConfig);
+      if (hasDbConnection()) return;
+    } catch (err) {
+      console.warn('[setup] ensureDbClient from setup-state failed:', err);
     }
+  }
+
+  const envUrl = process.env.DATABASE_URL;
+  if (envUrl) {
+    try {
+      const dbType = (process.env.DB_TYPE || state.dbConfig?.dbType || 'postgresql').toLowerCase();
+      createDbClient(envUrl, dbType);
+    } catch (err) {
+      console.warn('[setup] ensureDbClient from DATABASE_URL failed:', err);
+    }
+  }
+}
+
+/** 将系统标记为已初始化（幂等） */
+async function markSystemInitialized(): Promise<void> {
+  updateSetupState({ initialized: true, adminRegistered: true, dbConfigured: true });
+  try {
+    if (!hasDbConnection()) await ensureDbClient();
+    const db = getDb();
+    await db.update(teamSettings).set({ initialized: true }).where(eq(teamSettings.id, 1));
+  } catch {
+    // DB 不可写时至少文件状态已更新
   }
 }
 
@@ -272,6 +310,17 @@ export async function runMigration(): Promise<{ success: boolean; error?: string
     const sqlText = isMysqlDbType(dbType) ? MYSQL_MIGRATION_SQL : PG_MIGRATION_SQL;
     await runRawSql(sqlText);
 
+    // MySQL 无 IF NOT EXISTS 的 ADD COLUMN，单独兜底
+    if (isMysqlDbType(dbType)) {
+      try {
+        await runRawSql(
+          'ALTER TABLE `users` ADD COLUMN `email_notifications_enabled` boolean NOT NULL DEFAULT false',
+        );
+      } catch {
+        // column already exists
+      }
+    }
+
     const db = getDb();
     if (isMysqlDbType(dbType)) {
       try {
@@ -297,6 +346,71 @@ export async function runMigration(): Promise<{ success: boolean; error?: string
   }
 }
 
+/**
+ * 已初始化实例启动时补齐 schema 增量字段（幂等）。
+ */
+export async function ensureSchemaPatches(): Promise<void> {
+  try {
+    await ensureDbClient();
+    if (!getSql() && !getMysqlPool()) return;
+    const state = readSetupState();
+    if (!state.dbConfigured) return;
+    const dbType = state.dbConfig?.dbType ?? 'postgresql';
+    if (isMysqlDbType(dbType)) {
+      for (const sql of [
+        'ALTER TABLE `users` ADD COLUMN `email_notifications_enabled` boolean NOT NULL DEFAULT false',
+        'ALTER TABLE `oauth_providers` ADD COLUMN `well_known_url` varchar(512) NULL',
+        'ALTER TABLE `domains` ADD COLUMN `notes` text NULL',
+        'ALTER TABLE `domains` ADD COLUMN `ssl_expires_at` datetime NULL',
+        'ALTER TABLE `domains` ADD COLUMN `ssl_last_checked_at` datetime NULL',
+        'ALTER TABLE `domains` ADD COLUMN `ssl_issuer` varchar(255) NULL',
+        'ALTER TABLE `dns_records` ADD COLUMN `notes` text NULL',
+        'ALTER TABLE `domains` ADD COLUMN `monitor_enabled` boolean NOT NULL DEFAULT false',
+        'ALTER TABLE `domains` ADD COLUMN `monitor_status` varchar(16) NULL',
+        'ALTER TABLE `domains` ADD COLUMN `monitor_response_ms` int NULL',
+        'ALTER TABLE `domains` ADD COLUMN `monitor_last_checked_at` datetime NULL',
+        'ALTER TABLE `team_settings` ADD COLUMN `log_retention_days` int NULL',
+        'CREATE TABLE IF NOT EXISTS `monitor_checks` (`id` varchar(36) NOT NULL, `domain_id` varchar(36) NOT NULL, `check_type` varchar(16) NOT NULL DEFAULT \'http\', `status` varchar(8) NOT NULL, `status_code` int NULL, `response_ms` int NULL, `error` text NULL, `checked_at` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), PRIMARY KEY (`id`))',
+        'CREATE INDEX IF NOT EXISTS `idx_monitor_checks_domain_time` ON `monitor_checks` (`domain_id`, `checked_at`)',
+      ]) {
+        try {
+          await runRawSql(sql);
+        } catch {
+          // column/index/table exists
+        }
+      }
+    } else {
+      await runRawSql(`
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "email_notifications_enabled" boolean NOT NULL DEFAULT false;
+ALTER TABLE "oauth_providers" ADD COLUMN IF NOT EXISTS "well_known_url" varchar(512);
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "notes" text;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "ssl_expires_at" timestamptz;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "ssl_last_checked_at" timestamptz;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "ssl_issuer" varchar(255);
+ALTER TABLE "dns_records" ADD COLUMN IF NOT EXISTS "notes" text;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_enabled" boolean NOT NULL DEFAULT false;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_status" varchar(16);
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_response_ms" integer;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_last_checked_at" timestamptz;
+ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "log_retention_days" integer;
+CREATE TABLE IF NOT EXISTS "monitor_checks" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "domain_id" uuid NOT NULL,
+  "check_type" varchar(16) NOT NULL DEFAULT 'http',
+  "status" varchar(8) NOT NULL,
+  "status_code" integer,
+  "response_ms" integer,
+  "error" text,
+  "checked_at" timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "idx_monitor_checks_domain_time" ON "monitor_checks" ("domain_id", "checked_at");
+`);
+    }
+  } catch (err) {
+    console.warn('[setup] ensureSchemaPatches failed:', err);
+  }
+}
+
 export async function registerAdmin(
   username: string,
   password: string,
@@ -309,7 +423,12 @@ export async function registerAdmin(
   const passwordHash = await bcrypt.hash(password, 12);
 
   if (existingAdmin) {
-    await db.update(users).set({ passwordHash }).where(eq(users.id, existingAdmin.id));
+    await db
+      .update(users)
+      .set({ passwordHash, username })
+      .where(eq(users.id, existingAdmin.id));
+    // 已有管理员 = 系统可登录使用，标记完成初始化
+    await markSystemInitialized();
     return { user: { id: existingAdmin.id, username, role: 'admin' } };
   }
   const user = await insertReturningOne<{ id: string; username: string; role: string }>(
@@ -327,7 +446,8 @@ export async function registerAdmin(
     },
   );
 
-  updateSetupState({ adminRegistered: true });
+  // 管理员创建成功即视为安装完成；站点 URL / SMTP / 邮箱验证均为可选后续配置
+  await markSystemInitialized();
 
   return { user: { id: user.id, username: user.username, role: user.role } };
 }
@@ -437,50 +557,138 @@ export async function verifyEmail(code: string): Promise<{ success: boolean; err
   try {
     await ensureDbClient();
     const db = getDb();
-    await db.update(teamSettings).set({ initialized: true }).where(eq(teamSettings.id, 1));
     const [admin] = await db.select().from(users).where(eq(users.role, 'admin')).limit(1);
     if (admin) {
       await db.update(users).set({ emailVerified: true }).where(eq(users.id, admin.id));
     }
   } catch {}
 
-  updateSetupState({ initialized: true });
+  // 邮箱验证不再作为「能否进入系统」的门槛，只做邮箱确认
+  await markSystemInitialized();
 
   return { success: true };
+}
+
+/**
+ * 跳过可选步骤、显式完成引导（需已有管理员）
+ */
+export async function completeSetup(): Promise<{ success: boolean; error?: string }> {
+  try {
+    await ensureDbClient();
+    const db = getDb();
+    const adminRows = await db.select({ id: users.id }).from(users).where(eq(users.role, 'admin')).limit(1);
+    if (adminRows.length === 0) {
+      return { success: false, error: '请先注册管理员账户' };
+    }
+    await markSystemInitialized();
+    return { success: true };
+  } catch (err: any) {
+    // 文件态也可能已有 adminRegistered
+    const state = readSetupState();
+    if (state.adminRegistered) {
+      updateSetupState({ initialized: true });
+      return { success: true };
+    }
+    return { success: false, error: err?.message || '完成初始化失败' };
+  }
 }
 
 export async function getSetupStatus(): Promise<{
   initialized: boolean;
   dbConfigured: boolean;
+  tablesMigrated: boolean;
   adminRegistered: boolean;
   smtpConfigured: boolean;
   siteUrlConfigured: boolean;
 }> {
+  const fileState = readSetupState();
+
   try {
     await ensureDbClient();
-    const db = getDb();
-    const [settings] = await db.select().from(teamSettings).where(eq(teamSettings.id, 1));
-    if (settings) {
-      const adminRows = await db.select({ id: users.id }).from(users).where(eq(users.role, 'admin'));
-      updateSetupState({ initialized: settings.initialized });
+    if (!hasDbConnection()) {
       return {
-        initialized: settings.initialized,
-        dbConfigured: true,
-        adminRegistered: adminRows.length > 0,
-        smtpConfigured: !!(settings.smtpHost && settings.smtpPort),
-        siteUrlConfigured: !!settings.siteUrl,
+        initialized: fileState.initialized,
+        dbConfigured: fileState.dbConfigured,
+        tablesMigrated: false,
+        adminRegistered: fileState.adminRegistered,
+        smtpConfigured: fileState.smtpConfigured,
+        siteUrlConfigured: fileState.siteUrlConfigured,
       };
     }
-  } catch {}
 
-  const state = readSetupState();
-  return {
-    initialized: state.initialized,
-    dbConfigured: state.dbConfigured,
-    adminRegistered: state.adminRegistered,
-    smtpConfigured: state.smtpConfigured,
-    siteUrlConfigured: state.siteUrlConfigured,
-  };
+    const db = getDb();
+
+    // 探测表是否已迁移
+    let settings: {
+      initialized: boolean;
+      smtpHost: string | null;
+      smtpPort: number | null;
+      siteUrl: string | null;
+    } | null = null;
+    let tablesMigrated = false;
+    try {
+      const rows = await db.select().from(teamSettings).where(eq(teamSettings.id, 1)).limit(1);
+      settings = rows[0] ?? null;
+      tablesMigrated = true;
+    } catch {
+      // 表不存在
+      tablesMigrated = false;
+    }
+
+    let adminRegistered = false;
+    if (tablesMigrated) {
+      try {
+        const adminRows = await db.select({ id: users.id }).from(users).where(eq(users.role, 'admin')).limit(1);
+        adminRegistered = adminRows.length > 0;
+      } catch {
+        adminRegistered = false;
+      }
+    }
+
+    // 核心判定：只要已有管理员，系统即视为已安装（可登录使用）
+    // 自动修复历史数据：曾卡在「邮箱验证」导致 initialized 一直为 false
+    let initialized = !!(settings?.initialized || fileState.initialized);
+    if (adminRegistered) {
+      initialized = true;
+      if (!settings?.initialized) {
+        try {
+          await db.update(teamSettings).set({ initialized: true }).where(eq(teamSettings.id, 1));
+        } catch {}
+      }
+      updateSetupState({
+        initialized: true,
+        dbConfigured: true,
+        adminRegistered: true,
+        smtpConfigured: !!(settings?.smtpHost && settings?.smtpPort) || fileState.smtpConfigured,
+        siteUrlConfigured: !!settings?.siteUrl || fileState.siteUrlConfigured,
+      });
+    } else if (settings) {
+      // 同步 DB 标志到文件，但不把「仅文件 true、DB 无管理员」误判为已安装
+      updateSetupState({
+        initialized: !!settings.initialized,
+        dbConfigured: true,
+      });
+      initialized = !!settings.initialized;
+    }
+
+    return {
+      initialized,
+      dbConfigured: true,
+      tablesMigrated,
+      adminRegistered,
+      smtpConfigured: !!(settings?.smtpHost && settings?.smtpPort),
+      siteUrlConfigured: !!settings?.siteUrl,
+    };
+  } catch {
+    return {
+      initialized: fileState.initialized && fileState.adminRegistered,
+      dbConfigured: fileState.dbConfigured,
+      tablesMigrated: fileState.adminRegistered || fileState.initialized,
+      adminRegistered: fileState.adminRegistered,
+      smtpConfigured: fileState.smtpConfigured,
+      siteUrlConfigured: fileState.siteUrlConfigured,
+    };
+  }
 }
 
 const PG_MIGRATION_SQL = `
@@ -497,6 +705,7 @@ CREATE TABLE IF NOT EXISTS "users" (
   "two_factor_methods" varchar(64)[] NOT NULL DEFAULT '{}',
   "email_verified" boolean NOT NULL DEFAULT false,
   "notifications_enabled" boolean NOT NULL DEFAULT true,
+  "email_notifications_enabled" boolean NOT NULL DEFAULT false,
   "status" varchar(16) NOT NULL DEFAULT 'active',
   "created_at" timestamptz NOT NULL DEFAULT now(),
   "updated_at" timestamptz NOT NULL DEFAULT now()
@@ -545,6 +754,8 @@ ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "landing_background_url" va
 ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "footer_content" text;
 ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "footer_format" varchar(16) DEFAULT 'markdown';
 ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "registration_enabled" boolean NOT NULL DEFAULT true;
+ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "log_retention_days" integer;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "email_notifications_enabled" boolean NOT NULL DEFAULT false;
 
 CREATE TABLE IF NOT EXISTS "domains" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -562,6 +773,27 @@ CREATE TABLE IF NOT EXISTS "domains" (
   "created_at" timestamptz NOT NULL DEFAULT now(),
   "updated_at" timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "notes" text;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "ssl_expires_at" timestamptz;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "ssl_last_checked_at" timestamptz;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "ssl_issuer" varchar(255);
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_enabled" boolean NOT NULL DEFAULT false;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_status" varchar(16);
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_response_ms" integer;
+ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_last_checked_at" timestamptz;
+
+CREATE TABLE IF NOT EXISTS "monitor_checks" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "domain_id" uuid NOT NULL,
+  "check_type" varchar(16) NOT NULL DEFAULT 'http',
+  "status" varchar(8) NOT NULL,
+  "status_code" integer,
+  "response_ms" integer,
+  "error" text,
+  "checked_at" timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "idx_monitor_checks_domain_time" ON "monitor_checks" ("domain_id", "checked_at");
 
 CREATE TABLE IF NOT EXISTS "dns_records" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -718,6 +950,7 @@ CREATE TABLE IF NOT EXISTS "oauth_providers" (
   "client_id" varchar(512) NOT NULL,
   "client_secret" varchar(512) NOT NULL,
   "scope" varchar(256),
+  "well_known_url" varchar(512),
   "custom_authorize_url" varchar(512),
   "custom_token_url" varchar(512),
   "custom_user_info_url" varchar(512),
@@ -785,6 +1018,7 @@ CREATE TABLE IF NOT EXISTS \`users\` (
   \`two_factor_methods\` json NOT NULL DEFAULT (JSON_ARRAY()),
   \`email_verified\` boolean NOT NULL DEFAULT false,
   \`notifications_enabled\` boolean NOT NULL DEFAULT true,
+  \`email_notifications_enabled\` boolean NOT NULL DEFAULT false,
   \`status\` varchar(16) NOT NULL DEFAULT 'active',
   \`created_at\` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   \`updated_at\` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
@@ -821,6 +1055,7 @@ CREATE TABLE IF NOT EXISTS \`team_settings\` (
   \`landing_background_url\` varchar(512),
   \`footer_content\` text,
   \`footer_format\` varchar(16) DEFAULT 'markdown',
+  \`log_retention_days\` int NULL,
   \`created_at\` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   \`updated_at\` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
 );
@@ -838,9 +1073,25 @@ CREATE TABLE IF NOT EXISTS \`domains\` (
   \`auto_check_expiry\` boolean NOT NULL DEFAULT true,
   \`expiry_remind_days\` json NOT NULL DEFAULT (JSON_ARRAY(30, 14, 7, 3, 1, 0)),
   \`last_checked_at\` timestamp(3) NULL,
+  \`monitor_enabled\` boolean NOT NULL DEFAULT false,
+  \`monitor_status\` varchar(16) NULL,
+  \`monitor_response_ms\` int NULL,
+  \`monitor_last_checked_at\` timestamp(3) NULL,
   \`created_at\` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   \`updated_at\` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
 );
+
+CREATE TABLE IF NOT EXISTS \`monitor_checks\` (
+  \`id\` varchar(36) PRIMARY KEY,
+  \`domain_id\` varchar(36) NOT NULL,
+  \`check_type\` varchar(16) NOT NULL DEFAULT 'http',
+  \`status\` varchar(8) NOT NULL,
+  \`status_code\` int NULL,
+  \`response_ms\` int NULL,
+  \`error\` text NULL,
+  \`checked_at\` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+);
+CREATE INDEX IF NOT EXISTS \`idx_monitor_checks_domain_time\` ON \`monitor_checks\` (\`domain_id\`, \`checked_at\`);
 
 CREATE TABLE IF NOT EXISTS \`dns_records\` (
   \`id\` varchar(36) PRIMARY KEY,
@@ -997,6 +1248,7 @@ CREATE TABLE IF NOT EXISTS \`oauth_providers\` (
   \`client_id\` varchar(512) NOT NULL,
   \`client_secret\` varchar(512) NOT NULL,
   \`scope\` varchar(256),
+  \`well_known_url\` varchar(512),
   \`custom_authorize_url\` varchar(512),
   \`custom_token_url\` varchar(512),
   \`custom_user_info_url\` varchar(512),

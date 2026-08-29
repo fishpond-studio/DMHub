@@ -45,6 +45,8 @@ export async function teamRoutes(app: FastifyInstance) {
           landingSubtitle: body.landingSubtitle,
           footerContent: body.footerContent,
           footerFormat: body.footerFormat,
+          logRetentionDays: body.logRetentionDays,
+          redisUrl: body.redisUrl,
         },
         request.ip,
         request.headers['user-agent'],
@@ -200,6 +202,31 @@ export async function teamRoutes(app: FastifyInstance) {
     } catch (err: any) {
       return reply.status(400).send({ error: err.message });
     }
+  });
+
+  // 管理员：列出所有用户会话
+  app.get('/sessions', { preHandler: [authenticate, requireRole('admin')] }, async () => {
+    const { listAllSessions } = await import('../services/session.js');
+    return { sessions: await listAllSessions() };
+  });
+
+  // 管理员：强制注销某用户所有会话
+  app.delete('/users/:userId/sessions', { preHandler: [authenticate, requireRole('admin')] }, async (request: FastifyRequest, _reply: FastifyReply) => {
+    const { userId } = request.params as { userId: string };
+    const { revokeAllUserSessions } = await import('../services/session.js');
+    await revokeAllUserSessions(userId);
+    await import('../lib/log.js').then(({ logOperation }) =>
+      logOperation({
+        userId: request.user!.userId,
+        action: 'member.sessions_revoke',
+        targetType: 'user',
+        targetId: userId,
+        detail: { reason: 'admin_force_revoke' },
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'] || null,
+      }),
+    );
+    return { success: true };
   });
 }
 

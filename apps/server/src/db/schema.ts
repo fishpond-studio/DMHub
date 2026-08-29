@@ -48,3 +48,4 @@ export const oauthProviders: typeof pgSchema.oauthProviders = active.oauthProvid
 export const apiKeys: typeof pgSchema.apiKeys = active.apiKeys;
 export const refreshTokens: typeof pgSchema.refreshTokens = active.refreshTokens;
 export const userTokens: typeof pgSchema.userTokens = active.userTokens;
+export const monitorChecks: typeof pgSchema.monitorChecks = active.monitorChecks;

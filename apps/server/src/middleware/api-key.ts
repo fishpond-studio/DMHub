@@ -27,7 +27,7 @@ export async function apiKeyAuth(request: FastifyRequest, reply: FastifyReply) {
       return reply.status(401).send({ error: '令牌无效或已过期' });
     }
 
-    if (!checkRateLimit(result.tokenId)) {
+    if (!(await checkRateLimit(result.tokenId))) {
       return reply.status(429).send({ error: '请求频率超限，每分钟最多 100 次请求' });
     }
 
@@ -49,7 +49,7 @@ export async function apiKeyAuth(request: FastifyRequest, reply: FastifyReply) {
     return reply.status(401).send({ error: 'API 密钥无效或已过期' });
   }
 
-  if (!checkRateLimit(result.keyId)) {
+  if (!(await checkRateLimit(result.keyId))) {
     return reply.status(429).send({ error: '请求频率超限，每分钟最多 100 次请求' });
   }
 

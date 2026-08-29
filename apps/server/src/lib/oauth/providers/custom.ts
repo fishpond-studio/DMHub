@@ -3,85 +3,167 @@ import { registerProvider } from './index.js';
 import { isPublicDomain } from '../../ssrf-guard.js';
 
 interface OIDCDiscovery {
+  issuer?: string;
   authorization_endpoint?: string;
   token_endpoint?: string;
   userinfo_endpoint?: string;
+  jwks_uri?: string;
   [key: string]: unknown;
 }
 
-const discoveryCache = new Map<string, OIDCDiscovery>();
+const discoveryCache = new Map<string, { data: OIDCDiscovery; at: number }>();
+const DISCOVERY_TTL_MS = 60 * 60 * 1000;
 
-async function discoverOIDC(issuer: string): Promise<OIDCDiscovery> {
-  const cached = discoveryCache.get(issuer);
-  if (cached) return cached;
-
+async function assertPublicUrl(urlStr: string, label: string) {
+  let url: URL;
   try {
-    const issuerUrl = new URL(issuer);
-    const safe = await isPublicDomain(issuerUrl.hostname);
-    if (!safe) {
-      throw new Error(`SSRF blocked: OIDC issuer resolves to private address: ${issuerUrl.hostname}`);
-    }
-  } catch (err: unknown) {
-    if (err instanceof Error && err.message.includes('SSRF blocked')) throw err;
-    throw new Error(`Invalid OIDC issuer URL: ${issuer}`);
+    url = new URL(urlStr);
+  } catch {
+    throw new Error(`无效的 ${label}: ${urlStr}`);
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error(`${label} 仅支持 http/https`);
+  }
+  const safe = await isPublicDomain(url.hostname);
+  if (!safe && process.env.NODE_ENV === 'production') {
+    throw new Error(`SSRF 拦截：${label} 主机不可达公网: ${url.hostname}`);
+  }
+}
+
+/**
+ * 从完整 Well-Known URL 拉取 discovery 文档。
+ * 也支持只填 Issuer：自动补 /.well-known/openid-configuration
+ */
+export async function fetchOidcDiscovery(wellKnownOrIssuer: string): Promise<OIDCDiscovery> {
+  const input = wellKnownOrIssuer.trim().replace(/\/+$/, '');
+  const cached = discoveryCache.get(input);
+  if (cached && Date.now() - cached.at < DISCOVERY_TTL_MS) {
+    return cached.data;
   }
 
-  const url = new URL('/.well-known/openid-configuration', issuer);
-  const response = await fetch(url.toString(), {
+  await assertPublicUrl(input, 'Well-Known / Issuer URL');
+
+  let discoveryUrl = input;
+  if (!/openid-configuration|oauth-authorization-server/i.test(input)) {
+    discoveryUrl = `${input}/.well-known/openid-configuration`;
+  }
+
+  const response = await fetch(discoveryUrl, {
     headers: { Accept: 'application/json' },
+    redirect: 'follow',
   });
 
   if (!response.ok) {
-    throw new Error(`OIDC discovery failed for issuer: ${issuer}`);
+    throw new Error(
+      `OIDC Well-Known 拉取失败 (HTTP ${response.status})：${discoveryUrl}。请检查 URL，或手动填写授权/Token/用户信息端点。`,
+    );
   }
 
-  const discovery = await response.json() as OIDCDiscovery;
-  discoveryCache.set(issuer, discovery);
+  const discovery = (await response.json()) as OIDCDiscovery;
+  if (!discovery.authorization_endpoint || !discovery.token_endpoint) {
+    throw new Error('Well-Known 响应缺少 authorization_endpoint 或 token_endpoint');
+  }
+
+  discoveryCache.set(input, { data: discovery, at: Date.now() });
+  discoveryCache.set(discoveryUrl, { data: discovery, at: Date.now() });
   return discovery;
 }
 
-class CustomOIDCProvider implements OAuthProvider {
-  id = 'custom';
-  name = 'Custom OIDC';
-  type = 'oidc' as const;
+async function resolveEndpoints(config: OAuthProviderConfig): Promise<{
+  authorizeUrl: string;
+  tokenUrl: string;
+  userInfoUrl?: string;
+}> {
+  // 三个端点都手填 → 直接用
+  if (config.authorizeUrl && config.tokenUrl) {
+    return {
+      authorizeUrl: config.authorizeUrl,
+      tokenUrl: config.tokenUrl,
+      userInfoUrl: config.userInfoUrl,
+    };
+  }
 
-  private readonly DEFAULT_SCOPE = 'openid email profile';
+  // 需要 Well-Known / Issuer 补全缺失端点
+  const wellKnown = config.wellKnownUrl || config.issuer;
+  if (!wellKnown) {
+    throw new Error(
+      'OIDC 需要填写 Well-Known URL，或同时手动填写「授权端点」和「Token 端点」',
+    );
+  }
+
+  const discovery = await fetchOidcDiscovery(wellKnown);
+
+  return {
+    authorizeUrl: config.authorizeUrl || discovery.authorization_endpoint!,
+    tokenUrl: config.tokenUrl || discovery.token_endpoint!,
+    userInfoUrl: config.userInfoUrl || discovery.userinfo_endpoint,
+  };
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const json = Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString(
+      'utf8',
+    );
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+class GenericOidcProvider implements OAuthProvider {
+  defaultScope = 'openid email profile';
+
+  constructor(
+    public id: string,
+    public name: string,
+  ) {}
+
+  type = 'oidc' as const;
 
   getAuthorizationUrl(config: OAuthProviderConfig, state: string, redirectUri: string): string {
     const authorizeUrl = config.authorizeUrl;
     if (!authorizeUrl) {
-      throw new Error('Custom OIDC requires an authorize URL (authorizeUrl) or issuer for discovery');
+      throw new Error('OIDC 缺少授权端点，请填写 Well-Known URL 或手动指定授权端点');
     }
 
     const url = new URL(authorizeUrl);
     url.searchParams.set('client_id', config.clientId);
     url.searchParams.set('redirect_uri', redirectUri);
-    url.searchParams.set('scope', config.scope || this.DEFAULT_SCOPE);
+    url.searchParams.set('scope', config.scope || this.defaultScope);
     url.searchParams.set('state', state);
     url.searchParams.set('response_type', 'code');
     return url.toString();
   }
 
-  async handleCallback(config: OAuthProviderConfig, code: string, redirectUri: string): Promise<OAuthUserInfo> {
-    let tokenUrl = config.tokenUrl;
-    let userInfoUrl = config.userInfoUrl;
+  async prepareConfig(config: OAuthProviderConfig): Promise<OAuthProviderConfig> {
+    const endpoints = await resolveEndpoints(config);
+    await assertPublicUrl(endpoints.authorizeUrl, '授权端点');
+    await assertPublicUrl(endpoints.tokenUrl, 'Token 端点');
+    if (endpoints.userInfoUrl) {
+      await assertPublicUrl(endpoints.userInfoUrl, '用户信息端点');
+    }
+    return {
+      ...config,
+      authorizeUrl: endpoints.authorizeUrl,
+      tokenUrl: endpoints.tokenUrl,
+      userInfoUrl: endpoints.userInfoUrl,
+    };
+  }
 
-    if (!tokenUrl || !userInfoUrl) {
-      const issuer = config.authorizeUrl
-        ? new URL(config.authorizeUrl).origin
-        : undefined;
+  async handleCallback(
+    config: OAuthProviderConfig,
+    code: string,
+    redirectUri: string,
+  ): Promise<OAuthUserInfo> {
+    const prepared = await this.prepareConfig(config);
+    const tokenUrl = prepared.tokenUrl!;
+    const userInfoUrl = prepared.userInfoUrl;
 
-      if (!issuer) {
-        throw new Error('Custom OIDC requires tokenUrl and userInfoUrl, or a valid authorizeUrl for discovery');
-      }
-
-      const discovery = await discoverOIDC(issuer);
-      if (!tokenUrl) tokenUrl = discovery.token_endpoint;
-      if (!userInfoUrl) userInfoUrl = discovery.userinfo_endpoint;
-
-      if (!tokenUrl || !userInfoUrl) {
-        throw new Error('Custom OIDC: could not determine tokenUrl or userInfoUrl from discovery');
-      }
+    if (!redirectUri) {
+      throw new Error('OIDC 回调缺少 redirect_uri，无法交换令牌');
     }
 
     const tokenResponse = await fetch(tokenUrl, {
@@ -99,48 +181,86 @@ class CustomOIDCProvider implements OAuthProvider {
       }).toString(),
     });
 
-    if (!tokenResponse.ok) {
-      throw new Error('Custom OIDC token exchange failed');
-    }
-
-    const tokenData = await tokenResponse.json() as { access_token?: string; error?: string; error_description?: string };
-    if (tokenData.error || !tokenData.access_token) {
-      throw new Error(tokenData.error_description || tokenData.error || 'Failed to obtain access token from Custom OIDC');
-    }
-
-    const accessToken = tokenData.access_token;
-
-    const userResponse = await fetch(userInfoUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/json',
-      },
-    });
-
-    if (!userResponse.ok) {
-      throw new Error('Failed to fetch Custom OIDC user info');
-    }
-
-    const userData = await userResponse.json() as {
-      sub: string;
-      name?: string;
-      email?: string;
-      picture?: string;
-      [key: string]: unknown;
+    const tokenText = await tokenResponse.text();
+    let tokenData: {
+      access_token?: string;
+      id_token?: string;
+      error?: string;
+      error_description?: string;
     };
+    try {
+      tokenData = JSON.parse(tokenText);
+    } catch {
+      throw new Error(`OIDC Token 交换失败：非 JSON 响应 (HTTP ${tokenResponse.status})`);
+    }
 
-    return {
-      providerId: this.id,
-      providerUserId: userData.sub,
-      email: userData.email || undefined,
-      name: userData.name || undefined,
-      avatar: userData.picture || undefined,
-      raw: userData as unknown as Record<string, unknown>,
-    };
+    if (!tokenResponse.ok || tokenData.error || !tokenData.access_token) {
+      throw new Error(
+        tokenData.error_description ||
+          tokenData.error ||
+          `OIDC Token 交换失败 (HTTP ${tokenResponse.status})`,
+      );
+    }
+
+    if (userInfoUrl) {
+      const userResponse = await fetch(userInfoUrl, {
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+          Accept: 'application/json',
+        },
+      });
+      if (!userResponse.ok) {
+        throw new Error(`获取用户信息失败 (HTTP ${userResponse.status})`);
+      }
+      const userData = (await userResponse.json()) as {
+        sub?: string;
+        name?: string;
+        preferred_username?: string;
+        email?: string;
+        picture?: string;
+        [key: string]: unknown;
+      };
+      if (!userData.sub) {
+        throw new Error('用户信息响应缺少 sub 字段');
+      }
+      return {
+        providerId: this.id,
+        providerUserId: String(userData.sub),
+        email: userData.email || undefined,
+        name: userData.name || userData.preferred_username || undefined,
+        avatar: userData.picture || undefined,
+        raw: userData as Record<string, unknown>,
+      };
+    }
+
+    if (tokenData.id_token) {
+      const claims = decodeJwtPayload(tokenData.id_token);
+      if (!claims?.sub) {
+        throw new Error('id_token 缺少 sub，且未配置用户信息端点');
+      }
+      return {
+        providerId: this.id,
+        providerUserId: String(claims.sub),
+        email: typeof claims.email === 'string' ? claims.email : undefined,
+        name:
+          (typeof claims.name === 'string' && claims.name) ||
+          (typeof claims.preferred_username === 'string' && claims.preferred_username) ||
+          undefined,
+        avatar: typeof claims.picture === 'string' ? claims.picture : undefined,
+        raw: claims,
+      };
+    }
+
+    throw new Error('OIDC 未返回用户信息端点且无 id_token，无法获取用户身份');
   }
 }
 
-const customOIDCProvider = new CustomOIDCProvider();
-registerProvider(customOIDCProvider);
+// 主 ID：oidc（推荐）
+const oidcProvider = new GenericOidcProvider('oidc', 'OIDC');
+registerProvider(oidcProvider);
 
-export { CustomOIDCProvider };
+// 兼容旧配置 provider_id = custom
+const customAlias = new GenericOidcProvider('custom', '自定义 OIDC');
+registerProvider(customAlias);
+
+export { GenericOidcProvider };

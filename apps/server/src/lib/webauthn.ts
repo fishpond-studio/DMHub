@@ -1,11 +1,7 @@
 import { getTeamSettings } from '../services/team.js';
+import { cacheGet, cacheSet, cacheDel } from './cache.js';
 
-interface ChallengeEntry {
-  challenge: string;
-  expiresAt: number;
-}
-
-const challengeStore = new Map<string, ChallengeEntry>();
+const CHALLENGE_TTL = 5 * 60;
 
 export async function getWebAuthnConfig(hostname?: string) {
   const settings = await getTeamSettings();
@@ -17,23 +13,14 @@ export async function getWebAuthnConfig(hostname?: string) {
   return { rpID, rpName, origin };
 }
 
-export function storeChallenge(userId: string, challenge: string) {
-  challengeStore.set(userId, {
-    challenge,
-    expiresAt: Date.now() + 5 * 60 * 1000,
-  });
+export async function storeChallenge(userId: string, challenge: string) {
+  await cacheSet(`webauthn:${userId}`, challenge, CHALLENGE_TTL);
 }
 
-export function getChallenge(userId: string): string | null {
-  const entry = challengeStore.get(userId);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    challengeStore.delete(userId);
-    return null;
-  }
-  return entry.challenge;
+export async function getChallenge(userId: string): Promise<string | null> {
+  return cacheGet(`webauthn:${userId}`);
 }
 
-export function deleteChallenge(userId: string) {
-  challengeStore.delete(userId);
+export async function deleteChallenge(userId: string) {
+  await cacheDel(`webauthn:${userId}`);
 }

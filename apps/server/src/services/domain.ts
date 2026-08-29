@@ -63,20 +63,55 @@ export async function listDomains(
     .leftJoin(providerConfigs, eq(domains.providerConfigId, providerConfigs.id))
     .where(whereClause);
 
-  return rows.map((r: Record<string, unknown>) => ({
-    id: r.id,
-    name: r.name,
+  const mapped = rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    name: r.name as string,
     providerId: r.providerId,
     providerConfigId: r.providerConfigId,
     providerName: r.providerConfigName,
     expiresAt: r.expiresAt,
     tags: r.tags,
     groupName: r.groupName,
-    status: r.status,
+    status: r.status as string,
     recordCount: Number(r.recordCount),
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
+    assignments: [] as Array<{ id: string; subdomainPattern: string; permission: string }>,
   }));
+
+  // 非管理员附带指派范围，避免用户只看到总域名却不知道能管哪些子域
+  if (role !== 'admin' && mapped.length > 0) {
+    const domainIds: string[] = mapped.map((d: { id: string }) => d.id);
+    const assignmentRows = await db
+      .select({
+        id: domainAssignments.id,
+        domainId: domainAssignments.domainId,
+        subdomainPattern: domainAssignments.subdomainPattern,
+        permission: domainAssignments.permission,
+      })
+      .from(domainAssignments)
+      .where(
+        and(
+          eq(domainAssignments.userId, userId),
+          sql`${domainAssignments.domainId} IN (${sql.join(domainIds.map((id: string) => sql`${id}`), sql`,`)})`,
+        ),
+      );
+
+    const byDomain = new Map<string, Array<{ id: string; subdomainPattern: string; permission: string }>>();
+    for (const a of assignmentRows as Array<{ id: string; domainId: string; subdomainPattern: string; permission: string }>) {
+      if (!byDomain.has(a.domainId)) byDomain.set(a.domainId, []);
+      byDomain.get(a.domainId)!.push({
+        id: a.id,
+        subdomainPattern: a.subdomainPattern,
+        permission: a.permission,
+      });
+    }
+    for (const d of mapped) {
+      d.assignments = byDomain.get(d.id) ?? [];
+    }
+  }
+
+  return mapped;
 }
 
 export async function createDomain(
@@ -207,6 +242,14 @@ export async function getDomain(domainId: string, userId: string, role: string) 
       autoCheckExpiry: domains.autoCheckExpiry,
       expiryRemindDays: domains.expiryRemindDays,
       lastCheckedAt: domains.lastCheckedAt,
+      notes: domains.notes,
+      sslExpiresAt: domains.sslExpiresAt,
+      sslLastCheckedAt: domains.sslLastCheckedAt,
+      sslIssuer: domains.sslIssuer,
+      monitorEnabled: domains.monitorEnabled,
+      monitorStatus: domains.monitorStatus,
+      monitorResponseMs: domains.monitorResponseMs,
+      monitorLastCheckedAt: domains.monitorLastCheckedAt,
       createdAt: domains.createdAt,
       updatedAt: domains.updatedAt,
       providerConfigName: providerConfigs.name,
@@ -224,8 +267,9 @@ export async function getDomain(domainId: string, userId: string, role: string) 
     .where(eq(dnsRecords.domainId, domainId));
 
   let assignmentInfo = null;
+  let assignmentsList: Array<{ id: string; permission: string; subdomainPattern: string }> = [];
   if (role !== 'admin') {
-    const [assignment] = await db
+    assignmentsList = await db
       .select({
         id: domainAssignments.id,
         permission: domainAssignments.permission,
@@ -237,17 +281,188 @@ export async function getDomain(domainId: string, userId: string, role: string) 
           eq(domainAssignments.userId, userId),
           eq(domainAssignments.domainId, domainId),
         ),
-      )
+      );
+    // 兼容旧前端：保留单条 assignment，优先返回可编辑指派
+    assignmentInfo =
+      assignmentsList.find((a) => a.permission === 'dns_edit') ??
+      assignmentsList[0] ??
+      null;
+  }
+
+  // 解析真实 providerId（domains.providerId 可能为空，以 config 为准）
+  let resolvedProviderId = (row.providerId as string | null) || null;
+  if (!resolvedProviderId && row.providerConfigId) {
+    const [cfg] = await db
+      .select({ providerId: providerConfigs.providerId })
+      .from(providerConfigs)
+      .where(eq(providerConfigs.id, row.providerConfigId as string))
       .limit(1);
-    assignmentInfo = assignment ?? null;
+    resolvedProviderId = cfg?.providerId ?? null;
+  }
+
+  let cdnProxy: {
+    supported: boolean;
+    proxyRecordTypes: string[];
+    proxyLabel: string;
+    proxyDescription: string;
+  } = {
+    supported: false,
+    proxyRecordTypes: [],
+    proxyLabel: 'CDN 保护',
+    proxyDescription: '当前服务商不支持 DNS 层 CDN 代理',
+  };
+  try {
+    const { getProviderCapabilities } = await import('@dmhub/dns-providers');
+    const caps = getProviderCapabilities(resolvedProviderId);
+    cdnProxy = {
+      supported: caps.supportsProxy,
+      proxyRecordTypes: caps.proxyRecordTypes,
+      proxyLabel: caps.proxyLabel,
+      proxyDescription: caps.proxyDescription,
+    };
+  } catch {
+    // package 不可用时保持默认
   }
 
   return {
     ...row,
+    providerId: resolvedProviderId,
     providerName: row.providerConfigName,
     recordCount: Number(recordCountRow?.count ?? 0),
     assignment: assignmentInfo,
+    assignments: assignmentsList,
+    cdnProxy,
   };
+}
+
+export async function updateDomainNotes(domainId: string, notes: string | null) {
+  const db = getDb();
+  const [existing] = await db.select({ id: domains.id }).from(domains).where(eq(domains.id, domainId)).limit(1);
+  if (!existing) throw new Error('域名不存在');
+  const value = notes?.trim() ? notes.trim().slice(0, 4000) : null;
+  await db.update(domains).set({ notes: value, updatedAt: new Date() }).where(eq(domains.id, domainId));
+  const [updated] = await db
+    .select({ id: domains.id, notes: domains.notes })
+    .from(domains)
+    .where(eq(domains.id, domainId))
+    .limit(1);
+  return updated;
+}
+
+export async function searchDnsRecords(
+  userId: string,
+  role: string,
+  query: string,
+  limit = 50,
+) {
+  const q = query.trim();
+  if (!q || q.length < 1) return { results: [] as const };
+  const db = getDb();
+  const take = Math.min(Math.max(limit, 1), 100);
+
+  let allowedDomainIds: string[] | null = null;
+  if (role !== 'admin') {
+    const assigned = await db
+      .select({ domainId: domainAssignments.domainId })
+      .from(domainAssignments)
+      .where(eq(domainAssignments.userId, userId));
+    allowedDomainIds = assigned.map((a: { domainId: string }) => a.domainId) as string[];
+    if (!allowedDomainIds || allowedDomainIds.length === 0) return { results: [] };
+  }
+
+  const like = `%${q.replace(/[%_]/g, '\\$&')}%`;
+  // lower()+LIKE 跨 PG/MySQL 可用（避免 ILIKE）；含备注与精确 IP/值反查
+  const dialectSafe = [
+    sql`(
+      LOWER(${dnsRecords.name}) LIKE LOWER(${like})
+      OR LOWER(${dnsRecords.value}) LIKE LOWER(${like})
+      OR LOWER(${dnsRecords.recordType}) LIKE LOWER(${like})
+      OR LOWER(${domains.name}) LIKE LOWER(${like})
+      OR LOWER(COALESCE(${dnsRecords.notes}, '')) LIKE LOWER(${like})
+      OR LOWER(${dnsRecords.value}) = LOWER(${q})
+    )`,
+  ];
+  if (allowedDomainIds) {
+    dialectSafe.push(
+      sql`${dnsRecords.domainId} IN (${sql.join(
+        allowedDomainIds.map((id: string) => sql`${id}`),
+        sql`, `,
+      )})`,
+    );
+  }
+
+  const rows = await db
+    .select({
+      id: dnsRecords.id,
+      domainId: dnsRecords.domainId,
+      domainName: domains.name,
+      recordType: dnsRecords.recordType,
+      name: dnsRecords.name,
+      value: dnsRecords.value,
+      ttl: dnsRecords.ttl,
+      priority: dnsRecords.priority,
+      proxied: dnsRecords.proxied,
+      notes: dnsRecords.notes,
+    })
+    .from(dnsRecords)
+    .innerJoin(domains, eq(dnsRecords.domainId, domains.id))
+    .where(sql`${sql.join(dialectSafe.map((c) => sql`(${c})`), sql` AND `)}`)
+    .limit(take);
+
+  // 精确值匹配（反查 IP）排前
+  const qLower = q.toLowerCase();
+  const sorted = [...rows].sort((a: { value: string }, b: { value: string }) => {
+    const ae = a.value?.toLowerCase() === qLower ? 0 : 1;
+    const be = b.value?.toLowerCase() === qLower ? 0 : 1;
+    return ae - be;
+  });
+
+  return {
+    results: sorted.map((r: Record<string, unknown>) => ({
+      ...r,
+      fqdn:
+        !r.name || r.name === '@'
+          ? r.domainName
+          : `${r.name}.${r.domainName}`,
+    })),
+  };
+}
+
+/** 检测域名 HTTPS 证书并缓存到期信息 */
+export async function checkDomainSsl(domainId: string, hostname?: string) {
+  const { checkSslCertificate } = await import('../lib/ssl-check.js');
+  const db = getDb();
+  const [domain] = await db
+    .select({ id: domains.id, name: domains.name })
+    .from(domains)
+    .where(eq(domains.id, domainId))
+    .limit(1);
+  if (!domain) throw new Error('域名不存在');
+
+  const host = (hostname || domain.name).trim().toLowerCase();
+  const result = await checkSslCertificate(host, 443);
+
+  if (result.success && result.expiresAt) {
+    await db
+      .update(domains)
+      .set({
+        sslExpiresAt: new Date(result.expiresAt),
+        sslLastCheckedAt: new Date(),
+        sslIssuer: result.issuer?.slice(0, 255) || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(domains.id, domainId));
+  } else {
+    await db
+      .update(domains)
+      .set({
+        sslLastCheckedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(domains.id, domainId));
+  }
+
+  return result;
 }
 
 export async function updateExpiryRemind(
@@ -304,7 +519,10 @@ export async function checkDomainExpiry(
   const result = await lookupDomainExpiry(domain.name);
 
   if (!result.expiresAt) {
-    throw new Error('无法查询到该域名的到期时间，请手动设置');
+    throw new Error(
+      '无法查询到该域名的到期时间（RDAP/WHOIS 均无结果）。' +
+        '常见原因：注册局限流、隐私保护未公开到期日、或暂不支持该后缀。请稍后重试或手动设置。',
+    );
   }
 
   await db.update(domains).set({

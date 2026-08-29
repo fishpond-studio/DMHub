@@ -7,6 +7,7 @@ import {
   reviewAssignmentRequest,
   getMyDomains,
   getMemberAssignments,
+  getAssignmentsOverview,
   getPendingRequests,
   getMyRequests,
   getAllDomains,
@@ -114,6 +115,11 @@ export async function assignmentRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const result = await getMemberAssignments(id);
     return result;
+  });
+
+  /** 管理员：全部指派 + 子域 DNS 状态总览 */
+  app.get('/overview', { preHandler: [authenticate, requireRole('admin')] }, async () => {
+    return getAssignmentsOverview();
   });
 
   app.get('/requests/pending', { preHandler: [authenticate, requireRole('admin')] }, async (_request: FastifyRequest, _reply: FastifyReply) => {

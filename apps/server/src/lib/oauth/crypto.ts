@@ -3,16 +3,21 @@ import { config } from '../../config/index.js';
 
 const STATE_EXPIRY_MS = 10 * 60 * 1000;
 
-interface OAuthState {
+export type OAuthIntent = 'login' | 'bind';
+
+export interface OAuthState {
   providerId: string;
+  /** 与 IdP 注册一致的绝对回调地址 */
   redirectUri: string;
+  intent: OAuthIntent;
+  /** bind 时绑定到该用户 */
+  userId?: string;
   createdAt: number;
 }
 
-export function generateState(providerId: string, redirectUri: string): string {
+export function generateState(payload: Omit<OAuthState, 'createdAt'>): string {
   const state: OAuthState = {
-    providerId,
-    redirectUri,
+    ...payload,
     createdAt: Date.now(),
   };
   const iv = crypto.randomBytes(12);
@@ -28,6 +33,10 @@ export function verifyState(encodedState: string): OAuthState {
   try {
     data = Buffer.from(encodedState, 'base64url');
   } catch {
+    throw new Error('Invalid OAuth state');
+  }
+
+  if (data.length < 28) {
     throw new Error('Invalid OAuth state');
   }
 
@@ -47,6 +56,10 @@ export function verifyState(encodedState: string): OAuthState {
   }
 
   const state = JSON.parse(decrypted.toString('utf8')) as OAuthState;
+
+  if (!state.providerId || !state.redirectUri || !state.intent) {
+    throw new Error('Invalid OAuth state payload');
+  }
 
   if (Date.now() - state.createdAt > STATE_EXPIRY_MS) {
     throw new Error('OAuth state expired');

@@ -182,7 +182,7 @@ export async function verify2FALogin(userId: string, method: 'totp' | 'backup' |
       throw new Error('备用码无效或已使用');
     }
   } else if (method === 'email') {
-    const valid = verifyEmailCodeEntry(userId, code);
+    const valid = await verifyEmailCodeEntry(userId, code);
     if (!valid) {
       throw new Error('验证码错误或已过期');
     }
@@ -336,7 +336,7 @@ export async function generatePasskeyRegOptions(userId: string, hostname?: strin
     },
   });
 
-  storeChallenge(userId, options.challenge);
+  await storeChallenge(userId, options.challenge);
 
   return options;
 }
@@ -344,7 +344,7 @@ export async function generatePasskeyRegOptions(userId: string, hostname?: strin
 export async function verifyPasskeyRegistration(userId: string, response: any, hostname?: string, deviceName?: string) {
   const db = getDb();
   const { rpID, origin } = await getWebAuthnConfig(hostname);
-  const expectedChallenge = getChallenge(userId);
+  const expectedChallenge = await getChallenge(userId);
   if (!expectedChallenge) throw new Error('验证已过期，请重新注册');
 
   try {
@@ -374,13 +374,13 @@ export async function verifyPasskeyRegistration(userId: string, response: any, h
       deviceName: finalDeviceName,
     });
 
-    deleteChallenge(userId);
+    deleteChallenge(userId).catch(() => {});
 
     const backupCodesResult = await addMethodAndEnable(userId, 'passkey');
 
     return { verified: true, backupCodes: backupCodesResult };
   } catch (err) {
-    deleteChallenge(userId);
+    deleteChallenge(userId).catch(() => {});
     throw err;
   }
 }
@@ -406,7 +406,7 @@ export async function generatePasskeyAuthOptions(userId: string, hostname?: stri
     userVerification: 'preferred',
   });
 
-  storeChallenge(userId, options.challenge);
+  await storeChallenge(userId, options.challenge);
 
   return options;
 }
@@ -414,7 +414,7 @@ export async function generatePasskeyAuthOptions(userId: string, hostname?: stri
 export async function verifyPasskeyAuth(userId: string, response: any, hostname?: string, deviceInfo?: string, ipAddress?: string, userAgent?: string) {
   const db = getDb();
   const { rpID, origin } = await getWebAuthnConfig(hostname);
-  const expectedChallenge = getChallenge(userId);
+  const expectedChallenge = await getChallenge(userId);
   if (!expectedChallenge) throw new Error('验证已过期，请重新验证');
 
   const credentialIdBuffer = Buffer.from(response.id, 'base64url');
@@ -447,7 +447,7 @@ export async function verifyPasskeyAuth(userId: string, response: any, hostname?
       lastUsedAt: new Date(),
     }).where(eq(userPasskeys.id, passkey.id));
 
-    deleteChallenge(userId);
+    deleteChallenge(userId).catch(() => {});
 
     const [user] = await db.select({
       id: users.id, username: users.username, email: users.email, role: users.role,
@@ -486,7 +486,7 @@ export async function verifyPasskeyAuth(userId: string, response: any, hostname?
       backupCodesWarning,
     };
   } catch (err) {
-    deleteChallenge(userId);
+    deleteChallenge(userId).catch(() => {});
     throw err;
   }
 }
@@ -538,7 +538,7 @@ export async function sendEmail2FACode(userId: string) {
   if (!user.emailVerified) throw new Error('请先验证邮箱');
 
   const code = generateEmailCode();
-  const result = storeEmailCode(userId, code);
+  const result = await storeEmailCode(userId, code);
   if (!result.success) throw new Error(result.error!);
 
   const [smtpRow] = await db.select({
@@ -574,7 +574,7 @@ export async function sendEmail2FACode(userId: string) {
 }
 
 export async function verifyEmail2FASetup(userId: string, code: string) {
-  const valid = verifyEmailCodeEntry(userId, code);
+  const valid = await verifyEmailCodeEntry(userId, code);
   if (!valid) throw new Error('验证码错误或已过期');
 
   const backupCodesResult = await addMethodAndEnable(userId, 'email');
@@ -638,7 +638,7 @@ export async function requestAdminReset(userId: string, adminId: string, alterna
 
   const emailCode = generateEmailCode();
 
-  const requestId = createResetRequest({
+  const requestId = await createResetRequest({
     userId,
     username: user.username,
     adminId,
@@ -662,10 +662,10 @@ export async function requestAdminReset(userId: string, adminId: string, alterna
 }
 
 export async function verifyAdminResetEmail(requestId: string, code: string) {
-  const valid = verifyResetEmail(requestId, code);
+  const valid = await verifyResetEmail(requestId, code);
   if (!valid) throw new Error('验证码错误或已过期');
 
-  const req = getResetRequest(requestId);
+  const req = await getResetRequest(requestId);
   if (!req) throw new Error('请求不存在');
 
   const smtpConfig = await getSmtpConfig();
@@ -690,7 +690,8 @@ export async function verifyAdminResetEmail(requestId: string, code: string) {
 }
 
 export async function getPendingAdminResetRequests() {
-  return getPendingRequests().map(req => ({
+  const list = await getPendingRequests();
+  return list.map(req => ({
     requestId: req.requestId,
     userId: req.userId,
     username: req.username,
@@ -700,10 +701,10 @@ export async function getPendingAdminResetRequests() {
 }
 
 export async function approveAdminResetRequest(requestId: string) {
-  const req = getResetRequest(requestId);
+  const req = await getResetRequest(requestId);
   if (!req || req.status !== 'pending_admin') throw new Error('请求不存在或无法审批');
 
-  const resetCode = approveResetRequest(requestId);
+  const resetCode = await approveResetRequest(requestId);
   if (!resetCode) throw new Error('审批失败');
 
   const smtpConfig = await getSmtpConfig();
@@ -722,10 +723,10 @@ export async function approveAdminResetRequest(requestId: string) {
 }
 
 export async function rejectAdminResetRequest(requestId: string, reason?: string) {
-  const req = getResetRequest(requestId);
+  const req = await getResetRequest(requestId);
   if (!req || req.status !== 'pending_admin') throw new Error('请求不存在或无法拒绝');
 
-  const success = rejectResetRequest(requestId, reason);
+  const success = await rejectResetRequest(requestId, reason);
   if (!success) throw new Error('拒绝失败');
 
   const smtpConfig = await getSmtpConfig();
@@ -743,7 +744,7 @@ ${reason ? `<p style="text-align:center;color:#6b7280">原因：${reason}</p>` :
 }
 
 export async function applyAdminReset(userId: string, resetCode: string) {
-  const req = validateResetCode(userId, resetCode);
+  const req = await validateResetCode(userId, resetCode);
   if (!req) throw new Error('重置码无效或已过期');
 
   const codes = await regenerateBackupCodes(userId);
