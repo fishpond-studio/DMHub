@@ -14,6 +14,11 @@
         reverse_proxy app:3000
     }
 
+    # OIDC 简洁回调：https://domain/oauth/oidc
+    handle /oauth/oidc {
+        reverse_proxy app:3000
+    }
+
     # SSE 长连接
     handle /api/notifications/stream {
         reverse_proxy app:3000 {
