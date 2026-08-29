@@ -32,9 +32,30 @@ export interface CreateRecordInput {
 
 export type UpdateRecordInput = Partial<CreateRecordInput>;
 
+/** 服务商能力声明（CDN 代理等） */
+export interface ProviderCapabilities {
+  /** 是否支持 DNS 层 CDN/代理（如 Cloudflare orange cloud） */
+  supportsProxy: boolean;
+  /** 可开启代理的记录类型 */
+  proxyRecordTypes: string[];
+  /** UI 展示名 */
+  proxyLabel: string;
+  /** 简要说明 */
+  proxyDescription: string;
+}
+
+export const DEFAULT_CAPABILITIES: ProviderCapabilities = {
+  supportsProxy: false,
+  proxyRecordTypes: [],
+  proxyLabel: 'CDN 保护',
+  proxyDescription: '当前服务商不支持在 DNS 记录上直接开启 CDN 代理',
+};
+
 export interface DNSProviderAdapter {
   id: string;
   name: string;
+  /** 可选能力；缺省视为不支持 CDN 代理 */
+  capabilities?: ProviderCapabilities;
 
   testConnection(credentials: Credentials): Promise<boolean>;
   listDomains(credentials: Credentials): Promise<ProviderDomain[]>;

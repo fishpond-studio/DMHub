@@ -21,6 +21,13 @@ async function cfFetch<T>(path: string, token: string, options?: RequestInit): P
 export class CloudflareAdapter implements DNSProviderAdapter {
   id = 'cloudflare' as const;
   name = 'Cloudflare';
+  capabilities = {
+    supportsProxy: true,
+    proxyRecordTypes: ['A', 'AAAA', 'CNAME'],
+    proxyLabel: 'CDN 保护（Cloudflare Proxy）',
+    proxyDescription:
+      '开启后流量经 Cloudflare 反代（橙云），隐藏源站 IP 并启用 CDN/WAF；关闭则为仅 DNS（灰云）',
+  };
 
   async testConnection(credentials: Credentials): Promise<boolean> {
     try {
