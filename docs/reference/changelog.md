@@ -1,53 +1,35 @@
 # 更新日志
 
-## v0.1.0
+## 0.2.0 �?2026-07-25
 
-### 新增
+完整说明见仓库根目录 [CHANGELOG.md](https://github.com/fishpond-studio/dmhub/blob/main/CHANGELOG.md)�?
+### 亮点
 
-- **多数据库支持** — MariaDB / MySQL 8+ 与 PostgreSQL 同级支持
-- **统一错误码体系** — 60+ 错误码按业务域分段
-- **DNS 解析记录模板** — 9 个预设场景模板，一键批量添加
-- **批量 DNS 记录创建** — 单次最多100条，自动校验记录值格式
-- **DNS 记录值校验** — 按类型自动校验（A=IPv4, AAAA=IPv6 等）
-- **批量导出** — CSV/JSON 格式
-- **请求竞态保护** — AbortController 防数据覆盖
-- **确认对话框** — 替代原生 confirm()
-- **操作日志增强** — 时间预设 + 清除筛选
-- **数据库索引** — 20 个关键索引覆盖外键列和查询热点
+- **OIDC 可用�?* �?Well-Known、`/oauth/oidc` 重定向、主�?回调 URL 可复�?- **指派范围可见** �?成员直接看到可管理主机，记录写入�?pattern 约束
+- **站内�?+ 可选邮�?* �?铃铛收件箱；分配/审批推送；事件清单共享枚举
+- **可用性监�?* �?定时 HTTP 探测、状态变更告警、可用率与响应趋势、历史持久化
+- **审计与会�?* �?登录会话管理、登录失败留痕、日志保留策略、管理员强制注销
+- **缓存�?* �?Redis 缓存抽象（可选），验证码/票据/challenge/限流共享化，内存回退
+- **备份与导�?* �?全量 JSON 备份导出/恢复；`.xlsx` 域名与记录导�?- **前端体验** �?命令面板、DNS 模板 UI、导�?复制、暗色模式防闪烁、中英切�?- **文档** �?指南�?API 专题对齐实现
 
-### 核心功能
+### 升级注意
 
-- 系统初始化 6 步引导（数据库/建表/管理员/站点URL/SMTP/邮箱验证）
-- 账号密码 + OAuth2/OIDC 登录（GitHub/GitLab/Google/钉钉/飞书）
-- 双因素认证（TOTP/Passkey/邮箱验证码/备用代码）
-- 三角色权限 + 域名指派 + 子域名匹配模式
-- 域名管理 + DNS 记录 CRUD（8 种记录类型）
-- DNS 服务商（Cloudflare/阿里云/腾讯云）+ 同步
-- WHOIS/RDAP 到期查询 + cron 自动检查
-- 解析记录快照/diff/回滚
-- 批量导入 CSV
-- 多渠道通知 + SSE 实时推送
-- 操作审计日志 + API Key + Open API v1
-- UptimeKuma + DNS 测速/HTTP 检测
-- Docker Compose + Caddy 一键部署
+1. 配置 **站点 URL**
+2. IdP 重定向改�?`https://你的域名/oauth/oidc`
+3. 代理转发 `/oauth/oidc` 到后�?4. 重启服务加载 schema 补丁（含 `monitor_checks` 表，自动补建�?5. 可选：团队设置配置 Redis 连接地址后重启启用缓�?
+### 相关文档
 
-### 变更
+| 文档 | 链接 |
+|------|------|
+| OIDC 配置 | [指南](/guide/oauth) · [API](/api/oauth) |
+| 通知 | [指南](/guide/notifications) · [API](/api/notifications) |
+| 域名指派 | [指南](/guide/assignments) |
+| 监控集成 | [指南](/guide/monitoring) |
+| 新特性总览 | [0.2.0 新特性](/guide/whats-new) |
+| 环境变量 | [指南](/guide/env) |
 
-- Toast 替代 alert() — 全局替换 window.alert()
-- ESLint no-unused-vars 从 warn 升级为 error
-- 域名标签/分组改为 admin-only
-- 引导流程 7 步简化为 6 步
-- 包管理器统一为 pnpm workspace
+---
 
-### 修复
+## 0.1.0
 
-- rollbackSnapshot 参数顺序错位导致回滚失败
-- 子域名通配符 *.dev 误命中 dev 自身
-- WebAuthn credential_id 字段长度不足
-- count(*)::int PG 专有写法跨方言失败
-- MySQL JSON 列默认值缺失
-- 2FA 登录流程 axios 拦截器误触发 refresh 重定向
-- 仪表盘统计查询 WHERE 条件丢失
-- 域名详情页 TabsContent 组件 provide/inject 失效
-- 文件上传代理配置
-- Nginx 上传限制调整
+首个公开版本：多数据库、域�?DNS 协作�?FA、快照、导入导出、Open API、Docker 部署等。详见根目录 CHANGELOG�?

@@ -57,12 +57,14 @@ await insertIgnore(t, v);
 
 ```
 users
+ ├── notifications_enabled        (站内信开关，默认 true)
+ ├── email_notifications_enabled  (可选邮件通知，默认 false)
  ├── user_totp_seeds     (1:1, TOTP 密钥，加密存储)
  ├── user_passkeys       (1:N, WebAuthn 凭证)
  ├── backup_codes        (1:N, hash 存储，使用后标记)
  ├── refresh_tokens      (1:N, 设备 refresh token)
  ├── user_tokens         (1:N, 个人访问令牌，dmhub_pt_ 前缀)
- ├── user_oauth_bindings (1:N, OAuth 绑定)
+ ├── user_oauth_bindings (1:N, OAuth/OIDC 绑定)
  └── api_keys            (1:N, 管理员创建，dmhub_ 前缀)
 ```
 
@@ -101,14 +103,20 @@ users
 ### 团队与权限
 
 ```
-team_settings (单行表)
-dns_providers (服务商配置)
-oauth_providers (OAuth 配置)
-domain_assignments (域名指派)
+team_settings (单行表，含 site_url / SMTP)
+dns_providers / provider_configs (DNS 服务商)
+oauth_providers (OAuth/OIDC 配置)
+  ├── well_known_url          # OIDC Discovery 地址
+  ├── custom_authorize_url    # 可选：授权端点覆盖
+  ├── custom_token_url        # 可选：Token 端点
+  └── custom_user_info_url    # 可选：用户信息端点
+domain_assignments (域名指派：domainId + userId + subdomainPattern + permission)
 domain_assignment_requests (指派申请审批)
 operation_logs (操作日志)
-notification_configs (通知配置)
+notification_configs (外部渠道通知配置；站内信为进程内存)
 ```
+
+> 启动时 `ensureSchemaPatches()` 会幂等补齐增量列（如 `email_notifications_enabled`、`well_known_url`）。
 
 ## 快照系统
 

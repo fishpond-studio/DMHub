@@ -1,6 +1,15 @@
 # DMHub API 文档
 
-所有 API 端点前缀为 `/api`。需认证的接口在请求头携带 `Authorization: Bearer <access_token>`。
+**版本：0.2.0**
+
+所有 API 端点前缀为 `/api`（OIDC 简洁回调 `/oauth/oidc` 除外）。需认证的接口在请求头携带 `Authorization: Bearer <access_token>`。
+
+更细的专题文档见 VitePress 文档站：
+
+- [API 概述](./docs/api/index.md)
+- [OAuth / OIDC](./docs/api/oauth.md)
+- [通知](./docs/api/notifications.md)
+- [认证](./docs/api/auth.md)
 
 认证令牌类型：
 
@@ -250,7 +259,7 @@
 
 获取当前用户信息。
 
-**Response:** `{ user: { id, username, email, role, displayName, nickname, avatarUrl, twoFactorEnabled, twoFactorMethods, emailVerified, notificationsEnabled, status } }`
+**Response:** `{ user: { id, username, email, role, displayName, nickname, avatarUrl, twoFactorEnabled, twoFactorMethods, emailVerified, notificationsEnabled, emailNotificationsEnabled, status } }`
 
 ### PUT /auth/me/password 🔒
 
@@ -276,7 +285,8 @@
   "displayName": "string (可选)",
   "nickname": "string (可选)",
   "avatarUrl": "string (可选)",
-  "notificationsEnabled": true
+  "notificationsEnabled": true,
+  "emailNotificationsEnabled": false
 }
 ```
 
@@ -392,17 +402,34 @@
 
 ---
 
-## OAuth 登录 `/api/auth/oauth`
+## OAuth / OIDC 登录 `/api/auth/oauth`
 
-| 接口 | 方法 | 认证 | Body | 说明 |
-|------|------|------|------|------|
-| `/auth/oauth/providers` | GET | 无 | - | 获取已启用的 OAuth Provider 列表 |
-| `/auth/oauth/:providerId/authorize` | GET | 无 | - | 跳转到 OAuth 授权页（302） |
-| `/auth/oauth/:providerId/callback` | GET | 无 | - | OAuth 回调（302 到前端） |
-| `/auth/oauth/:providerId/register` | POST | 无 | `{ pendingToken, code }` | OAuth 首次登录完成注册 |
-| `/auth/oauth/bind` | POST | Access Token | `{ providerId, code, redirectUri? }` | 绑定 OAuth |
-| `/auth/oauth/unbind/:providerId` | DELETE | Access Token | - | 解绑 OAuth |
-| `/auth/oauth/bindings` | GET | Access Token | - | 获取已绑定列表 |
+| 接口 | 方法 | 认证 | Body / 说明 |
+|------|------|------|-------------|
+| `/auth/oauth/providers` | GET | 无 | 已启用的登录提供商列表 |
+| `/auth/oauth/:providerId/callback-url` | GET | 无 | 返回 `homepageUrl`、`redirectUrl`（登记到 IdP） |
+| `/auth/oauth/:providerId/authorize` | GET | 无 | 302 跳转 IdP 授权页 |
+| `/auth/oauth/:providerId/callback` | GET | 无 | IdP 回调 → 302 前端 `?ticket=` / `needs_invite` / `bound` / `error` |
+| `/auth/oauth/exchange-ticket` | POST | 无 | `{ ticket }` → `{ accessToken, user }`，并设置 refresh Cookie |
+| `/auth/oauth/:providerId/bind/start` | POST | Access Token | 发起绑定，返回 `{ authorizeUrl, redirectUrl }` |
+| `/auth/oauth/:providerId/register` | POST | 无 | `{ pendingToken, inviteCode }` 邀请码完成注册（兼容字段 `code`） |
+| `/auth/oauth/unbind/:providerId` | DELETE | Access Token | 解绑 |
+| `/auth/oauth/bindings` | GET | Access Token | 已绑定列表 |
+
+### OIDC 简洁回调（非 `/api` 前缀）
+
+| 路径 | 方法 | 说明 |
+|------|------|------|
+| `/oauth/oidc` | GET | OIDC 重定向 URL，与 state 中的 `oidc`/`custom` 提供商对应 |
+
+**OIDC 登记示例：**
+
+| 名称 | 值 |
+|------|-----|
+| 主页 URL | `https://your-domain.com` |
+| 重定向 URL | `https://your-domain.com/oauth/oidc` |
+
+反向代理须将 `/oauth/oidc` 转发到后端（勿落到前端 SPA）。
 
 ---
 
@@ -517,6 +544,14 @@
 | `/domains/:id/records` | GET | 域名访问权限 | 记录列表（Query: `type`, `search`） |
 | `/domains/:id/records` | POST | 域名写权限 | 创建记录 |
 | `/domains/:id/records/bulk` | POST | 域名写权限 | 批量创建记录（最多100条） |
+| `/domains/:id/records/bulk-update` | POST | 域名写权限 | 批量改 TTL / 代理（body: `recordIds`, `ttl?`, `proxied?`） |
+| `/domains/:id/records/bulk-delete` | POST | 域名写权限 | 批量删除记录（body: `recordIds`） |
+| `/domains/:id/records/:recordId/propagate` | POST | 域名读权限 | 多公共 DNS 传播检测 |
+| `/domains/:id/dns-check` | POST | 域名读权限 | 任意主机传播检测 |
+| `/domains/:id/ssl-check` | POST | 域名读权限 | HTTPS 证书探测并缓存到期 |
+| `/domains/search/records` | GET | 认证用户 | 全局 DNS 搜索 `?q=&limit=` |
+| `/domains/:id/notes` | PUT | 管理员 | 更新域名备注 |
+| `/domains/check-expiry-batch` | POST | 管理员 | 批量 WHOIS 到期检查 |
 | `/domains/:id/records/:recordId` | PUT | 域名写权限 | 更新记录 |
 | `/domains/:id/records/:recordId` | DELETE | 域名写权限 | 删除记录 |
 | `/domains/:id/sync` | POST | admin | 从服务商同步记录 |
@@ -635,14 +670,38 @@
 | `/assignments/requests/:id` | PUT | admin | `{ action: "approve"\|"reject", reviewComment?, confirmed? }` | 审批 |
 | `/assignments/requests/pending` | GET | admin | - | 待审批列表 |
 | `/assignments/requests/mine` | GET | 认证用户 | - | 我的申请 |
-| `/assignments/my/domains` | GET | 认证用户 | - | 我的指派域名 |
+| `/assignments/my/domains` | GET | 认证用户 | - | 我的指派域名（含 `assignments[]` 子域名范围） |
 | `/assignments/domains` | GET | 认证用户 | - | 可指派的域名列表 |
+
+**GET /assignments/my/domains 响应要点：**
+
+```json
+{
+  "domains": [
+    {
+      "id": "uuid",
+      "name": "example.com",
+      "permission": "dns_edit",
+      "subdomainPattern": "blog",
+      "assignments": [
+        { "id": "uuid", "subdomainPattern": "blog", "permission": "dns_edit" }
+      ]
+    }
+  ]
+}
+```
+
+域名详情 `GET /domains/:id` 对非管理员同样返回 `assignments` 数组（全部指派范围）。
 
 **子域名匹配模式：** `*` = 整个域名 | `blog` = 仅 blog.example.com | `*.dev` = 所有 *.dev.example.com
 
 ---
 
 ## 操作日志 `/api/logs`
+
+### GET /logs/export 🔒
+
+按当前筛选条件导出 CSV（最多 5000 条，带 BOM）。查询参数同列表接口的 `action` / `userId` / `domainId` / `startDate` / `endDate`。
 
 ### GET /logs 🔒
 
@@ -656,15 +715,28 @@ admin 查看全部，member 仅查看指派范围域名。
 
 ## 通知 `/api/notifications`
 
+### 站内信
+
 | 接口 | 方法 | 权限 | 说明 |
 |------|------|------|------|
-| `/notifications/stream` | GET | Query `token` 或 Bearer | SSE 通知流（`text/event-stream`） |
-| `/notifications` | GET | 认证用户 | 获取已存储的通知 |
+| `/notifications/stream` | GET | Query `token` | SSE 实时流 |
+| `/notifications` | GET | 认证用户 | `{ notifications, unreadCount }` |
+| `/notifications/:id/read` | POST | 认证用户 | 标记已读 |
+| `/notifications/read-all` | POST | 认证用户 | 全部已读 |
+| `/notifications/:id` | DELETE | 认证用户 | 删除单条 |
+| `/notifications` | DELETE | 认证用户 | 清空全部 |
+
+站内信为进程内存存储，**服务重启后清空**。
+
+### 外部渠道配置
+
+| 接口 | 方法 | 权限 | 说明 |
+|------|------|------|------|
 | `/notifications` | POST | admin | 创建通知配置 |
-| `/notifications/configs` | GET | admin | 获取通知配置列表 |
-| `/notifications/configs/:id` | GET | admin | 获取单个配置 |
-| `/notifications/configs/:id` | PUT | admin | 更新配置 |
-| `/notifications/configs/:id` | DELETE | admin | 删除配置 |
+| `/notifications/configs` | GET | admin | 配置列表 |
+| `/notifications/configs/:id` | GET | admin | 单个配置 |
+| `/notifications/configs/:id` | PUT | admin | 更新 |
+| `/notifications/configs/:id` | DELETE | admin | 删除 |
 
 **创建通知配置 Body:**
 ```json
@@ -684,32 +756,75 @@ admin 查看全部，member 仅查看指派范围域名。
 
 **events 可选值：** `domain.expiring`, `domain.expired`, `team_settings.updated`, `member.role_changed`, `member.removed`, `member.status_changed`, `notification.update`, `dns_provider.deleted`, `oauth_provider.deleted`, `admin_reset.requested` 等
 
+### 个人通知开关
+
+`PUT /api/auth/me/profile`：
+
+```json
+{
+  "notificationsEnabled": true,
+  "emailNotificationsEnabled": false
+}
+```
+
+| 字段 | 默认 | 说明 |
+|------|------|------|
+| `notificationsEnabled` | true | 站内信 / SSE / Toast |
+| `emailNotificationsEnabled` | false | 可选邮件（需绑定邮箱 + SMTP） |
+
+域名分配、审批结果等会调用 `notifyUser`：站内信 +（若开启）邮件。
+
 ---
 
 ## OAuth Provider 配置 `/api/oauth`
 
 | 接口 | 方法 | 权限 | 说明 |
 |------|------|------|------|
-| `/oauth/providers` | GET | 认证用户 | 获取列表和可用 Provider，返回 `{ providers, availableProviders }` |
+| `/oauth/providers` | GET | 认证用户 | `{ providers, availableProviders, homepageUrl, oidcUrls }` |
 | `/oauth/providers` | POST | admin | 创建 |
 | `/oauth/providers/:id` | PUT | admin | 更新 |
-| `/oauth/providers/:id` | DELETE | admin | 删除（需 Header `x-confirm-delete: true`） |
+| `/oauth/providers/:id` | DELETE | admin | 删除（有绑定时需 Header `x-confirm-delete: true`） |
 
-**创建 Body:**
+**创建 OIDC Body:**
+```json
+{
+  "providerId": "oidc",
+  "clientId": "my-client",
+  "clientSecret": "secret",
+  "wellKnownUrl": "https://idp.example.com/realms/demo/.well-known/openid-configuration",
+  "authorizeUrl": null,
+  "tokenUrl": null,
+  "userInfoUrl": null,
+  "scope": "openid email profile",
+  "enabled": true
+}
+```
+
+**创建 GitHub Body:**
 ```json
 {
   "providerId": "github",
   "clientId": "xxx",
   "clientSecret": "xxx",
   "scope": "user:email",
-  "enabled": true,
-  "customAuthorizeUrl": null,
-  "customTokenUrl": null,
-  "customUserInfoUrl": null
+  "enabled": true
 }
 ```
 
-**可用 providerId：** `github`, `gitlab`, `google`, `dingtalk`, `feishu`, `custom`
+**OIDC 字段说明：**
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `wellKnownUrl` | 是* | Well-Known 完整 URL 或 Issuer |
+| `authorizeUrl` | 否 | 授权端点覆盖 |
+| `tokenUrl` | 否 | Token 端点覆盖 |
+| `userInfoUrl` | 否 | 用户信息端点覆盖 |
+
+\* 不填 `wellKnownUrl` 时须同时提供 `authorizeUrl` + `tokenUrl`。
+
+**可用 providerId：** `oidc`, `custom`（兼容旧配置）, `github`, `gitlab`, `google`, `dingtalk`, `feishu`
+
+创建/更新成功响应中包含 `homepageUrl`、`redirectUrl`，便于复制到 IdP。
 
 ---
 
@@ -734,6 +849,7 @@ admin 查看全部，member 仅查看指派范围域名。
 | `/dashboard/expiring` | GET | 认证用户 | 即将过期域名 |
 | `/dashboard/activity` | GET | 认证用户 | 最近活动 |
 | `/dashboard/records-distribution` | GET | 认证用户 | DNS 记录类型分布 |
+| `/dashboard/health` | GET | 认证用户 | 域名健康评分（0–100 + 问题列表） |
 
 **stats Response:**
 ```json
@@ -828,6 +944,55 @@ admin 查看全部，member 仅查看指派范围域名。
 | `/v1/domains/:id/records/:recordId` | DELETE | `records:write` | 删除记录 |
 
 频率限制：100 请求 / 分钟 / Key
+
+---
+
+## 可用性监控 `/api/monitor`
+
+定时 HTTP 探测域名可用性，历史持久化，状态变更告警。
+
+| 接口 | 方法 | 权限 | 说明 |
+|------|------|------|------|
+| `/monitor/summary` | GET | 登录 | 监控概览（监控中/正常/不可用数量与域名列表） |
+| `/monitor/:domainId/history` | GET | 域名访问 | 探测历史（Query: `hours=24`，最大 168） |
+| `/monitor/:domainId/check` | POST | 域名访问 | 手动触发一次探测 |
+| `/monitor/:domainId/enabled` | PUT | admin | 开关监控（Body: `{ enabled: boolean }`） |
+
+定时任务每 15 分钟探测所有启用监控的活跃域名；历史保留 30 天。
+
+---
+
+## 会话管理
+
+| 接口 | 方法 | 权限 | 说明 |
+|------|------|------|------|
+| `/auth/sessions` | GET | 登录 | 当前用户登录会话列表 |
+| `/auth/sessions/:id` | DELETE | 登录 | 注销指定会话（不能注销当前会话） |
+| `/auth/sessions` | DELETE | 登录 | 注销其他所有会话 |
+| `/team/sessions` | GET | admin | 全部用户会话列表 |
+| `/team/users/:userId/sessions` | DELETE | admin | 强制注销某用户全部会话 |
+
+---
+
+## 备份与恢复 `/api/backup`
+
+| 接口 | 方法 | 权限 | 说明 |
+|------|------|------|------|
+| `/backup/export` | GET | admin | 导出全量 JSON 备份（域名 + 记录，不含凭据） |
+| `/backup/import` | POST | admin | 恢复备份（multipart 文件上传，跳过已存在） |
+
+---
+
+## Excel 导入 `/api/import`
+
+在原有 CSV 导入基础上新增 Excel（`.xlsx`）支持：
+
+| 接口 | 方法 | 权限 | 说明 |
+|------|------|------|------|
+| `/import/domains/excel` | POST | admin | Excel 导入域名 |
+| `/import/records/excel` | POST | 域名写权限 | Excel 导入记录（Query: `domainId`） |
+
+列格式与 CSV 模板一致，首个工作表生效。
 
 ---
 

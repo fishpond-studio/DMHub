@@ -1,23 +1,23 @@
 import { defineConfig } from 'vitepress'
-// import './theme' — 禁用：Node 22 ESM 与 vitepress 1.6 不兼容，自定义主题为空（仅 extends DefaultTheme）不影响显示
+// import './theme' �?禁用：Node 22 ESM �?vitepress 1.6 不兼容，自定义主题为空（�?extends DefaultTheme）不影响显示
 
-const GH_URL = 'https://github.com/FishpondStu/dmhub'
-const VERSION = '0.1.0'
+const GH_URL = 'https://github.com/fishpond-studio/dmhub'
+const VERSION = '0.2.0'
 
 export default defineConfig({
   title: 'DMHub',
-  description: '面向小型团队的开源域名协作管理工具，支持多数据库、DNS 解析同步、域名到期提醒',
+  description: '面向小型团队的开源域名协作管理工�?v0.2.0 �?OIDC、域名指派、站内信�?DNS 协作',
   lang: 'zh-CN',
 
   head: [
     ['link', { rel: 'icon', type: 'image/png', href: '/favicon.png' }],
-    ['meta', { name: 'description', content: 'DMHub - 域名协作管理工具，解决域名分散、到期无人管理、解析变更无通知等问题' }],
+    ['meta', { name: 'description', content: 'DMHub - 域名协作管理工具，解决域名分散、到期无人管理、解析变更无通知等问�? }],
     ['meta', { property: 'og:title', content: 'DMHub - 域名协作管理工具' }],
-    ['meta', { property: 'og:description', content: '面向小型团队的开源域名协作管理平台' }],
+    ['meta', { property: 'og:description', content: '面向小型团队的开源域名协作管理平�? }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
     ['meta', { name: 'twitter:title', content: 'DMHub - 域名协作管理工具' }],
-    ['meta', { name: 'twitter:description', content: '面向小型团队的开源域名协作管理平台' }],
+    ['meta', { name: 'twitter:description', content: '面向小型团队的开源域名协作管理平�? }],
     ['link', { rel: 'stylesheet', href: '/custom.css' }],
   ],
 
@@ -72,40 +72,41 @@ export default defineConfig({
         {
           text: '入门',
           items: [
-            { text: '简介', link: '/guide/' },
-            { text: '快速开始', link: '/guide/quick-start' },
-            { text: '初始化引导', link: '/guide/setup' },
+            { text: '简�?, link: '/guide/' },
+            { text: '0.2.0 新特�?, link: '/guide/whats-new' },
+            { text: '快速开�?, link: '/guide/quick-start' },
+            { text: '初始化引�?, link: '/guide/setup' },
           ],
         },
         {
           text: '部署',
           items: [
             { text: 'Docker Compose', link: '/guide/docker' },
-            { text: '本地开发', link: '/guide/local-dev' },
+            { text: '本地开�?, link: '/guide/local-dev' },
             { text: '环境变量', link: '/guide/env' },
           ],
         },
         {
           text: '核心功能',
           items: [
-            { text: '仪表盘', link: '/guide/dashboard' },
+            { text: '仪表�?, link: '/guide/dashboard' },
             { text: '域名管理', link: '/guide/domains' },
             { text: 'DNS 解析记录', link: '/guide/dns-records' },
             { text: 'DNS 记录模板', link: '/guide/dns-templates' },
-            { text: 'DNS 服务商', link: '/guide/dns-providers' },
-            { text: '域名到期与 WHOIS', link: '/guide/domain-expiry' },
-            { text: '域名指派与协作', link: '/guide/assignments' },
-            { text: '快照与回滚', link: '/guide/snapshots' },
+            { text: 'DNS 服务�?, link: '/guide/dns-providers' },
+            { text: '域名到期�?WHOIS', link: '/guide/domain-expiry' },
+            { text: '域名指派与协�?, link: '/guide/assignments' },
+            { text: '快照与回�?, link: '/guide/snapshots' },
             { text: '批量导入', link: '/guide/import' },
           ],
         },
         {
-          text: '团队与安全',
+          text: '团队与安�?,
           items: [
             { text: '团队管理', link: '/guide/team' },
             { text: '通知配置', link: '/guide/notifications' },
-            { text: '双因素认证', link: '/guide/2fa' },
-            { text: 'OAuth 登录', link: '/guide/oauth' },
+            { text: '双因素认�?, link: '/guide/2fa' },
+            { text: 'OIDC / OAuth2 登录', link: '/guide/oauth' },
             { text: 'API Key', link: '/guide/api-keys' },
           ],
         },
@@ -119,10 +120,12 @@ export default defineConfig({
       ],
       '/api/': [
         {
-          text: 'API 参考',
+          text: 'API 参�?,
           items: [
             { text: '概述', link: '/api/' },
             { text: '认证', link: '/api/auth' },
+            { text: 'OAuth / OIDC', link: '/api/oauth' },
+            { text: '通知', link: '/api/notifications' },
             { text: '域名', link: '/api/domains' },
             { text: '解析记录', link: '/api/records' },
             { text: '快照', link: '/api/snapshots' },
@@ -132,10 +135,10 @@ export default defineConfig({
       ],
       '/reference/': [
         {
-          text: '架构参考',
+          text: '架构参�?,
           items: [
             { text: '系统架构', link: '/reference/architecture' },
-            { text: '数据库设计', link: '/reference/database' },
+            { text: '数据库设�?, link: '/reference/database' },
             { text: '权限模型', link: '/reference/permissions' },
           ],
         },
@@ -178,8 +181,8 @@ export default defineConfig({
     },
 
     docFooter: {
-      prev: '上一篇',
-      next: '下一篇',
+      prev: '上一�?,
+      next: '下一�?,
     },
 
     lastUpdated: {
@@ -188,7 +191,7 @@ export default defineConfig({
 
     editLink: {
       pattern: `${GH_URL}/edit/main/docs/:path`,
-      text: '在 GitHub 上编辑此页',
+      text: '�?GitHub 上编辑此�?,
     },
   },
 })

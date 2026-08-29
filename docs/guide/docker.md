@@ -104,6 +104,7 @@ docker compose down
 - API 不缓存
 - SSE 长连接支持
 - 上传文件代理
+- **OIDC 回调** `/oauth/oidc` 转发到后端（勿落到前端 SPA）
 
 ```text
 {$DOMAIN} {
@@ -119,6 +120,10 @@ docker compose down
         reverse_proxy app:3000
     }
 
+    handle /oauth/oidc {
+        reverse_proxy app:3000
+    }
+
     handle /api/notifications/stream {
         reverse_proxy app:3000 {
             flush_interval -1
@@ -126,6 +131,8 @@ docker compose down
     }
 }
 ```
+
+Nginx（`docker/nginx.conf`）同样将 `location = /oauth/oidc` 代理到 `app:3000`。
 
 > 修改 `DOMAIN` 环境变量即可更换域名，Caddy 会自动申请证书。
 

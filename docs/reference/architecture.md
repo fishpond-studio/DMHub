@@ -5,12 +5,13 @@ DMHub 采用 pnpm workspace monorepo 结构，前后端分离部署。
 ## 整体架构
 
 ```
-┌─────────────┐     ┌──────────────────────────────────────┐
-│   Caddy     │────▶│  Nginx                              │
-│ (HTTPS/443) │     │  ├── /           → Vue SPA (80)     │
-│             │     │  ├── /api/*      → Node.js (3000)   │
-│             │     │  └── /uploads/*  → Node.js (3000)   │
-└─────────────┘     └──────────────────────────────────────┘
+┌─────────────┐     ┌──────────────────────────────────────────┐
+│   Caddy     │────▶│  Nginx                                   │
+│ (HTTPS/443) │     │  ├── /              → Vue SPA (80)      │
+│             │     │  ├── /api/*         → Node.js (3000)    │
+│             │     │  ├── /oauth/oidc    → Node.js (3000)    │
+│             │     │  └── /uploads/*     → Node.js (3000)    │
+└─────────────┘     └──────────────────────────────────────────┘
                                           │
                                     ┌─────┴─────┐
                                     │  Fastify   │
@@ -24,6 +25,8 @@ DMHub 采用 pnpm workspace monorepo 结构，前后端分离部署。
                         │   (DB)  │  │(可选)  │  │Provider│
                         └────────┘  └────────┘  └────────┘
 ```
+
+> OIDC 重定向 URL 为 `{站点URL}/oauth/oidc`，必须由反向代理转发到后端，不能落到前端 SPA。
 
 ## 请求处理流程
 
@@ -51,18 +54,47 @@ dmhub/
 │   └── server/               # Fastify 后端
 │       └── src/
 │           ├── routes/       # 路由处理
-│           ├── services/     # 业务逻辑
-│           ├── middleware/    # 中间件（认证、权限）
-│           ├── db/           # Drizzle ORM schema 和连接
-│           ├── lib/          # 工具库（JWT、cron、WHOIS、通知等）
-│           └── config/       # 环境变量配置
+│           ├── services/     # 业务逻辑（含 oauth、notification、assignment）
+│           ├── middleware/    # 认证、域名/记录权限
+│           ├── db/           # 双方言 schema + helpers
+│           ├── lib/          # JWT、cron、WHOIS、oauth/、notifications/
+│           └── config/
 ├── packages/
-│   ├── shared/               # 共享类型 + Zod schema + 常量
-│   └── dns-providers/        # DNS 服务商适配器
-│       └── src/adapters/     # Cloudflare / Aliyun / Tencent
-├── docker/                   # Docker 构建文件
+│   ├── shared/               # 类型 + Zod + DNS 模板常量
+│   └── dns-providers/        # Cloudflare / 阿里云 / 腾讯云
+├── docs/                     # VitePress 文档
+├── docker/
 └── Caddyfile
 ```
+
+## 关键子系统
+
+### OIDC / OAuth2
+
+```
+authorize → IdP → callback (/oauth/oidc 或 /api/auth/oauth/:id/callback)
+  → 校验 state（含 redirect_uri + intent）
+  → token 交换（原样 redirect_uri）
+  → login: 一次性 ticket → 前端 exchange-ticket
+  → bind: 写入 user_oauth_bindings
+```
+
+配置存 `oauth_providers`（含 `well_known_url` 与可选端点覆盖）。详见 [OIDC 指南](/guide/oauth)。
+
+### 站内信与通知
+
+```
+notifyUser / notifyAdmins
+  → 内存 NOTIFICATION_STORE + SSE
+  → emailNotificationsEnabled 时 SMTP 发信
+
+triggerNotification(event)
+  → 匹配 notification_configs → 钉钉/飞书/邮件列表/Webhook
+```
+
+### 域名指派
+
+`domain_assignments.subdomainPattern` + 三层中间件；成员 API 返回 `assignments[]` 供前端展示可管范围。
 
 ## 分层设计
 
@@ -72,8 +104,9 @@ dmhub/
 |---|---|
 | **Views** | 页面组件，对应路由 |
 | **Stores** | Pinia 状态管理，API 调用封装 |
-| **Components** | 通用 UI 组件（Radix Vue） |
-| **Lib** | axios 封装、工具函数 |
+| **Components** | 通用 UI（shadcn-vue / Radix Vue）+ 业务组件 |
+| **Lib** | axios、copy/toast、subdomain-scope 等 |
+| **Composables** | 主题、确认框、请求竞态等 |
 
 ### 后端
 

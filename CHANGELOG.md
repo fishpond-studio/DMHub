@@ -1,56 +1,194 @@
 # 更新日志
 
-## v0.1.0
+## [0.2.0] — 2026-07-25
+
+本版本聚焦 **OIDC 可用化**、**协作指派体验**、**站内信/邮件通知**、**可用性监控**、**审计与会话管理** 与 **前端交互**，并全面同步文档。
+
+### 亮点
+
+| 方向 | 说明 |
+|------|------|
+| OIDC | Well-Known 自动发现；重定向 URL `{site}/oauth/oidc`；配置页复制主页/重定向地址 |
+| 指派 | 成员可见可管理主机（如 `blog.example.com`），不再只显示总域名 |
+| 通知 | 顶栏站内信 + 可选个人邮件；分配/审批即时推送；事件清单前后端统一枚举 |
+| 监控 | 定时 HTTP 探测、状态变更告警（`monitor.down` / `monitor.up`）、可用率与响应趋势 |
+| 审计 | 登录会话管理、登录失败留痕、日志保留策略、管理员强制注销 |
+| 缓存 | Redis 缓存抽象层（可选），验证码/票据/challenge/限流共享化，内存回退 |
+| 备份 | 全量 JSON 备份导出/恢复；Excel（`.xlsx`）域名与记录导入 |
+| 交互 | 命令面板、DNS 模板一键应用、导出/复制、骨架屏与空状态、暗色模式防闪烁、中英切换 |
+| 运维 | 批量 TTL、粘贴导入、域名健康分、操作日志 CSV、最近访问 |
+| 探测 | 多 DNS 传播检测、HTTPS 证书到期、记录备注、DNS 变更 Webhook 事件 |
+| 文档 | VitePress 指南/API 与根目录 README、API.md 对齐 |
+
+### 新增
+
+#### 认证 · OIDC / OAuth2
+
+- 标准 **OIDC** 提供商（`providerId: oidc`，兼容旧 `custom`）
+- 配置字段：Client ID / Secret / **Well-Known URL**；可选授权、Token、用户信息端点
+- 固定回调 **`GET /oauth/oidc`**（Nginx / Caddy / Vite 已代理）
+- 登录：加密 `state`（含绝对 `redirect_uri` + intent）→ 一次性 **ticket** → `POST /api/auth/oauth/exchange-ticket`
+- 绑定：`POST /api/auth/oauth/:providerId/bind/start`（与登录流程分离）
+- `GET /api/auth/oauth/:providerId/callback-url` 返回主页 URL / 重定向 URL
+
+#### 通知
+
+- 站内信铃铛收件箱（SSE + Toast，已读 / 全部已读 / 清空）
+- 个人可选 **邮件通知**（`emailNotificationsEnabled`，默认关；需邮箱 + SMTP）
+- 域名分配 / 移除 / 申请 / 审批通过或拒绝时 `notifyUser` / `notifyAdmins`
+- `@dmhub/shared` 新增 **`NOTIFICATION_EVENTS` 枚举常量**，通知配置页改用共享枚举，前后端事件清单统一（含 `monitor.down/up`、`member.status_changed`）
+
+#### 域名协作
+
+- 我的域名 / 域名列表 / 详情展示 `assignments[]` 可管范围
+- 添加记录时校验主机是否在指派 pattern 内
+- 管理员分配时预览成员可见主机名
+
+#### 可用性监控
+
+- 新增 `monitor_checks` 表（双方言 schema + 迁移 + 幂等补表）
+- `domains` 增加 `monitor_enabled` / `monitor_status` / `monitor_response_ms` / `monitor_last_checked_at` 字段
+- 定时探测 cron（每 15 分钟，带重叠保护）+ 手动探测接口
+- 状态变更告警：`monitor.down`（critical）/ `monitor.up`（恢复 info）
+- 域名详情"可用性监控"卡片：开关、可用率、响应时间趋势柱状图
+- 历史保留 30 天，定时清理
+
+#### 审计与会话管理
+
+- 会话管理：列出/注销当前用户登录会话；管理员可查看全部会话并强制注销任意用户
+- 个人资料页新增"登录会话"卡片
+- 密码错误记录 `login_failed` 操作日志（含 IP / UA）
+- 日志保留策略：`team_settings.log_retention_days`（0/空 = 永久保留），每日 03:00 清理过期操作日志与监控历史
+- 团队设置页新增"审计与日志"配置区
+
+#### 缓存层（Redis 可选）
+
+- `lib/cache.ts` 统一缓存抽象：配置 `REDIS_URL`（环境变量或团队设置）启用 Redis，否则回退进程内存
+- 验证码（2FA 邮箱码、管理员重置码）、OAuth 登录票据、WebAuthn challenge、API Key 限流迁移到缓存层
+- docker-compose 增加 `redis` 服务（可选）；断连自动回退内存并周期性重试
+
+#### 备份与导入
+
+- 全量备份导出/恢复：JSON 格式（域名 + 解析记录，不含服务商凭据），恢复时跳过已存在项
+- Excel 导入：`.xlsx` 域名与解析记录批量解析，复用 CSV 导入管线
+- 导入页新增"数据备份"标签页，文件选择同时支持 `.csv` / `.xlsx`
+
+#### 前端体验
+
+- 命令面板 `Ctrl/⌘ + K`
+- DNS 记录模板对话框（对接 bulk API）
+- 域名/记录导出 CSV / BIND Zone、一键复制、`dig` 命令复制
+- 批量改 TTL、批量删除、记录克隆、粘贴多行导入
+- 全局 DNS 搜索、域名收藏、域名备注、最近访问
+- 仪表盘域名健康评分、快捷入口、骨架屏与空状态
+- 操作日志导出 CSV
+- 统一确认框与 Toast 时长
+- **暗色模式**：index.html 内联脚本防首屏闪烁
+- **i18n**：vue-i18n 中英切换（顶栏语言开关），导航/登录/监控/会话等核心文案国际化
+
+#### 数据与部署
+
+- `users.email_notifications_enabled`
+- `oauth_providers.well_known_url`
+- `team_settings.log_retention_days`
+- 启动时 `ensureSchemaPatches()` 幂等补列补表
+
+### API 变更摘要
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/auth/oauth/exchange-ticket` | ticket 换 accessToken |
+| POST | `/api/auth/oauth/:id/bind/start` | 发起绑定 |
+| GET | `/api/auth/oauth/:id/callback-url` | 主页/重定向 URL |
+| GET | `/oauth/oidc` | OIDC 回调 |
+| GET/POST/DELETE | `/api/notifications` 及已读接口 | 站内信 |
+| PUT | `/api/auth/me/profile` | 增加 `emailNotificationsEnabled` |
+| * | OAuth 配置 | `wellKnownUrl` / 可选端点字段 |
+| GET | 域名相关 | 非管理员返回 `assignments[]`；详情返回监控状态字段 |
+| POST | `/api/domains/:id/records/bulk-update` | 批量改 TTL / 代理 |
+| POST | `/api/domains/:id/records/bulk-delete` | 批量删除记录 |
+| GET | `/api/logs/export` | 操作日志 CSV |
+| GET | `/api/dashboard/health` | 域名健康评分 |
+| GET | `/api/domains/search/records` | 全局 DNS 搜索 |
+| PUT | `/api/domains/:id/notes` | 域名备注 |
+| POST | `/api/domains/check-expiry-batch` | 批量 WHOIS 到期 |
+| GET | `/api/monitor/summary` | 监控概览 |
+| GET | `/api/monitor/:domainId/history` | 探测历史（`hours` 最大 168） |
+| POST | `/api/monitor/:domainId/check` | 手动探测 |
+| PUT | `/api/monitor/:domainId/enabled` | 开关监控 |
+| GET | `/api/auth/sessions` | 我的会话 |
+| DELETE | `/api/auth/sessions/:id` | 注销会话 |
+| DELETE | `/api/auth/sessions` | 注销其他会话 |
+| GET | `/api/team/sessions` | 全部会话（admin） |
+| DELETE | `/api/team/users/:userId/sessions` | 强制注销用户全部会话（admin） |
+| GET | `/api/backup/export` | 导出全量 JSON 备份 |
+| POST | `/api/backup/import` | 恢复备份 |
+| POST | `/api/import/domains/excel` | Excel 导入域名 |
+| POST | `/api/import/records/excel` | Excel 导入记录 |
+
+### 文档
+
+- 指南：`docs/guide/oauth.md`、`notifications.md`、`assignments.md`、`env.md`、`faq.md` 等
+- API：`docs/api/oauth.md`、`notifications.md`；侧栏与 `API.md` 同步（含监控/会话/备份章节）
+- 架构 / 数据库 / 权限参考页更新
+- `.env.example` 标明 OAuth 走 Web 配置、Redis 启用方式
+
+### 破坏性 / 升级注意
+
+1. **站点 URL** 必须在团队设置中正确填写，否则 OAuth 无法生成回调地址。
+2. **OIDC 重定向 URL** 现为 `{站点}/oauth/oidc`（不再是 `/api/auth/oauth/custom/callback`）。请在 IdP 中更新登记。
+3. 反向代理需转发 `/oauth/oidc` 到后端（Docker 镜像内 nginx / 根目录 Caddyfile 已包含）。
+4. 重启服务以加载 schema 补丁（`well_known_url`、`email_notifications_enabled`、`monitor_checks` 表及监控字段等，启动时自动补建）。
+5. 站内信为内存存储，**重启后历史清空**（设计如此）。
+6. 启用 Redis 需在团队设置填入连接地址并**重启服务**；留空则维持内存模式，单实例行为不变。
+
+### 升级步骤
+
+```bash
+git pull
+pnpm install
+pnpm build   # 或 docker compose build && up -d
+# 确认团队设置中的站点 URL
+# 若使用 OIDC：在 IdP 更新重定向 URL 为 https://你的域名/oauth/oidc
+# 可选：团队设置 → 审计与日志 → 配置 Redis 连接地址后重启服务
+```
+
+---
+
+## [0.1.0]
 
 ### 新增
 
 - **多数据库支持** — MariaDB / MySQL 8+ 与 PostgreSQL 同级支持。双 schema 文件（`schema-pg.ts` / `schema-mysql.ts`）+ 动态 re-export 层
-- **跨方言 DB 帮手** — `insertReturningOne` / `insertReturningAll` / `insertIgnore`，统一替换 `.returning()` / `.onConflictDoNothing()`
-- **统一错误码体系** — 60+ 错误码按业务域分段（认证 2000、域名 4000、DNS 5000 等），`AppError` 类 + 全局错误中间件
-- **DNS 解析记录模板** — 9 个预设场景模板（Gmail、Microsoft 365、腾讯企业邮箱、Cloudflare CDN、GitHub Pages、Vercel 等），支持一键批量添加
-- **批量 DNS 记录创建** — `POST /domains/:id/records/bulk`，单次最多100条，独立校验逐条返回结果
-- **DNS 记录值校验** — 按记录类型自动校验（A=IPv4、AAAA=IPv6、CNAME/NS=域名格式、MX=优先级范围、TXT=长度限制、SRV=端口权重、CAA=flag范围）
-- **批量导出** — 域名列表和 DNS 记录导出 CSV（含 BOM）和 JSON
-- **请求竞态保护** — `useRequest` composable（AbortController），快速切换时不产生数据覆盖
-- **确认对话框** — 替代原生 `confirm()`，与 Toast 配套使用
-- **操作日志增强** — 时间范围预设快捷选择 + 一键清除筛选
-- **数据库索引** — 20 个关键索引覆盖外键列和查询热点（`dns_records.domain_id`、`operation_logs.created_at`、`refresh_tokens.token_hash` 等）
+- **跨方言 DB 帮手** — `insertReturningOne` / `insertReturningAll` / `insertIgnore`
+- **统一错误码体系** — 60+ 错误码按业务域分段
+- **DNS 解析记录模板** — 9 个预设场景（常量层）
+- **批量 DNS 记录创建** — `POST /domains/:id/records/bulk`，单次最多 100 条
+- **DNS 记录值校验** — 按类型校验
+- **批量导出** — CSV / JSON
+- **请求竞态保护** — `useRequest` + AbortController
+- **确认对话框**、**操作日志增强**、**数据库索引**
 
 ### 核心功能
 
-- 系统初始化引导（数据库配置、建表、注册管理员、站点 URL、SMTP、邮箱验证）
-- 账号密码登录 + OAuth2/OIDC 登录（GitHub / GitLab / Google / 钉钉 / 飞书 / 自定义 OIDC）
-- 双因素认证（TOTP / Passkey / 邮箱验证码 / 备用代码）
-- 三角色权限模型（admin / member / guest）+ 域名指派 + 指派申请审批
-- 域名管理（添加/删除/分组/标签/状态） + DNS 记录 CRUD（A/AAAA/CNAME/MX/TXT/NS/SRV/CAA）
-- DNS 服务商集成（Cloudflare / 阿里云 / 腾讯云）+ 服务商连接测试和域名同步
-- WHOIS/RDAP 到期查询（三级回退，纯 Node.js 实现）+ 自动检查与提醒（cron 每天 08:00）
-- 解析记录快照（手动/变更触发）、版本 diff 和回滚
-- 批量导入域名和解析记录（CSV）
-- 多渠道通知（网页/钉钉/飞书/邮件/Webhook）+ SSE 实时推送
-- 操作审计日志 + API Key 管理 + Open API v1
-- UptimeKuma Push URL 集成 + DNS 测速/HTTP 可用性检测
-- 仪表盘统计 + 站外主页/公告
-- 子域名权限模式精确匹配（`*` / `''` / `blog` / `*.dev`）+ 记录级写权限中间件
-- Docker Compose + Caddy 自动 HTTPS 一键部署
+- 系统初始化 6 步引导
+- 账号密码 + OAuth2/OIDC（GitHub / GitLab / Google / 钉钉 / 飞书）
+- 双因素认证（TOTP / Passkey / 邮箱 / 备用代码）
+- 三角色 + 域名指派 + 审批
+- 域名与 DNS CRUD、服务商同步、WHOIS/RDAP
+- 快照 / 导入导出 / 多渠道通知 / 审计 / Open API
+- Docker Compose + Caddy
 
 ### 变更
 
-- **Toast 替代 alert()** — 全局替换 `window.alert()`，全站 70+ 处自动转为 Toast
-- **ESLint `no-unused-vars`** — 从 warn 升级为 error
-- **域名标签/分组改为 admin-only** — 仅管理员可修改域名元数据
-- 引导流程 7 步简化为 6 步
-- 包管理器统一为 pnpm workspace
+- Toast 替代 `window.alert()`
+- ESLint `no-unused-vars` 升为 error
+- 域名标签/分组仅管理员可改
+- 引导 7 步简化为 6 步；统一 pnpm workspace
 
 ### 修复
 
-- `rollbackSnapshot` 参数顺序错位导致回滚失败
-- 子域名通配符 `*.dev` 误命中 `dev` 自身
-- WebAuthn `credential_id` 字段长度不足（512 → 1024）
-- `count(*)::int` PG 专有写法跨方言失败
-- MySQL JSON 列默认值缺失
-- 2FA 登录流程 axios 拦截器误触发 refresh 重定向
-- 仪表盘统计查询 WHERE 条件丢失
-- 域名详情页 TabsContent 组件 provide/inject 失效
-- 文件上传代理配置
-- Nginx 上传限制（2M → 6M）
+- 快照回滚参数顺序、子域名 `*.dev` 匹配、WebAuthn credential 长度
+- 跨方言 `count(*)` / MySQL JSON 默认值
+- 2FA axios 拦截、仪表盘 WHERE、Tabs provide/inject
+- 上传代理与 Nginx 体积限制

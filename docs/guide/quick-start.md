@@ -1,10 +1,10 @@
-# 快速开始
+# 快速开�?
 
-DMHub 提供两种部署方式：Docker Compose（推荐）和本地开发。
+DMHub 提供两种部署方式：Docker Compose（推荐）和本地开发�?
 
 ## Docker Compose（推荐）
 
-一键部署，包含后端、前端、数据库和反向代理。
+一键部署，包含后端、前端、数据库和反向代理�?
 
 ### 前置要求
 
@@ -15,14 +15,14 @@ DMHub 提供两种部署方式：Docker Compose（推荐）和本地开发。
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/FishpondStu/dmhub.git
+git clone https://github.com/fishpond-studio/dmhub.git
 cd dmhub
 
 # 2. 创建环境变量文件
 cp .env.example .env
 ```
 
-编辑 `.env`，填入必填项：
+编辑 `.env`，填入必填项�?
 
 ```bash
 # 生成命令: openssl rand -hex 32
@@ -44,7 +44,7 @@ POSTGRES_DB=dmhub
 # 3. 启动服务
 docker compose -f docker/docker-compose.yml --env-file .env up -d
 
-# 4. 访问 https://your-domain.com 进入初始化引导
+# 4. 访问 https://your-domain.com 进入初始化引�?
 ```
 
 启动后包含四个服务：
@@ -56,49 +56,49 @@ docker compose -f docker/docker-compose.yml --env-file .env up -d
 | `postgres` | PostgreSQL 16 | 5432 |
 | `caddy` | 反向代理 + HTTPS | 80 / 443 |
 
-## 本地开发
+## 本地开�?
 
-适合二次开发和调试。
+适合二次开发和调试�?
 
 ### 前置要求
 
-- Node.js ≥ 20
-- pnpm ≥ 9
-- PostgreSQL 16（推荐）或 MariaDB / MySQL
+- Node.js �?20
+- pnpm �?9
+- PostgreSQL 16（推荐）�?MariaDB / MySQL
 
 ### 步骤
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/FishpondStu/dmhub.git
+git clone https://github.com/fishpond-studio/dmhub.git
 cd dmhub
 
 # 2. 安装依赖
 pnpm install
 
-# 3. 构建依赖包
+# 3. 构建依赖�?
 pnpm --filter @dmhub/shared build
 pnpm --filter @dmhub/dns-providers build
 
 # 4. 创建 .env
 cp .env.example .env
-# 编辑 .env，填写 JWT_SECRET 和 ENCRYPTION_KEY
+# 编辑 .env，填�?JWT_SECRET �?ENCRYPTION_KEY
 
-# 5. 启动后端（终端 1）
+# 5. 启动后端（终�?1�?
 pnpm dev:server
-# 后端运行在 http://127.0.0.1:8088
+# 后端运行�?http://127.0.0.1:8088
 
-# 6. 启动前端（终端 2）
+# 6. 启动前端（终�?2�?
 pnpm dev:web
-# 前端运行在 http://127.0.0.1:5173
+# 前端运行�?http://127.0.0.1:5173
 ```
 
-前端开发模式自动代理 `/api` 和 `/uploads` 到后端，无需额外配置。
+前端开发模式自动代�?`/api` �?`/uploads` 到后端，无需额外配置�?
 
-访问 `http://localhost:5173` 进入初始化引导。
+访问 `http://localhost:5173` 进入初始化引导�?
 
-## 下一步
+## 下一�?
 
-- [初始化引导](./setup) — 完成数据库配置和初始设置
-- [Docker 部署详解](./docker) — 生产环境配置细节
-- [环境变量](./env) — 完整配置参考
+- [初始化引导](./setup) �?完成数据库配置和初始设置
+- [Docker 部署详解](./docker) �?生产环境配置细节
+- [环境变量](./env) �?完整配置参�?

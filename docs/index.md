@@ -9,6 +9,9 @@ hero:
       text: 快速开始
       link: /guide/quick-start
     - theme: alt
+      text: 0.2.0 新特性
+      link: /guide/whats-new
+    - theme: alt
       text: 功能概览
       link: /guide/
 
@@ -27,11 +30,11 @@ features:
     link: /guide/assignments
   - icon: 🛡️
     title: 安全认证
-    details: 账号密码 + OAuth2 / OIDC 登录，双因素认证（TOTP / Passkey），API Key 粒度权限。
-    link: /guide/2fa
+    details: 账号密码 + OIDC/OAuth2（Well-Known 发现，回调 /oauth/oidc），双因素认证与 API Key。
+    link: /guide/oauth
   - icon: 🔔
     title: 通知提醒
-    details: 多渠道通知（网页 Toast / 钉钉 / 飞书 / 邮件 / Webhook），域名到期自动检查与提醒。
+    details: 站内信铃铛 + 可选邮件 + 钉钉/飞书/Webhook，域名到期与指派变更可推送。
     link: /guide/notifications
   - icon: 📸
     title: 快照回滚

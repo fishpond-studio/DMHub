@@ -30,14 +30,18 @@ DMHub 支持以下 DNS 记录类型：
 
 ### 创建记录
 
-1. 进入域名详情 → 「解析记录」Tab
-2. 点击「添加记录」（或使用 [DNS 记录模板](/guide/dns-templates) 快速填充）
+1. 进入域名详情 → 「DNS 记录」Tab
+2. 点击「添加记录」，或「应用模板」使用 [DNS 记录模板](/guide/dns-templates)
 3. 选择记录类型，填写主机记录和值
 4. 设置 TTL 和优先级（如适用）
 5. 保存 → 自动同步到服务商 API
 
 ::: tip DNS 记录模板
-常用配置（Gmail、Office 365、Cloudflare CDN 等）可使用预设模板快速创建，无需手动记忆每条记录。详见 [DNS 记录模板](/guide/dns-templates)。
+常用配置（Gmail、Office 365、Cloudflare CDN 等）可在详情页「应用模板」一键批量创建。详见 [DNS 记录模板](/guide/dns-templates)。
+:::
+
+::: tip 成员权限
+若当前账号为 member，列表只显示指派范围内的主机；详情页顶部会展示「可管理范围」。主机名不在范围内时无法保存。详见 [域名指派](/guide/assignments)。
 :::
 
 ### 修改记录

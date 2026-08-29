@@ -5,12 +5,13 @@
 DMHub 采用 pnpm workspace monorepo 结构，前后端分离部署。
 
 ```
-┌─────────────┐     ┌──────────────────────────────────────┐
-│   Caddy     │────▶│  Nginx                              │
-│ (HTTPS/443) │     │  ├── /           → Vue SPA (80)     │
-│             │     │  ├── /api/*      → Node.js (3000)   │
-│             │     │  └── /uploads/*  → Node.js (3000)   │
-└─────────────┘     └──────────────────────────────────────┘
+┌─────────────┐     ┌──────────────────────────────────────────┐
+│   Caddy     │────▶│  Nginx                                   │
+│ (HTTPS/443) │     │  ├── /              → Vue SPA (80)      │
+│             │     │  ├── /api/*         → Node.js (3000)    │
+│             │     │  ├── /oauth/oidc    → Node.js (3000)    │
+│             │     │  └── /uploads/*     → Node.js (3000)    │
+└─────────────┘     └──────────────────────────────────────────┘
                                           │
                                     ┌─────┴─────┐
                                     │  Fastify   │
@@ -24,6 +25,8 @@ DMHub 采用 pnpm workspace monorepo 结构，前后端分离部署。
                         │   (DB)  │  │(可选)  │  │Provider│
                         └────────┘  └────────┘  └────────┘
 ```
+
+OIDC 重定向 URL 固定为 `{站点URL}/oauth/oidc`，须代理到后端。
 
 ## 项目结构
 
@@ -273,23 +276,27 @@ DNSProviderAdapter (interface)
 ## 通知系统
 
 ```
-事件触发 → triggerNotification() → 遍历管理员
-                                            │
-                                    ┌───────┴───────┐
-                                    │               │
-                              SSE 推送          dispatch()
-                              (站内通知)      (外部渠道)
-                                                    │
-                                      ┌─────┬───────┼───────┬──────┐
-                                      │     │       │       │      │
-                                    邮件  钉钉   飞书  Webhook ...
+业务事件
+  ├─ notifyUser / notifyAdmins
+  │     → 内存站内信 + SSE（铃铛 / Toast）
+  │     → 用户开启 emailNotificationsEnabled 时 SMTP 个人邮件
+  └─ triggerNotification(event)
+        → 匹配 notification_configs
+        → dispatch：钉钉 / 飞书 / 邮件列表 / Webhook
 ```
 
-- SSE 流：`GET /notifications/stream?token=xxx`，实时推送给管理员
-- 管理员关闭 `notificationsEnabled` 后不接收站内/SSE 通知
-- `web` 通知配置用于事件匹配和站内通知，非外部渠道分发
-- 支持事件：`domain.expiring`、`domain.expired`、`team_settings.updated`、`member.role_changed`、`member.removed`、`member.status_changed`、`notification.update`、`dns_provider.deleted`、`oauth_provider.deleted`、`admin_reset.requested`
-- 每日 08:00 cron 任务检查域名到期，触发通知
+- SSE：`GET /api/notifications/stream?token=xxx`
+- 站内信存进程内存，重启清空；支持已读 / 清空 API
+- `notificationsEnabled` 控制站内；`emailNotificationsEnabled` 控制个人邮件（默认关）
+- 域名指派创建/删除/审批会 `notifyUser` 对应成员
+- 到期检查 cron 默认每天 08:00
+
+## OIDC / OAuth2
+
+- 配置表 `oauth_providers`：`well_known_url` + 可选端点覆盖
+- `state` 加密携带 `redirectUri`、`intent`（login|bind）
+- 登录成功发一次性 `ticket`，前端 `POST /api/auth/oauth/exchange-ticket`
+- 绑定：`POST /api/auth/oauth/:id/bind/start` 后再跳转 IdP
 
 ## WHOIS / RDAP 查询
 

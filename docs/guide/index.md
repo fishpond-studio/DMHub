@@ -2,6 +2,8 @@
 
 DMHub 是面向小型团队的开源域名协作管理平台，解决域名分散、到期无人管理、解析变更无通知等问题。
 
+> **v0.2.0** 已发布：OIDC 可用化、指派范围可见、站内信/可选邮件等。见 [0.2.0 新特性](/guide/whats-new) · [更新日志](/reference/changelog)。
+
 ## 为什么需要 DMHub
 
 | 痛点 | DMHub 方案 |
@@ -29,14 +31,14 @@ DMHub 是面向小型团队的开源域名协作管理平台，解决域名分�
 | 方式 | 说明 |
 |------|------|
 | 账号密码 | 用户名或邮箱 + 密码，bcryptjs 哈希存储 |
-| OAuth2 / OIDC | GitHub / GitLab / Google / 钉钉 / 飞书 / 自定义 OIDC |
+| OAuth2 / OIDC | GitHub / GitLab / Google / 钉钉 / 飞书 / [标准 OIDC](/guide/oauth)（Well-Known） |
 | 双因素认证 | TOTP / Passkey / 邮箱验证码 / 备用代码，可多选 |
 
 ### 权限与团队
 
 - **三角色模型** — admin / member / guest
-- **域名指派** — 管理员为 member 指派域名及子域名管理权限
-- **指派申请** — member 可主动申请，管理员审批
+- **域名指派** — 子域名范围 + 读写权限；[成员可见可管主机](/guide/assignments)
+- **指派申请** — 审批通过后生效；站内信通知
 - **邀请码制度** — 默认开启，管理员可随时关闭
 
 ### 域名与 DNS
@@ -44,7 +46,7 @@ DMHub 是面向小型团队的开源域名协作管理平台，解决域名分�
 - 域名管理（添加 / 删除 / 分组 / 标签 / 状态）
 - 解析记录 CRUD（A / AAAA / CNAME / MX / TXT / NS / SRV / CAA），自动校验记录值格式
 - 批量 DNS 记录创建（单次最多100条）
-- [DNS 记录模板](/guide/dns-templates) — 9 个预设场景，快速填充，支持批量添加
+- [DNS 记录模板](/guide/dns-templates) — 9 个预设场景，一键批量添加
 - DNS 服务商：Cloudflare / 阿里云 / 腾讯云
 - WHOIS / RDAP 到期查询（三级回退，纯 Node.js 实现）
 - [批量导出](/api/#导出端点) — 域名列表和 DNS 记录导出 CSV / JSON
@@ -53,9 +55,9 @@ DMHub 是面向小型团队的开源域名协作管理平台，解决域名分�
 
 ### 通知与监控
 
-- 多渠道通知：网页 Toast / 钉钉 / 飞书 / 邮件 / Webhook
+- [站内信](/guide/notifications)（铃铛 + SSE + Toast）+ 可选个人邮件
+- 多渠道：钉钉 / 飞书 / 邮件列表 / Webhook
 - 到期提醒：每天 08:00 检查，可配置提醒节点
-- SSE 实时推送
 - UptimeKuma Push URL 集成
 - DNS 测速 / HTTP 可用性检测
 
@@ -63,7 +65,7 @@ DMHub 是面向小型团队的开源域名协作管理平台，解决域名分�
 
 | 层 | 选型 |
 |---|---|
-| 前端 | Vue 3 + Vite + Radix Vue + Tailwind CSS + Pinia |
+| 前端 | Vue 3 + Vite + shadcn-vue（Radix Vue）+ Tailwind CSS + Pinia |
 | 后端 | Fastify + TypeScript + Drizzle ORM |
 | 数据库 | PostgreSQL（推荐）/ MariaDB / MySQL 8+ |
 | 认证 | JWT（Access 15min + Refresh 7d）+ bcryptjs |

@@ -1,63 +1,86 @@
 # 通知配置
 
-DMHub 支持多渠道通知，包括站内 SSE 推送和外部渠道分发。
+DMHub 支持**站内�?*�?*可选邮�?*�?*外部渠道**（钉�?/ 飞书 / 邮件群发 / Webhook）�?
+## 通知渠道总览
 
-## 通知渠道
+| 渠道 | 说明 | 配置 |
+|------|------|------|
+| **站内�?* | SSE 实时推�?+ 顶栏铃铛收件�?+ Toast | 默认开启，个人资料可关 |
+| **个人邮件** | 发到用户绑定邮箱 | 个人资料开启「邮件通知�? 团队 SMTP |
+| **钉钉 / 飞书** | 群机器人 | 设置 �?通知配置 |
+| **邮件（渠道）** | 发给配置的收件人列表 | 通知配置 + SMTP |
+| **Webhook** | 自定�?HTTP 回调 | 通知配置 |
 
-| 渠道 | 说明 | 配置项 |
-|------|------|--------|
-| 站内通知 | SSE 实时推送 + Toast | 无需额外配置 |
-| 钉钉 | 群机器人 Webhook | Webhook URL + 签名密钥 |
-| 飞书 | 群机器人 Webhook | Webhook URL + 签名密钥 |
-| 邮件 | 使用团队 SMTP 配置 | SMTP 已在团队设置中配置 |
-| Webhook | 自定义 HTTP 回调 | URL + 请求头 + 签名密钥 |
+## 站内�?
+### 使用方式
 
-## 通知事件
+- 登录后顶�?**铃铛** 显示未读�?- 点击查看标题、正文、时间；可标记已�?/ 全部已读 / 清空
+- 在线时同步弹�?Toast
+- 点击域名相关消息可跳转详情或审批�?
+### 技术说�?
+| 项目 | 说明 |
+|------|------|
+| 推�?| `GET /api/notifications/stream?token=<access_token>`（SSE�?|
+| 历史 | 进程内存存储，每用户最多约 100 条；**重启服务后清�?* |
+| 轮询兜底 | SSE 不可用时�?30 秒拉�?`/api/notifications` |
 
-每个通知配置可选择触发事件：
+### 个人开�?
+**设置 �?个人资料 �?通知偏好**
+
+| 开�?| 默认 | 作用 |
+|------|------|------|
+| 站内通知 | 开 | 铃铛 / Toast / SSE |
+| 邮件通知 | **关（可选）** | 域名分配等事件发到邮�?|
+
+邮件通知需：已绑定邮箱 + 团队已配�?SMTP + 用户主动开启�?
+## 会触发站内信 / 邮件的业务事�?
+| 事件 | 接收�?| 说明 |
+|------|--------|------|
+| 管理员分配域�?| 被分配成�?| 含可管理主机范围（如 `blog.example.com`）与权限 |
+| 移除域名分配 | 被移除成�?| |
+| 指派申请提交 | 管理�?| |
+| 指派审批通过 / 拒绝 | 申请�?| |
+| 团队关键设置变更�?| 管理�?| 亦可能走外部渠道配置 |
+
+## 外部渠道配置
+
+路径�?*设置 �?通知配置**（管理员�?
+每个配置包含�?
+- **渠道**：web / dingtalk / feishu / email / webhook  
+- **名称**  
+- **渠道参数**（如钉钉 webhook、收件人列表�? 
+- **订阅事件**  
+- **启用开�?*
+
+### 常用事件
 
 | 事件 | 说明 |
 |------|------|
 | `domain.expiring` | 域名即将过期 |
-| `domain.expired` | 域名已过期 |
+| `domain.expired` | 域名已过�?|
 | `team_settings.updated` | 团队设置变更 |
 | `member.role_changed` | 成员角色变更 |
-| `member.removed` | 成员被移除 |
-| `member.status_changed` | 成员启用 / 禁用 |
-| `notification.update` | 通知配置变更 |
-| `dns_provider.deleted` | DNS 服务商被删除 |
-| `oauth_provider.deleted` | OAuth Provider 被删除 |
-| `admin_reset.requested` | 管理员帮助重置 2FA |
+| `member.removed` | 成员被移�?|
+| `assignment.create` / 相关 | 域名指派（站内信侧已覆盖�?|
+| `oauth_provider.deleted` | OAuth 提供商删�?|
+| `admin_reset.requested` | 管理员帮助重�?2FA |
 
-## 通知流程
+### 流程示意
 
 ```
-事件触发 → triggerNotification() → 遍历管理员
-                                            │
-                                    ┌───────┴───────┐
-                                    │               │
-                              SSE 推送          dispatch()
-                              (站内通知)      (外部渠道)
-                                                    │
-                                      ┌─────┬───────┼───────┬──────┐
-                                      │     │       │       │      │
-                                    邮件  钉钉   飞书  Webhook ...
+业务事件
+  ├─ notifyUser / notifyAdmins  �?站内信存�?+ SSE
+  �?                                └─ 若用户开启邮件通知 �?SMTP 发信
+  └─ triggerNotification(event) �?匹配通知配置
+                                    └─ dispatch 钉钉 / 飞书 / 邮件列表 / Webhook
 ```
 
-## 个人通知设置
+## 到期提醒
 
-管理员可在「设置 → 个人资料」中关闭通知开关，关闭后不接收站内通知和 SSE 推送。
+- 定时任务默认每天 **08:00** 检查域名到�? 
+- 提醒节点可按域名配置（如 30 / 14 / 7 / 3 / 1 / 0 天）  
+- 通过通知配置中的 `domain.expiring` / `domain.expired` 分发  
 
-## 系统通知
+## 相关 API
 
-- 系统通知主要推送给启用通知的管理员
-- 每日 08:00 域名到期检查会触发通知
-- 解析变更、成员变动等事件触发通知
-
-## SSE 连接
-
-```
-GET /api/notifications/stream?token=<access_token>
-```
-
-SSE 连接用于实时推送站内通知。连接断开后会自动重连。
+�?[API：通知](/api/notifications) 与根目录 [API.md](https://github.com/fishpond-studio/dmhub/blob/main/API.md)�?

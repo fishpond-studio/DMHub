@@ -55,6 +55,18 @@
 |------|------|------|
 | `/api/domains/:id/records/bulk` | POST | 批量创建 DNS 记录（最多100条） |
 
+## 专题文档
+
+| 文档 | 内容 |
+|------|------|
+| [认证](./auth) | 登录 / 刷新 / 2FA / 个人资料 |
+| [OAuth / OIDC](./oauth) | 登录回调、绑定、Well-Known 配置、`/oauth/oidc` |
+| [通知](./notifications) | 站内信 SSE、已读、渠道配置、邮件开关 |
+| [域名](./domains) | 域名 CRUD |
+| [解析记录](./records) | DNS 记录与批量 |
+| [快照](./snapshots) | 快照与回滚 |
+| [导出](./export) | CSV / JSON 导出 |
+
 ## 频率限制
 
 - 100 请求 / 分钟 / Key

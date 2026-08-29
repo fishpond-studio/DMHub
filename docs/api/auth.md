@@ -99,25 +99,44 @@
 }
 ```
 
-## OAuth 登录
+## OAuth / OIDC 登录
 
-### GET /api/auth/oauth/:providerId/authorize
+完整说明见 [OAuth / OIDC API](./oauth)。
 
-跳转到 Provider 授权页面。`:providerId` 可以是 `github` / `gitlab` / `google` / `dingtalk` / `feishu` / `custom`。
+摘要：
 
-### GET /api/auth/oauth/:providerId/callback
+| 接口 | 说明 |
+|------|------|
+| `GET /api/auth/oauth/providers` | 已启用提供商 |
+| `GET /api/auth/oauth/:id/authorize` | 跳转授权 |
+| `GET /oauth/oidc` | OIDC 重定向 URL（简洁路径） |
+| `POST /api/auth/oauth/exchange-ticket` | ticket 换 accessToken |
+| `POST /api/auth/oauth/:id/bind/start` | 发起账号绑定 |
+| `POST /api/auth/oauth/:id/register` | 邀请码完成注册 |
 
-OAuth 回调地址。
+`:providerId` 可为 `oidc` / `github` / `gitlab` / `google` / `dingtalk` / `feishu` / `custom`（兼容）。
 
 ## 用户资料
 
 ### GET /api/auth/me
 
-获取当前登录用户信息。
+获取当前登录用户信息（含 `notificationsEnabled`、`emailNotificationsEnabled`）。
 
 ### PUT /api/auth/me/profile
 
-更新用户资料（显示名称、昵称、头像）。
+更新用户资料。
+
+**Body 示例:**
+
+```json
+{
+  "displayName": "张三",
+  "nickname": "san",
+  "avatarUrl": "https://...",
+  "notificationsEnabled": true,
+  "emailNotificationsEnabled": false
+}
+```
 
 ### PUT /api/auth/me/password
 
