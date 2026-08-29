@@ -1,16 +1,19 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Sun, Moon, Monitor } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useTheme } from '@/composables/use-theme'
+import { useI18n } from 'vue-i18n'
 
 const { currentTheme, setTheme } = useTheme()
+const { t } = useI18n()
 
-const themes: { value: 'light' | 'dark' | 'system'; label: string; icon: any }[] = [
-  { value: 'light', label: '浅色', icon: Sun },
-  { value: 'dark', label: '深色', icon: Moon },
-  { value: 'system', label: '跟随系统', icon: Monitor },
-]
+const themes = computed(() => [
+  { value: 'light' as const, label: t('theme.light'), icon: Sun },
+  { value: 'dark' as const, label: t('theme.dark'), icon: Moon },
+  { value: 'system' as const, label: t('theme.system'), icon: Monitor },
+])
 </script>
 
 <template>
