@@ -8,14 +8,56 @@
           <Button variant="ghost" size="icon" @click="$router.push('/domains')">
             <ArrowLeft class="h-5 w-5" />
           </Button>
-          <h1 class="text-xl md:text-2xl font-bold text-foreground truncate">{{ domain.name }}</h1>
-          <div class="flex items-center gap-2 sm:ml-auto">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <h1 class="text-xl md:text-2xl font-bold text-foreground truncate">{{ domain.name }}</h1>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-8 w-8 shrink-0"
+                :title="favorited ? '取消收藏' : '收藏域名'"
+                @click="toggleFavorite"
+              >
+                <Star class="h-4 w-4" :class="favorited ? 'fill-yellow-400 text-yellow-500' : ''" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-8 w-8 shrink-0"
+                title="复制域名"
+                @click="copyText(domain.name, '域名已复制')"
+              >
+                <Copy class="h-4 w-4" />
+              </Button>
+            </div>
+            <p class="text-xs text-muted-foreground mt-0.5">
+              {{ domain.providerName || '未关联服务商' }}
+              <span v-if="domain.groupName"> · {{ domain.groupName }}</span>
+              <span> · {{ domain.recordCount }} 条记录</span>
+              <span v-if="cdnSupported" class="text-orange-500"> · 支持 CDN 保护</span>
+            </p>
+          </div>
+          <div class="flex items-center gap-2 sm:ml-auto flex-wrap">
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button variant="outline" size="sm">
+                  <Download class="mr-1.5 h-4 w-4" />
+                  导出
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem @click="handleExportRecords('csv')">导出 CSV</DropdownMenuItem>
+                <DropdownMenuItem @click="handleExportRecords('json')">导出 JSON</DropdownMenuItem>
+                <DropdownMenuItem @click="handleExportRecords('zone')">导出 BIND Zone</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               v-if="isAdmin"
               @click="handleSync"
               :disabled="syncing"
               size="sm"
             >
+              <RefreshCw class="mr-1.5 h-4 w-4" :class="syncing ? 'animate-spin' : ''" />
               {{ syncing ? '同步中...' : '同步记录' }}
             </Button>
             <Button
@@ -28,6 +70,73 @@
             </Button>
           </div>
         </div>
+
+        <!-- 域名备注 -->
+        <Card class="mb-4">
+          <CardContent class="p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <dt class="text-xs font-medium text-muted-foreground mb-1">备注</dt>
+                <div v-if="!editingNotes">
+                  <p v-if="domain.notes" class="text-sm whitespace-pre-wrap">{{ domain.notes }}</p>
+                  <p v-else class="text-sm text-muted-foreground">暂无备注</p>
+                </div>
+                <Textarea
+                  v-else
+                  v-model="notesInput"
+                  rows="3"
+                  class="text-sm"
+                  placeholder="记录续费账号、联系人、用途等…"
+                  maxlength="4000"
+                />
+              </div>
+              <div v-if="isAdmin" class="shrink-0 flex gap-1">
+                <template v-if="!editingNotes">
+                  <Button variant="ghost" size="sm" class="h-8" @click="startEditNotes">编辑</Button>
+                </template>
+                <template v-else>
+                  <Button variant="ghost" size="sm" class="h-8" @click="editingNotes = false">取消</Button>
+                  <Button size="sm" class="h-8" :disabled="savingNotes" @click="saveNotes">保存</Button>
+                </template>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- 非管理员：清晰展示被指派的子域名范围，避免只看到总域名 -->
+        <Card v-if="!isAdmin && myScopes.length" class="mb-4 border-primary/20 bg-primary/5">
+          <CardContent class="p-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Shield class="h-4 w-4 text-primary" />
+                  你的可管理范围
+                </div>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  列表仅显示权限范围内的解析记录；主机名需落在下列模式内才可{{ canEdit ? '编辑' : '查看' }}。
+                </p>
+              </div>
+              <Badge :variant="canEdit ? 'default' : 'secondary'" class="shrink-0 self-start">
+                {{ canEdit ? '可编辑' : '只读' }}
+              </Badge>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <div
+                v-for="scope in myScopes"
+                :key="scope.id"
+                class="rounded-lg border border-primary/15 bg-background/80 px-3 py-2"
+              >
+                <div class="font-mono text-sm font-medium">
+                  {{ formatHostPreview(domain.name, scope.subdomainPattern) }}
+                </div>
+                <div class="mt-0.5 text-[11px] text-muted-foreground">
+                  {{ formatScopeLabel(scope.subdomainPattern) }}
+                  · {{ permissionLabel(scope.permission) }}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card class="mb-6">
           <CardContent class="p-5">
@@ -74,6 +183,29 @@
               <div>
                 <dt class="text-xs font-medium text-muted-foreground">记录数</dt>
                 <dd class="mt-1 text-sm">{{ domain.recordCount }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium text-muted-foreground">HTTPS 证书</dt>
+                <dd class="mt-1">
+                  <div class="flex items-center gap-1 flex-wrap">
+                    <span class="text-sm" :class="sslExpiryClass">
+                      {{ sslExpiryLabel }}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="h-6 w-6"
+                      title="检测证书"
+                      :disabled="checkingSsl"
+                      @click="handleSslCheck"
+                    >
+                      <Shield class="h-3.5 w-3.5" :class="checkingSsl ? 'animate-pulse' : ''" />
+                    </Button>
+                  </div>
+                  <div v-if="domain.sslIssuer" class="text-xs text-muted-foreground mt-0.5 truncate max-w-[12rem]" :title="domain.sslIssuer">
+                    {{ domain.sslIssuer }}
+                  </div>
+                </dd>
               </div>
               <div>
                 <dt class="text-xs font-medium text-muted-foreground">分组</dt>
@@ -123,9 +255,9 @@
               <div>
                 <dt class="text-xs font-medium text-muted-foreground">权限</dt>
                 <dd class="mt-1 text-sm">
-                  <span v-if="isAdmin">管理员</span>
-                  <span v-else-if="domain.assignment?.permission === 'dns_edit'">可编辑</span>
-                  <span v-else>只读</span>
+                  <span v-if="isAdmin">管理员（全部）</span>
+                  <span v-else-if="canEdit">可编辑（限定子域）</span>
+                  <span v-else>只读（限定子域）</span>
                 </dd>
               </div>
               <div>
@@ -178,17 +310,50 @@
           </TabsList>
 
           <TabsContent value="records">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-            <div class="flex items-center gap-3 flex-wrap">
+          <div class="flex flex-col gap-3 mb-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="flex gap-1 flex-wrap">
                 <Badge
                   v-for="summary in recordSummary"
                   :key="summary.type"
                   variant="outline"
+                  class="cursor-pointer"
+                  :class="typeFilter === summary.type ? 'border-primary text-primary' : ''"
+                  @click="typeFilter = typeFilter === summary.type ? 'all' : summary.type; loadRecords()"
                 >
                   {{ summary.type }}: {{ summary.count }}
                 </Badge>
               </div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <Button
+                  v-if="canEdit"
+                  variant="outline"
+                  size="sm"
+                  @click="showPasteDialog = true"
+                >
+                  <ClipboardPaste class="mr-1.5 h-4 w-4" />
+                  粘贴导入
+                </Button>
+                <Button
+                  v-if="canEdit"
+                  variant="outline"
+                  size="sm"
+                  @click="showTemplateDialog = true"
+                >
+                  <LayoutTemplate class="mr-1.5 h-4 w-4" />
+                  应用模板
+                </Button>
+                <Button
+                  v-if="canEdit"
+                  @click="openCreateRecord"
+                  size="sm"
+                >
+                  <Plus class="mr-1.5 h-4 w-4" />
+                  添加记录
+                </Button>
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Select v-model="typeFilter" @update:model-value="loadRecords">
                 <SelectTrigger class="w-full sm:w-[130px]">
                   <SelectValue placeholder="全部类型" />
@@ -198,55 +363,159 @@
                   <SelectItem v-for="t in recordTypes" :key="t.type" :value="t.type">{{ t.type }}</SelectItem>
                 </SelectContent>
               </Select>
-              <Input
-                v-model="recordSearch"
-                type="text"
-                placeholder="搜索记录名..."
-                class="w-full sm:w-48"
-                @input="debouncedLoadRecords"
-              />
-              <Button
-                v-if="canEdit"
-                @click="openCreateRecord"
-                size="sm"
-              >
-                添加记录
-              </Button>
+              <div class="relative flex-1 sm:max-w-xs">
+                <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  v-model="recordSearch"
+                  type="text"
+                  placeholder="搜索记录名或值..."
+                  class="pl-9"
+                  @input="debouncedLoadRecords"
+                />
+              </div>
+              <div v-if="canEdit && selectedRecordIds.length" class="flex items-center gap-2 ml-auto flex-wrap">
+                <span class="text-xs text-muted-foreground">已选 {{ selectedRecordIds.length }}</span>
+                <Select v-model="bulkTtl" @update:model-value="handleBulkTtl">
+                  <SelectTrigger class="w-[120px] h-8">
+                    <SelectValue placeholder="改 TTL" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="60">TTL 1 分钟</SelectItem>
+                    <SelectItem value="300">TTL 5 分钟</SelectItem>
+                    <SelectItem value="600">TTL 10 分钟</SelectItem>
+                    <SelectItem value="1800">TTL 30 分钟</SelectItem>
+                    <SelectItem value="3600">TTL 1 小时</SelectItem>
+                    <SelectItem value="21600">TTL 6 小时</SelectItem>
+                    <SelectItem value="86400">TTL 1 天</SelectItem>
+                  </SelectContent>
+                </Select>
+                <template v-if="cdnSupported">
+                  <Button variant="outline" size="sm" :disabled="bulkCdnLoading" @click="handleBulkCdn(true)">
+                    开 CDN
+                  </Button>
+                  <Button variant="outline" size="sm" :disabled="bulkCdnLoading" @click="handleBulkCdn(false)">
+                    关 CDN
+                  </Button>
+                </template>
+                <Button variant="destructive" size="sm" @click="handleBulkDeleteRecords">
+                  批量删除
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div v-if="store.loading" class="text-center py-8 text-muted-foreground">加载中...</div>
-          <div v-else-if="store.records.length === 0" class="text-center py-8 text-muted-foreground">暂无 DNS 记录</div>
+          <div v-if="store.loading" class="space-y-2 py-2">
+            <Skeleton v-for="i in 5" :key="i" class="h-12 w-full rounded-lg" />
+          </div>
+          <EmptyState
+            v-else-if="store.records.length === 0"
+            title="暂无 DNS 记录"
+            description="手动添加，或使用模板一键配置常见场景（邮箱、建站、CDN 等）"
+            :action-label="canEdit ? '添加记录' : undefined"
+            :secondary-label="canEdit ? '应用模板' : undefined"
+            @action="openCreateRecord"
+            @secondary="showTemplateDialog = true"
+          />
           <div v-else>
-            <div class="hidden md:block">
+            <div class="hidden md:block overflow-hidden rounded-xl border">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow class="bg-muted/40 hover:bg-muted/40">
+                    <TableHead v-if="canEdit" class="w-10">
+                      <Checkbox
+                        :checked="allRecordsSelected"
+                        @update:checked="toggleSelectAllRecords"
+                      />
+                    </TableHead>
                     <TableHead>类型</TableHead>
                     <TableHead>主机记录</TableHead>
                     <TableHead>记录值</TableHead>
                     <TableHead>TTL</TableHead>
                     <TableHead>优先级</TableHead>
-                    <TableHead>代理</TableHead>
-                    <TableHead v-if="canEdit" class="text-right">操作</TableHead>
+                    <TableHead>
+                      <span v-if="cdnSupported">CDN</span>
+                      <span v-else>代理</span>
+                    </TableHead>
+                    <TableHead>备注</TableHead>
+                    <TableHead class="text-right">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow v-for="r in store.records" :key="r.id">
+                  <TableRow v-for="r in store.records" :key="r.id" class="group">
+                    <TableCell v-if="canEdit">
+                      <Checkbox
+                        :checked="selectedRecordIds.includes(r.id)"
+                        @update:checked="(v: boolean) => toggleRecordSelect(r.id, v)"
+                      />
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{{ r.recordType }}</Badge>
                     </TableCell>
-                    <TableCell class="font-medium">{{ r.name }}</TableCell>
-                    <TableCell class="max-w-xs truncate text-muted-foreground" :title="r.value">{{ r.value }}</TableCell>
-                    <TableCell class="text-muted-foreground">{{ r.ttl }}</TableCell>
+                    <TableCell class="font-medium font-mono text-sm">{{ r.name }}</TableCell>
+                    <TableCell class="max-w-xs">
+                      <div class="flex items-center gap-1">
+                        <span class="truncate text-muted-foreground font-mono text-xs" :title="r.value">{{ r.value }}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          class="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
+                          @click="copyText(r.value, '记录值已复制')"
+                        >
+                          <Copy class="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell class="text-muted-foreground tabular-nums">{{ r.ttl }}</TableCell>
                     <TableCell class="text-muted-foreground">{{ r.priority ?? '-' }}</TableCell>
                     <TableCell>
-                      <span v-if="r.proxied" class="text-orange-500 dark:text-orange-400">已代理</span>
+                      <template v-if="cdnSupported && canToggleCdn(r)">
+                        <div class="flex items-center gap-1.5" @click.stop>
+                          <Switch
+                            :checked="!!r.proxied"
+                            :disabled="!canEdit || togglingCdnId === r.id"
+                            @update:checked="(v: boolean) => toggleRecordCdn(r, v)"
+                          />
+                          <span
+                            class="text-xs"
+                            :class="r.proxied ? 'text-orange-500 font-medium' : 'text-muted-foreground'"
+                          >
+                            {{ r.proxied ? '开' : '关' }}
+                          </span>
+                        </div>
+                      </template>
+                      <template v-else-if="r.proxied">
+                        <span class="text-orange-500 dark:text-orange-400 text-xs font-medium">已代理</span>
+                      </template>
                       <span v-else class="text-muted-foreground">-</span>
                     </TableCell>
-                    <TableCell v-if="canEdit" class="text-right">
-                      <Button @click="openEditRecord(r)" variant="link" size="sm" class="text-primary">编辑</Button>
-                      <Button @click="handleDeleteRecord(r.id)" variant="link" size="sm" class="text-destructive">删除</Button>
+                    <TableCell class="max-w-[8rem] truncate text-xs text-muted-foreground" :title="r.notes || ''">
+                      {{ r.notes || '—' }}
+                    </TableCell>
+                    <TableCell class="text-right whitespace-nowrap">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        class="h-8"
+                        title="检测解析传播"
+                        :disabled="propagatingId === r.id"
+                        @click="handlePropagate(r)"
+                      >
+                        {{ propagatingId === r.id ? '检测…' : '传播' }}
+                      </Button>
+                      <template v-if="canEdit">
+                        <Button @click="openEditRecord(r)" variant="ghost" size="sm" class="h-8">编辑</Button>
+                        <Button @click="openCloneRecord(r)" variant="ghost" size="sm" class="h-8">克隆</Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          class="h-8"
+                          title="复制 dig 命令"
+                          @click="copyDigCommand(r)"
+                        >
+                          dig
+                        </Button>
+                        <Button @click="handleDeleteRecord(r.id)" variant="ghost" size="sm" class="h-8 text-destructive hover:text-destructive">删除</Button>
+                      </template>
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -257,21 +526,43 @@
               <Card v-for="r in store.records" :key="r.id">
                 <CardContent class="p-3">
                   <div class="flex items-center justify-between mb-1">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <Checkbox
+                        v-if="canEdit"
+                        :checked="selectedRecordIds.includes(r.id)"
+                        @update:checked="(v: boolean) => toggleRecordSelect(r.id, v)"
+                      />
                       <Badge variant="secondary" class="text-xs">{{ r.recordType }}</Badge>
-                      <span class="font-medium text-sm">{{ r.name }}</span>
+                      <span class="font-medium text-sm font-mono">{{ r.name }}</span>
                     </div>
-                    <div v-if="canEdit" class="flex gap-1">
+                    <div v-if="canEdit" class="flex gap-1 shrink-0 flex-wrap justify-end">
                       <Button @click="openEditRecord(r)" variant="ghost" size="sm" class="text-primary h-7 px-2">编辑</Button>
+                      <Button @click="openCloneRecord(r)" variant="ghost" size="sm" class="h-7 px-2">克隆</Button>
+                      <Button @click="copyDigCommand(r)" variant="ghost" size="sm" class="h-7 px-2">dig</Button>
                       <Button @click="handleDeleteRecord(r.id)" variant="ghost" size="sm" class="text-destructive h-7 px-2">删除</Button>
                     </div>
                   </div>
-                  <div class="text-xs text-muted-foreground break-all">{{ r.value }}</div>
-                  <div class="flex gap-3 mt-1 text-xs text-muted-foreground">
+                  <div class="text-xs text-muted-foreground break-all font-mono flex items-start gap-1">
+                    <span class="flex-1">{{ r.value }}</span>
+                    <Button variant="ghost" size="icon" class="h-6 w-6 shrink-0" @click="copyText(r.value, '记录值已复制')">
+                      <Copy class="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div class="flex gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                     <span>TTL: {{ r.ttl }}</span>
                     <span v-if="r.priority">优先级: {{ r.priority }}</span>
                     <span v-if="r.proxied" class="text-orange-500">已代理</span>
+                    <span v-if="r.notes" class="truncate">备注: {{ r.notes }}</span>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="mt-2 h-7 w-full"
+                    :disabled="propagatingId === r.id"
+                    @click="handlePropagate(r)"
+                  >
+                    {{ propagatingId === r.id ? '检测传播中…' : '检测解析传播' }}
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -280,9 +571,31 @@
           <RecordEditForm
             v-if="showRecordForm"
             :domain-id="domainId"
+            :domain-name="domain?.name || ''"
             :record="editingRecord"
-            @close="showRecordForm = false"
+            :defaults="cloneDefaults"
+            :allowed-patterns="myScopes.filter((s) => s.permission === 'dns_edit').map((s) => s.subdomainPattern)"
+            :cdn-supported="cdnSupported"
+            :cdn-proxy-types="cdnProxyTypes"
+            :cdn-label="cdnLabel"
+            :cdn-description="cdnDescription"
+            @close="closeRecordForm"
             @saved="handleRecordSaved"
+          />
+
+          <DnsTemplateDialog
+            v-if="domain"
+            v-model:open="showTemplateDialog"
+            :domain-id="domainId"
+            :domain-name="domain.name"
+            @applied="handleTemplateApplied"
+          />
+
+          <PasteRecordsDialog
+            v-if="domain"
+            v-model:open="showPasteDialog"
+            :domain-id="domainId"
+            @applied="handleTemplateApplied"
           />
         </TabsContent>
 
@@ -405,6 +718,59 @@
               </div>
               <div v-else class="text-sm text-muted-foreground">
                 联系管理员配置 UptimeKuma 集成
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div class="flex items-center justify-between">
+                <CardTitle class="text-sm">可用性监控</CardTitle>
+                <div class="flex items-center gap-2">
+                  <Switch
+                    v-if="isAdmin"
+                    :checked="monitorEnabled"
+                    @update:checked="handleToggleMonitor"
+                  />
+                  <Button
+                    @click="handleMonitorCheck"
+                    :disabled="monitorStore.checking || !monitorEnabled"
+                    size="sm"
+                  >
+                    {{ monitorStore.checking ? '探测中...' : '立即探测' }}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div v-if="!monitorEnabled" class="text-center py-6 text-sm text-muted-foreground">
+                监控未启用{{ isAdmin ? '，请开启开关以定时探测域名可用性' : '' }}
+              </div>
+              <div v-else-if="monitorStore.history.length === 0" class="text-center py-6 text-sm text-muted-foreground">
+                暂无探测记录，点击"立即探测"开始
+              </div>
+              <div v-else class="space-y-3">
+                <div class="flex flex-wrap items-center gap-3">
+                  <Badge :variant="monitorStore.history[0]?.status === 'up' ? 'default' : 'destructive'">
+                    {{ monitorStore.history[0]?.status === 'up' ? '正常' : '不可用' }}
+                  </Badge>
+                  <span class="text-sm text-muted-foreground">
+                    响应时间: <span class="font-medium">{{ monitorStore.history[0]?.responseMs ?? '-' }}ms</span>
+                  </span>
+                  <span class="text-xs text-muted-foreground">
+                    可用率: <span class="font-medium">{{ monitorAvailability }}%</span>（近 {{ monitorStore.history.length }} 次）
+                  </span>
+                </div>
+                <div class="flex gap-1 items-end h-20">
+                  <div
+                    v-for="(h, i) in [...monitorStore.history].slice(0, 48).reverse()"
+                    :key="h.id || i"
+                    :class="h.status === 'up' ? 'bg-primary' : 'bg-destructive'"
+                    class="flex-1 rounded-t min-w-[4px]"
+                    :style="{ height: Math.max(15, Math.min(100, (h.responseMs ?? 500) / 10)) + '%' }"
+                    :title="`${h.status === 'up' ? '正常' : '异常'} ${h.responseMs ?? '-'}ms ${new Date(h.checkedAt).toLocaleString('zh-CN')}`"
+                  ></div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -589,6 +955,50 @@
       </DialogContent>
     </Dialog>
 
+    <Dialog v-model:open="showPropagateDialog">
+      <DialogContent class="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>解析传播检测</DialogTitle>
+          <DialogDescription v-if="propagateResult">
+            {{ propagateResult.recordType }} · {{ propagateResult.fqdn }}
+            <span v-if="propagateResult.expectedValue" class="block font-mono text-xs mt-1 truncate">
+              期望: {{ propagateResult.expectedValue }}
+            </span>
+          </DialogDescription>
+        </DialogHeader>
+        <div v-if="propagateResult" class="space-y-3">
+          <div class="flex flex-wrap gap-2 text-sm">
+            <Badge variant="default">匹配 {{ propagateResult.matched }}/{{ propagateResult.total }}</Badge>
+            <Badge variant="secondary">可解析 {{ propagateResult.resolved }}/{{ propagateResult.total }}</Badge>
+          </div>
+          <div class="space-y-2">
+            <div
+              v-for="hit in propagateResult.results"
+              :key="hit.ip"
+              class="rounded-lg border px-3 py-2 text-sm"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div class="font-medium">
+                  {{ hit.name }}
+                  <span class="text-xs font-normal text-muted-foreground font-mono ml-1">{{ hit.ip }}</span>
+                </div>
+                <Badge :variant="hit.matched ? 'default' : hit.ok ? 'secondary' : 'destructive'">
+                  {{ hit.matched ? '已匹配' : hit.ok ? '不一致' : '失败' }}
+                </Badge>
+              </div>
+              <div class="mt-1 text-xs text-muted-foreground font-mono break-all">
+                <template v-if="hit.ok">{{ hit.values.join(' · ') || '（空）' }} · {{ hit.latencyMs }}ms</template>
+                <template v-else>{{ hit.error }}</template>
+              </div>
+            </div>
+          </div>
+          <p class="text-[11px] text-muted-foreground">
+            结果仅供参考：部分解析器有缓存，TTL 未到期时可能暂时不一致。
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+
     <AlertDialog :open="pendingDisableOneDay">
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -608,15 +1018,23 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useDomainStore, type DnsRecord } from '@/stores/domain';
 import { useAuthStore } from '@/stores/auth';
 import { useUptimeStore } from '@/stores/uptime';
 import { useSpeedtestStore } from '@/stores/speedtest';
+import { useMonitorStore } from '@/stores/monitor';
 import { DNS_RECORD_TYPES, DEFAULT_EXPIRY_REMIND_DAYS } from '@dmhub/shared/constants';
 import RecordEditForm from '@/components/domain/RecordEditForm.vue';
 import SnapshotDiff from '@/components/domain/SnapshotDiff.vue';
+import DnsTemplateDialog from '@/components/domain/DnsTemplateDialog.vue';
+import PasteRecordsDialog from '@/components/domain/PasteRecordsDialog.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import { Skeleton } from '@/components/ui/skeleton';
 import api from '@/lib/axios';
+import { copyText } from '@/lib/copy';
+import { confirmDialog } from '@/composables/use-confirm';
+import { toastSuccess, toastError, toastInfo } from '@/lib/toast-helpers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -629,25 +1047,197 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Pencil, Search } from 'lucide-vue-next';
+import { ArrowLeft, Pencil, Search, Copy, Download, RefreshCw, LayoutTemplate, Plus, Shield, Star, ClipboardPaste } from 'lucide-vue-next';
+import {
+  formatHostPreview,
+  formatScopeLabel,
+  permissionLabel,
+} from '@/lib/subdomain-scope';
+import { isFavoriteDomain, toggleFavoriteDomain } from '@/lib/favorites';
+import { pushRecentDomain } from '@/lib/recent-domains';
+import type { DomainAssignmentScope } from '@/stores/domain';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const route = useRoute();
+const router = useRouter();
 const store = useDomainStore();
 const authStore = useAuthStore();
 const uptimeStore = useUptimeStore();
 const speedtestStore = useSpeedtestStore();
+const monitorStore = useMonitorStore();
 const domainId = computed(() => route.params.id as string);
 
 const domain = computed(() => store.currentDomain);
 const isAdmin = computed(() => authStore.user?.role === 'admin');
-const canEdit = computed(() => isAdmin.value || store.currentDomain?.assignment?.permission === 'dns_edit');
+const monitorEnabled = ref(false);
+const monitorAvailability = computed(() => {
+  const h = monitorStore.history;
+  if (h.length === 0) return 0;
+  const up = h.filter((x: any) => x.status === 'up').length;
+  return Math.round((up / h.length) * 100);
+});
+
+const myScopes = computed<DomainAssignmentScope[]>(() => {
+  const d = store.currentDomain;
+  if (!d || isAdmin.value) return [];
+  if (d.assignments && d.assignments.length > 0) return d.assignments;
+  if (d.assignment) return [d.assignment];
+  return [];
+});
+
+const canEdit = computed(() => {
+  if (isAdmin.value) return true;
+  return myScopes.value.some((a) => a.permission === 'dns_edit');
+});
 
 const syncing = ref(false);
 const syncResult = ref<{ synced: number; created: number; updated: number } | null>(null);
 const typeFilter = ref('all');
 const recordSearch = ref('');
 const showRecordForm = ref(false);
+const showTemplateDialog = ref(false);
+const showPasteDialog = ref(false);
+const selectedRecordIds = ref<string[]>([]);
 const editingRecord = ref<DnsRecord | null>(null);
+const cloneDefaults = ref<Partial<DnsRecord> | null>(null);
+const bulkTtl = ref<string>('');
+const propagatingId = ref<string | null>(null);
+const showPropagateDialog = ref(false);
+const propagateResult = ref<{
+  fqdn: string;
+  recordType: string;
+  expectedValue: string | null;
+  total: number;
+  resolved: number;
+  matched: number;
+  results: Array<{
+    name: string;
+    ip: string;
+    ok: boolean;
+    matched: boolean;
+    values: string[];
+    error?: string;
+    latencyMs: number;
+  }>;
+} | null>(null);
+const checkingSsl = ref(false);
+const togglingCdnId = ref<string | null>(null);
+const bulkCdnLoading = ref(false);
+
+const cdnSupported = computed(() => domain.value?.cdnProxy?.supported === true);
+const cdnProxyTypes = computed(() => domain.value?.cdnProxy?.proxyRecordTypes || ['A', 'AAAA', 'CNAME']);
+const cdnLabel = computed(() => domain.value?.cdnProxy?.proxyLabel || 'CDN 保护');
+const cdnDescription = computed(
+  () => domain.value?.cdnProxy?.proxyDescription || '',
+);
+
+function canToggleCdn(r: DnsRecord) {
+  return cdnSupported.value && cdnProxyTypes.value.includes(r.recordType);
+}
+
+async function toggleRecordCdn(r: DnsRecord, enabled: boolean) {
+  if (!canEdit.value || !canToggleCdn(r)) return;
+  togglingCdnId.value = r.id;
+  try {
+    await store.updateRecord(domainId.value, r.id, { proxied: enabled });
+    toastSuccess(enabled ? '已开启 CDN 保护' : '已关闭 CDN 保护');
+  } catch (err: any) {
+    toastError('更新失败', err.response?.data?.error || err.message);
+  } finally {
+    togglingCdnId.value = null;
+  }
+}
+
+async function handleBulkCdn(enabled: boolean) {
+  const ids = selectedRecordIds.value.filter((id) => {
+    const r = store.records.find((x) => x.id === id);
+    return r && canToggleCdn(r);
+  });
+  if (!ids.length) {
+    toastError('所选记录中没有可开关 CDN 的类型', `支持：${cdnProxyTypes.value.join(', ')}`);
+    return;
+  }
+  const ok = await confirmDialog({
+    title: enabled ? '批量开启 CDN' : '批量关闭 CDN',
+    description: `将对 ${ids.length} 条 ${cdnProxyTypes.value.join('/')} 记录${enabled ? '开启' : '关闭'} CDN 保护（${cdnLabel.value}）。`,
+    confirmText: enabled ? '开启' : '关闭',
+  });
+  if (!ok) return;
+  bulkCdnLoading.value = true;
+  try {
+    const result = await store.bulkUpdateRecords(domainId.value, ids, { proxied: enabled });
+    if (result.succeeded === result.total) toastSuccess(`已更新 ${result.succeeded} 条`);
+    else toastError(`完成：成功 ${result.succeeded}，失败 ${result.failed}`);
+    selectedRecordIds.value = [];
+    await loadRecords();
+  } catch (err: any) {
+    toastError('批量更新失败', err.response?.data?.error || err.message);
+  } finally {
+    bulkCdnLoading.value = false;
+  }
+}
+
+const sslExpiryLabel = computed(() => {
+  const d = domain.value;
+  if (!d?.sslExpiresAt) return '未检测';
+  const days = Math.ceil((new Date(d.sslExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return `已过期 ${Math.abs(days)} 天`;
+  if (days === 0) return '今天到期';
+  return `${new Date(d.sslExpiresAt).toLocaleDateString('zh-CN')}（${days}天）`;
+});
+
+const sslExpiryClass = computed(() => {
+  const d = domain.value;
+  if (!d?.sslExpiresAt) return 'text-muted-foreground';
+  const days = Math.ceil((new Date(d.sslExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return 'text-destructive font-medium';
+  if (days <= 14) return 'text-amber-600 dark:text-amber-400 font-medium';
+  return 'text-sm';
+});
+
+async function handlePropagate(r: DnsRecord) {
+  propagatingId.value = r.id;
+  try {
+    const data = await store.checkPropagation(domainId.value, r.id);
+    propagateResult.value = data;
+    showPropagateDialog.value = true;
+    if (data.matched === data.total) toastSuccess('各解析器均已匹配');
+    else if (data.matched > 0) toastInfo('部分解析器已匹配', `${data.matched}/${data.total}`);
+    else toastError('尚未匹配', '可能仍在传播或记录值不一致');
+  } catch (err: any) {
+    toastError('传播检测失败', err.response?.data?.error || err.message);
+  } finally {
+    propagatingId.value = null;
+  }
+}
+
+async function handleSslCheck() {
+  checkingSsl.value = true;
+  try {
+    const data = await store.checkSsl(domainId.value);
+    if (data.success) {
+      toastSuccess(
+        '证书检测完成',
+        data.daysRemaining != null
+          ? `剩余 ${data.daysRemaining} 天 · ${data.issuer || ''}`
+          : data.subject || '成功',
+      );
+      await store.fetchDomain(domainId.value);
+    } else {
+      toastError('证书检测失败', data.error || '无法连接 443');
+    }
+  } catch (err: any) {
+    toastError('证书检测失败', err.response?.data?.error || err.message);
+  } finally {
+    checkingSsl.value = false;
+  }
+}
 const activeTab = ref('records');
 const creatingSnapshot = ref(false);
 const showSnapshotDetail = ref(false);
@@ -661,6 +1251,159 @@ const checkingExpiry = ref(false);
 const newTag = ref('');
 const uptimePushUrl = ref('');
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+const allRecordsSelected = computed(
+  () => store.records.length > 0 && selectedRecordIds.value.length === store.records.length,
+);
+
+function toggleRecordSelect(id: string, checked: boolean) {
+  if (checked) {
+    if (!selectedRecordIds.value.includes(id)) selectedRecordIds.value.push(id);
+  } else {
+    selectedRecordIds.value = selectedRecordIds.value.filter((x) => x !== id);
+  }
+}
+
+function toggleSelectAllRecords(checked: boolean) {
+  selectedRecordIds.value = checked ? store.records.map((r) => r.id) : [];
+}
+
+function handleTemplateApplied() {
+  selectedRecordIds.value = [];
+  loadRecords();
+  store.fetchDomain(domainId.value);
+}
+
+const favorited = ref(false);
+const editingNotes = ref(false);
+const notesInput = ref('');
+const savingNotes = ref(false);
+
+function toggleFavorite() {
+  if (!domain.value) return;
+  favorited.value = toggleFavoriteDomain(domain.value.id);
+  toastSuccess(favorited.value ? '已收藏' : '已取消收藏');
+}
+
+function startEditNotes() {
+  notesInput.value = domain.value?.notes || '';
+  editingNotes.value = true;
+}
+
+async function saveNotes() {
+  savingNotes.value = true;
+  try {
+    await store.updateDomainNotes(domainId.value, notesInput.value);
+    editingNotes.value = false;
+    toastSuccess('备注已保存');
+  } catch (err: any) {
+    toastError('保存失败', err.response?.data?.error || err.message);
+  } finally {
+    savingNotes.value = false;
+  }
+}
+
+async function handleExportRecords(format: 'csv' | 'json' | 'zone' = 'csv') {
+  try {
+    const response = await api.get(`/export/dns-records/${domainId.value}`, {
+      params: { format },
+      responseType: 'blob',
+    });
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = url;
+    const base = domain.value?.name || 'records';
+    const ext = format === 'zone' ? 'zone' : format === 'json' ? 'json' : 'csv';
+    link.download = format === 'zone' ? `${base}.zone` : `${base}-dns.${ext}`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toastSuccess(format === 'zone' ? 'BIND Zone 已导出' : '记录已导出');
+  } catch (err: any) {
+    toastError('导出失败', err.response?.data?.error || err.message);
+  }
+}
+
+watch(
+  () => domain.value?.id,
+  (id) => {
+    favorited.value = id ? isFavoriteDomain(id) : false;
+  },
+  { immediate: true },
+);
+
+async function handleBulkDeleteRecords() {
+  const ids = [...selectedRecordIds.value];
+  if (!ids.length) return;
+  const ok = await confirmDialog({
+    title: '批量删除记录',
+    description: `确定删除选中的 ${ids.length} 条 DNS 记录吗？此操作会同步到 DNS 服务商。`,
+    confirmText: '删除',
+    variant: 'destructive',
+  });
+  if (!ok) return;
+  try {
+    const result = await store.bulkDeleteRecords(domainId.value, ids);
+    selectedRecordIds.value = [];
+    if (result.succeeded === result.total) toastSuccess(`已删除 ${result.succeeded} 条记录`);
+    else toastError(`删除完成：成功 ${result.succeeded}，失败 ${result.failed}`);
+    await loadRecords();
+    store.fetchDomain(domainId.value);
+  } catch (err: any) {
+    toastError('批量删除失败', err.response?.data?.error || err.message);
+  }
+}
+
+async function handleBulkTtl(value: string) {
+  const ttl = Number(value);
+  const ids = [...selectedRecordIds.value];
+  bulkTtl.value = '';
+  if (!ids.length || !ttl) return;
+  const ok = await confirmDialog({
+    title: '批量修改 TTL',
+    description: `将选中的 ${ids.length} 条记录 TTL 改为 ${ttl} 秒？`,
+    confirmText: '确认修改',
+  });
+  if (!ok) return;
+  try {
+    const result = await store.bulkUpdateRecords(domainId.value, ids, { ttl });
+    if (result.succeeded === result.total) toastSuccess(`已更新 ${result.succeeded} 条 TTL`);
+    else toastError(`更新完成：成功 ${result.succeeded}，失败 ${result.failed}`);
+    selectedRecordIds.value = [];
+    await loadRecords();
+  } catch (err: any) {
+    toastError('批量改 TTL 失败', err.response?.data?.error || err.message);
+  }
+}
+
+function closeRecordForm() {
+  showRecordForm.value = false;
+  editingRecord.value = null;
+  cloneDefaults.value = null;
+}
+
+function openCloneRecord(r: DnsRecord) {
+  editingRecord.value = null;
+  cloneDefaults.value = {
+    recordType: r.recordType,
+    name: r.name,
+    value: r.value,
+    ttl: r.ttl,
+    priority: r.priority,
+    proxied: r.proxied,
+  };
+  showRecordForm.value = true;
+}
+
+function copyDigCommand(r: DnsRecord) {
+  const host =
+    !r.name || r.name === '@'
+      ? domain.value?.name || ''
+      : r.name.endsWith(`.${domain.value?.name}`)
+        ? r.name
+        : `${r.name}.${domain.value?.name || ''}`;
+  const cmd = `dig ${r.recordType} ${host}`;
+  copyText(cmd, 'dig 命令已复制');
+}
 
 const recordTypes = DNS_RECORD_TYPES;
 
@@ -694,7 +1437,7 @@ async function applyToggleRemindDay(day: number) {
     await api.put(`/domains/${domainId.value}/expiry-remind`, { expiryRemindDays: current });
     store.fetchDomain(domainId.value);
   } catch (err: any) {
-    alert(err.response?.data?.error || '更新失败');
+    toastError('更新失败', err.response?.data?.error || err.message);
   }
 }
 
@@ -711,7 +1454,7 @@ async function toggleAutoCheck() {
     });
     store.fetchDomain(domainId.value);
   } catch (err: any) {
-    alert(err.response?.data?.error || '更新失败');
+    toastError('更新失败', err.response?.data?.error || err.message);
   }
 }
 
@@ -769,45 +1512,65 @@ async function handleSync() {
     syncResult.value = await store.syncRecords(domainId.value);
     await store.fetchDomain(domainId.value);
     loadRecords();
+    toastSuccess('同步完成', `处理 ${syncResult.value.synced} 条记录`);
   } catch (err: any) {
-    alert(err.response?.data?.error || '同步失败');
+    toastError('同步失败', err.response?.data?.error || err.message);
   } finally {
     syncing.value = false;
   }
 }
 
 async function handleDelete() {
-  if (!confirm('确定要删除该域名吗？此操作将同时删除所有 DNS 记录和分配信息。')) return;
+  const ok = await confirmDialog({
+    title: '删除域名',
+    description: `确定删除域名 ${domain.value?.name} 吗？\n将同时删除所有 DNS 记录和分配信息，此操作不可撤销。`,
+    confirmText: '删除',
+    variant: 'destructive',
+  });
+  if (!ok) return;
   try {
     await store.deleteDomain(domainId.value);
-    history.back();
+    toastSuccess('域名已删除');
+    router.push('/domains');
   } catch (err: any) {
-    alert(err.response?.data?.error || '删除失败');
+    toastError('删除失败', err.response?.data?.error || err.message);
   }
 }
 
 function openCreateRecord() {
   editingRecord.value = null;
+  cloneDefaults.value = null;
   showRecordForm.value = true;
 }
 
 function openEditRecord(record: DnsRecord) {
   editingRecord.value = record;
+  cloneDefaults.value = null;
   showRecordForm.value = true;
 }
 
 async function handleDeleteRecord(recordId: string) {
-  if (!confirm('确定要删除该记录吗？')) return;
+  const ok = await confirmDialog({
+    title: '删除记录',
+    description: '确定删除该 DNS 记录吗？将同步到 DNS 服务商。',
+    confirmText: '删除',
+    variant: 'destructive',
+  });
+  if (!ok) return;
   try {
     await store.deleteRecord(domainId.value, recordId);
+    selectedRecordIds.value = selectedRecordIds.value.filter((id) => id !== recordId);
+    toastSuccess('记录已删除');
   } catch (err: any) {
-    alert(err.response?.data?.error || '删除失败');
+    toastError('删除失败', err.response?.data?.error || err.message);
   }
 }
 
 function handleRecordSaved() {
-  showRecordForm.value = false;
+  closeRecordForm();
   loadRecords();
+  store.fetchDomain(domainId.value);
+  toastSuccess('记录已保存');
 }
 
 async function handleCreateSnapshot() {
@@ -815,8 +1578,9 @@ async function handleCreateSnapshot() {
   try {
     await store.createSnapshot(domainId.value);
     await store.fetchSnapshots(domainId.value);
+    toastSuccess('快照已创建');
   } catch (err: any) {
-    alert(err.response?.data?.error || '创建快照失败');
+    toastError('创建快照失败', err.response?.data?.error || err.message);
   } finally {
     creatingSnapshot.value = false;
   }
@@ -827,20 +1591,29 @@ async function viewSnapshotDetail(snapshotId: string) {
     await store.getSnapshotDetail(domainId.value, snapshotId);
     showSnapshotDetail.value = true;
   } catch (err: any) {
-    alert(err.response?.data?.error || '获取快照详情失败');
+    toastError('获取快照详情失败', err.response?.data?.error || err.message);
   }
 }
 
 async function handleRollback(snapshotId: string, version: number) {
-  if (!confirm(`确定要回滚到 v${version} 吗？这将替换所有当前的 DNS 记录，当前状态会被保存为快照。此操作不可撤销！`)) return;
+  const ok = await confirmDialog({
+    title: `回滚到 v${version}`,
+    description: '将替换所有当前 DNS 记录，当前状态会先保存为快照。此操作影响线上解析，请确认。',
+    confirmText: '确认回滚',
+    variant: 'destructive',
+  });
+  if (!ok) return;
   try {
     const result = await store.rollbackSnapshot(domainId.value, snapshotId);
-    alert(`回滚完成：删除 ${result.deleted} 条，新增 ${result.created} 条，更新 ${result.updated} 条`);
+    toastSuccess(
+      '回滚完成',
+      `删除 ${result.deleted} 条，新增 ${result.created} 条，更新 ${result.updated} 条`,
+    );
     await store.fetchDomain(domainId.value);
     loadRecords();
     await store.fetchSnapshots(domainId.value);
   } catch (err: any) {
-    alert(err.response?.data?.error || '回滚失败');
+    toastError('回滚失败', err.response?.data?.error || err.message);
   }
 }
 
@@ -849,7 +1622,7 @@ async function handleDiff() {
   try {
     await store.diffSnapshots(domainId.value, Number(diffFromVersion.value), Number(diffToVersion.value));
   } catch (err: any) {
-    alert(err.response?.data?.error || '比较失败');
+    toastError('比较失败', err.response?.data?.error || err.message);
   }
 }
 
@@ -862,8 +1635,9 @@ async function saveGroup() {
   try {
     await store.updateDomainGroup(domainId.value, groupInput.value);
     editingGroup.value = false;
+    toastSuccess('分组已更新');
   } catch (err: any) {
-    alert(err.response?.data?.error || '更新失败');
+    toastError('更新失败', err.response?.data?.error || err.message);
   }
 }
 
@@ -878,15 +1652,16 @@ function startEditExpiry() {
 
 async function saveExpiry() {
   if (!expiryInput.value) {
-    alert('请选择到期日期');
+    toastError('请选择到期日期');
     return;
   }
   try {
     await api.put(`/domains/${domainId.value}/expiry`, { expiresAt: expiryInput.value });
     editingExpiry.value = false;
     await store.fetchDomain(domainId.value);
+    toastSuccess('到期时间已更新');
   } catch (err: any) {
-    alert(err.response?.data?.error || '更新失败');
+    toastError('更新失败', err.response?.data?.error || err.message);
   }
 }
 
@@ -896,9 +1671,12 @@ async function handleCheckExpiry() {
     const { data } = await api.post(`/domains/${domainId.value}/check-expiry`);
     await store.fetchDomain(domainId.value);
     const date = data.expiresAt ? new Date(data.expiresAt).toLocaleDateString('zh-CN') : '未知';
-    alert(`WHOIS 查询成功！到期时间: ${date}${data.registrar ? `\n注册商: ${data.registrar}` : ''}`);
+    toastSuccess(
+      'WHOIS 查询成功',
+      `到期时间: ${date}${data.registrar ? ` · 注册商: ${data.registrar}` : ''}`,
+    );
   } catch (err: any) {
-    alert(err.response?.data?.error || 'WHOIS 查询失败');
+    toastError('WHOIS 查询失败', err.response?.data?.error || err.message);
   } finally {
     checkingExpiry.value = false;
   }
@@ -913,8 +1691,9 @@ async function addTag() {
   try {
     await store.updateDomainTags(domainId.value, currentTags);
     newTag.value = '';
+    toastSuccess('标签已添加');
   } catch (err: any) {
-    alert(err.response?.data?.error || '添加标签失败');
+    toastError('添加标签失败', err.response?.data?.error || err.message);
   }
 }
 
@@ -923,7 +1702,7 @@ async function removeTag(tag: string) {
   try {
     await store.updateDomainTags(domainId.value, currentTags);
   } catch (err: any) {
-    alert(err.response?.data?.error || '删除标签失败');
+    toastError('删除标签失败', err.response?.data?.error || err.message);
   }
 }
 
@@ -932,46 +1711,81 @@ async function handleConfigureUptime() {
   try {
     await uptimeStore.configure(uptimePushUrl.value);
     uptimePushUrl.value = '';
+    toastSuccess('UptimeKuma 已配置');
   } catch (err: any) {
-    alert(err.response?.data?.error || '配置失败');
+    toastError('配置失败', err.response?.data?.error || err.message);
   }
 }
 
 async function handleRemoveUptime() {
-  if (!confirm('确定要移除 UptimeKuma 配置吗？')) return;
+  const ok = await confirmDialog({
+    title: '移除监控配置',
+    description: '确定移除 UptimeKuma 配置吗？',
+    confirmText: '移除',
+    variant: 'destructive',
+  });
+  if (!ok) return;
   try {
     await uptimeStore.removeConfig();
+    toastSuccess('已移除配置');
   } catch (err: any) {
-    alert(err.response?.data?.error || '移除失败');
+    toastError('移除失败', err.response?.data?.error || err.message);
   }
 }
 
 async function handleHealthCheck() {
   try {
     await uptimeStore.checkDomain(domainId.value);
+    toastSuccess('健康检查完成');
   } catch (err: any) {
-    alert(err.response?.data?.error || '检查失败');
+    toastError('检查失败', err.response?.data?.error || err.message);
+  }
+}
+
+async function handleMonitorCheck() {
+  try {
+    await monitorStore.checkNow(domainId.value);
+    await monitorStore.fetchHistory(domainId.value);
+    toastSuccess('探测完成');
+  } catch (err: any) {
+    toastError('探测失败', err.response?.data?.error || err.message);
+  }
+}
+
+async function handleToggleMonitor(enabled: boolean) {
+  try {
+    await monitorStore.setEnabled(domainId.value, enabled);
+    monitorEnabled.value = enabled;
+    toastSuccess(enabled ? '监控已启用' : '监控已关闭');
+    if (enabled) {
+      monitorStore.fetchHistory(domainId.value).catch(() => {});
+    }
+  } catch (err: any) {
+    toastError('操作失败', err.response?.data?.error || err.message);
   }
 }
 
 async function handleDnsTest() {
   try {
     await speedtestStore.runDnsTest(domainId.value);
+    toastSuccess('DNS 测速完成');
   } catch (err: any) {
-    alert(err.response?.data?.error || 'DNS 测试失败');
+    toastError('DNS 测试失败', err.response?.data?.error || err.message);
   }
 }
 
 async function handleHttpTest() {
   try {
     await speedtestStore.runHttpTest(domainId.value);
+    toastSuccess('HTTP 测试完成');
   } catch (err: any) {
-    alert(err.response?.data?.error || 'HTTP 测试失败');
+    toastError('HTTP 测试失败', err.response?.data?.error || err.message);
   }
 }
 
 watch(domainId, (newId) => {
   if (newId) {
+    selectedRecordIds.value = [];
     store.fetchDomain(newId);
     loadRecords();
     store.fetchSnapshots(newId);
@@ -987,14 +1801,20 @@ watch(activeTab, (tab) => {
   if (tab === 'monitor') {
     uptimeStore.fetchConfig();
     uptimeStore.fetchStatus(domainId.value);
+    monitorEnabled.value = !!(store.currentDomain as any)?.monitorEnabled;
+    monitorStore.fetchHistory(domainId.value).catch(() => {});
   }
   if (tab === 'speedtest') {
     speedtestStore.reset();
   }
 });
 
-onMounted(() => {
-  store.fetchDomain(domainId.value);
+onMounted(async () => {
+  await store.fetchDomain(domainId.value);
+  if (store.currentDomain) {
+    pushRecentDomain(store.currentDomain.id, store.currentDomain.name);
+    monitorEnabled.value = !!(store.currentDomain as any)?.monitorEnabled;
+  }
   loadRecords();
   store.fetchSnapshots(domainId.value);
   store.fetchGroups();

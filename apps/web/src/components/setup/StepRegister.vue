@@ -41,10 +41,13 @@ async function saveAndNext() {
   try {
     await api.post('/setup/register', form);
     store.adminRegistered = true;
+    // 管理员创建后系统即可使用；后续站点 URL / SMTP 为可选
+    store.initialized = true;
     emit('next');
   } catch (e: unknown) {
-    const err = e as { response?: { data?: { message?: string } } };
-    errors.value._form = err.response?.data?.message || '注册失败';
+    const err = e as { response?: { data?: { message?: string; error?: string } } };
+    const msg = err.response?.data?.error || err.response?.data?.message || '注册失败';
+    errors.value._form = typeof msg === 'string' ? msg : '注册失败';
   } finally {
     saving.value = false;
   }

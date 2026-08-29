@@ -23,6 +23,8 @@ export interface TeamSettings {
   landingBackgroundUrl: string | null;
   footerContent: string | null;
   footerFormat: string | null;
+  logRetentionDays?: number | null;
+  redisUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }

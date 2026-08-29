@@ -3,7 +3,6 @@ import { ref, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '@/lib/axios';
 import { useSetupStore } from '@/stores/setup';
-import { setInitialized } from '@/router';
 import { Loader2, CheckCircle2, Mail, Send } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -78,14 +77,30 @@ async function verify() {
   try {
     await api.post('/setup/verify-email', { code: code.value });
     verified.value = true;
-    store.initialized = true;
-    setInitialized(true);
+    await store.finishSetup();
     setTimeout(() => {
       router.push('/login');
-    }, 3000);
+    }, 1500);
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } } };
     error.value = err.response?.data?.message || '验证失败';
+  } finally {
+    verifying.value = false;
+  }
+}
+
+async function skipAndFinish() {
+  error.value = '';
+  verifying.value = true;
+  try {
+    await store.finishSetup();
+    verified.value = true;
+    setTimeout(() => {
+      router.push('/login');
+    }, 800);
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string; error?: string } } };
+    error.value = err.response?.data?.error || err.response?.data?.message || '完成失败';
   } finally {
     verifying.value = false;
   }
@@ -99,8 +114,10 @@ onUnmounted(() => {
 <template>
   <div class="space-y-6">
     <div v-if="!verified">
-      <h2 class="text-xl font-semibold tracking-tight">验证邮箱</h2>
-      <p class="text-sm text-muted-foreground mt-1">绑定管理员邮箱并验证，确保邮件服务正常工作</p>
+      <h2 class="text-xl font-semibold tracking-tight">验证邮箱（可选）</h2>
+      <p class="text-sm text-muted-foreground mt-1">
+        可跳过。未配置 SMTP 时请直接完成初始化；邮箱可登录后在个人资料中绑定。
+      </p>
     </div>
 
     <div v-if="error" class="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -161,14 +178,19 @@ onUnmounted(() => {
         </div>
       </template>
 
-      <div class="flex justify-between pt-4 border-t">
+      <div class="flex justify-between pt-4 border-t gap-2">
         <Button variant="outline" @click="emit('back')">
           上一步
         </Button>
-        <Button v-if="emailBound" @click="verify" :disabled="verifying || code.length !== 6">
-          <Loader2 v-if="verifying" class="mr-2 h-4 w-4 animate-spin" />
-          {{ verifying ? '验证中...' : '验证' }}
-        </Button>
+        <div class="flex gap-2">
+          <Button variant="secondary" @click="skipAndFinish" :disabled="verifying">
+            跳过并完成初始化
+          </Button>
+          <Button v-if="emailBound" @click="verify" :disabled="verifying || code.length !== 6">
+            <Loader2 v-if="verifying" class="mr-2 h-4 w-4 animate-spin" />
+            {{ verifying ? '验证中...' : '验证并完成' }}
+          </Button>
+        </div>
       </div>
     </template>
   </div>

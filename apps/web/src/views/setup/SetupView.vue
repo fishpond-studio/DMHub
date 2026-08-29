@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useSetupStore } from '@/stores/setup';
 import { Check, Loader2, Minus } from 'lucide-vue-next';
 import StepDatabase from '@/components/setup/StepDatabase.vue';
@@ -12,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 const store = useSetupStore();
+const router = useRouter();
 
 const steps = [
   { label: '数据库' },
@@ -41,6 +43,11 @@ function onSkip() {
 
 onMounted(async () => {
   await store.fetchStatus();
+  // 已安装实例进入此页时由路由守卫重定向；双保险
+  if (store.initialized) {
+    router.replace('/login');
+    return;
+  }
   mountedSteps[store.currentStep] = true;
 });
 </script>
@@ -118,6 +125,7 @@ onMounted(async () => {
             v-show="store.currentStep === 4"
             @next="onNext"
             @back="onBack"
+            @skip="onSkip"
           />
           <StepVerifyEmail
             v-if="mountedSteps[5]"

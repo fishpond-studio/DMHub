@@ -15,7 +15,7 @@ export interface Toast {
 }
 
 const TOAST_LIMIT = 5
-const TOAST_DEFAULT_DURATION = 120000
+const TOAST_DEFAULT_DURATION = 4000
 
 let count = 0
 

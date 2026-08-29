@@ -2,6 +2,12 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import api from '@/lib/axios';
 
+export interface DomainAssignmentScope {
+  id: string;
+  permission: string;
+  subdomainPattern: string;
+}
+
 export interface Domain {
   id: string;
   name: string;
@@ -15,6 +21,8 @@ export interface Domain {
   recordCount: number;
   createdAt: string;
   updatedAt: string;
+  /** 非管理员：当前用户在该域名上的指派范围 */
+  assignments?: DomainAssignmentScope[];
 }
 
 export interface DnsRecord {
@@ -28,8 +36,16 @@ export interface DnsRecord {
   proxied: boolean;
   providerRecordId: string | null;
   status: string;
+  notes?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CdnProxyInfo {
+  supported: boolean;
+  proxyRecordTypes: string[];
+  proxyLabel: string;
+  proxyDescription: string;
 }
 
 export interface DomainDetail extends Domain {
@@ -37,11 +53,16 @@ export interface DomainDetail extends Domain {
   autoCheckExpiry: boolean;
   expiryRemindDays: number[];
   lastCheckedAt: string | null;
-  assignment: {
-    id: string;
-    permission: string;
-    subdomainPattern: string;
-  } | null;
+  notes?: string | null;
+  sslExpiresAt?: string | null;
+  sslLastCheckedAt?: string | null;
+  sslIssuer?: string | null;
+  /** 服务商是否支持 DNS 层 CDN 代理（如 Cloudflare） */
+  cdnProxy?: CdnProxyInfo;
+  /** @deprecated 兼容字段，优先使用 assignments */
+  assignment: DomainAssignmentScope | null;
+  /** 当前用户在该域名上的全部指派（管理员为空数组） */
+  assignments?: DomainAssignmentScope[];
 }
 
 export interface Snapshot {
@@ -150,6 +171,7 @@ export const useDomainStore = defineStore('domain', () => {
     ttl?: number;
     priority?: number;
     proxied?: boolean;
+    notes?: string | null;
   }) {
     const { data } = await api.post(`/domains/${domainId}/records`, input);
     records.value.push(data);
@@ -163,6 +185,7 @@ export const useDomainStore = defineStore('domain', () => {
     ttl?: number;
     priority?: number;
     proxied?: boolean;
+    notes?: string | null;
   }) {
     const { data } = await api.put(`/domains/${domainId}/records/${recordId}`, input);
     const idx = records.value.findIndex((r) => r.id === recordId);
@@ -170,9 +193,104 @@ export const useDomainStore = defineStore('domain', () => {
     return data;
   }
 
+  async function checkPropagation(domainId: string, recordId: string) {
+    const { data } = await api.post(`/domains/${domainId}/records/${recordId}/propagate`);
+    return data as {
+      fqdn: string;
+      recordType: string;
+      expectedValue: string | null;
+      total: number;
+      resolved: number;
+      matched: number;
+      results: Array<{
+        name: string;
+        ip: string;
+        ok: boolean;
+        matched: boolean;
+        values: string[];
+        error?: string;
+        latencyMs: number;
+      }>;
+    };
+  }
+
+  async function checkSsl(domainId: string, hostname?: string) {
+    const { data } = await api.post(`/domains/${domainId}/ssl-check`, { hostname });
+    if (currentDomain.value && currentDomain.value.id === domainId && data.success) {
+      currentDomain.value.sslExpiresAt = data.expiresAt;
+      currentDomain.value.sslLastCheckedAt = data.checkedAt;
+      currentDomain.value.sslIssuer = data.issuer;
+    }
+    return data as {
+      success: boolean;
+      valid: boolean;
+      daysRemaining: number | null;
+      expiresAt: string | null;
+      issuer: string | null;
+      subject: string | null;
+      error?: string;
+      checkedAt: string;
+      hostname: string;
+    };
+  }
+
   async function deleteRecord(domainId: string, recordId: string) {
     await api.delete(`/domains/${domainId}/records/${recordId}`);
     records.value = records.value.filter((r) => r.id !== recordId);
+  }
+
+  async function bulkCreateRecords(
+    domainId: string,
+    items: Array<{
+      recordType: string;
+      name: string;
+      value: string;
+      ttl?: number;
+      priority?: number;
+      proxied?: boolean;
+    }>,
+  ) {
+    const { data } = await api.post(`/domains/${domainId}/records/bulk`, { records: items });
+    return data as {
+      results: Array<{ success: boolean; recordType?: string; name?: string; error?: string }>;
+      total: number;
+      succeeded: number;
+    };
+  }
+
+  async function bulkUpdateRecords(
+    domainId: string,
+    recordIds: string[],
+    patch: { ttl?: number; proxied?: boolean },
+  ) {
+    const { data } = await api.post(`/domains/${domainId}/records/bulk-update`, {
+      recordIds,
+      ...patch,
+    });
+    return data as {
+      total: number;
+      succeeded: number;
+      failed: number;
+      results: Array<{ id: string; success: boolean; error?: string }>;
+    };
+  }
+
+  async function bulkDeleteRecords(domainId: string, recordIds: string[]) {
+    const { data } = await api.post(`/domains/${domainId}/records/bulk-delete`, { recordIds });
+    if (data.succeeded > 0) {
+      const ok = new Set(
+        (data.results as Array<{ id: string; success: boolean }>)
+          .filter((r) => r.success)
+          .map((r) => r.id),
+      );
+      records.value = records.value.filter((r) => !ok.has(r.id));
+    }
+    return data as {
+      total: number;
+      succeeded: number;
+      failed: number;
+      results: Array<{ id: string; success: boolean; error?: string }>;
+    };
   }
 
   async function syncRecords(domainId: string) {
@@ -242,6 +360,37 @@ export const useDomainStore = defineStore('domain', () => {
     return data;
   }
 
+  async function updateDomainNotes(domainId: string, notes: string | null) {
+    const { data } = await api.put(`/domains/${domainId}/notes`, { notes });
+    if (currentDomain.value && currentDomain.value.id === domainId) {
+      currentDomain.value.notes = data.notes ?? null;
+    }
+    return data;
+  }
+
+  async function searchRecords(q: string, limit = 50) {
+    const { data } = await api.get('/domains/search/records', { params: { q, limit } });
+    return data.results as Array<{
+      id: string;
+      domainId: string;
+      domainName: string;
+      recordType: string;
+      name: string;
+      value: string;
+      fqdn?: string;
+    }>;
+  }
+
+  async function batchCheckExpiry(domainIds?: string[]) {
+    const { data } = await api.post('/domains/check-expiry-batch', { domainIds, limit: 20 });
+    return data as {
+      total: number;
+      succeeded: number;
+      failed: number;
+      results: Array<{ domainId: string; name?: string; success: boolean; expiresAt?: string; error?: string }>;
+    };
+  }
+
   return {
     domains,
     currentDomain,
@@ -260,6 +409,11 @@ export const useDomainStore = defineStore('domain', () => {
     createRecord,
     updateRecord,
     deleteRecord,
+    bulkCreateRecords,
+    bulkUpdateRecords,
+    bulkDeleteRecords,
+    checkPropagation,
+    checkSsl,
     syncRecords,
     fetchSnapshots,
     getSnapshotDetail,
@@ -270,5 +424,8 @@ export const useDomainStore = defineStore('domain', () => {
     fetchTags,
     updateDomainTags,
     updateDomainGroup,
+    updateDomainNotes,
+    searchRecords,
+    batchCheckExpiry,
   };
 });

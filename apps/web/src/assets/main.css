@@ -54,17 +54,27 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+  ::selection {
+    @apply bg-primary/20;
   }
 }
 
 @layer components {
   .card-hover {
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
   }
   .card-hover:hover {
-    box-shadow: 0 4px 12px -2px hsl(var(--foreground) / 0.06);
+    box-shadow: 0 8px 24px -8px hsl(var(--foreground) / 0.08);
     transform: translateY(-1px);
+  }
+
+  .table-row-interactive {
+    @apply transition-colors;
+  }
+  .table-row-interactive:hover {
+    @apply bg-muted/50;
   }
 }
 

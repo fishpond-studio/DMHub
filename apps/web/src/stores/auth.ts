@@ -6,7 +6,18 @@ import { startAuthentication } from '@simplewebauthn/browser';
 export const useAuthStore = defineStore('auth', () => {
   const savedToken = sessionStorage.getItem('dmhub_token');
   const token = ref<string | null>(savedToken);
-  const user = ref<{ id: string; username: string; email: string | null; role: string; displayName?: string | null; nickname?: string | null; avatarUrl?: string | null; emailVerified?: boolean; notificationsEnabled?: boolean } | null>(null);
+  const user = ref<{
+    id: string;
+    username: string;
+    email: string | null;
+    role: string;
+    displayName?: string | null;
+    nickname?: string | null;
+    avatarUrl?: string | null;
+    emailVerified?: boolean;
+    notificationsEnabled?: boolean;
+    emailNotificationsEnabled?: boolean;
+  } | null>(null);
 
   function setAccessToken(newToken: string) {
     token.value = newToken;

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const emit = defineEmits<{
   next: [];
   back: [];
+  skip: [];
 }>();
 
 const store = useSetupStore();
@@ -98,8 +99,10 @@ async function saveAndNext() {
 <template>
   <div class="space-y-6">
     <div>
-      <h2 class="text-xl font-semibold tracking-tight">配置SMTP</h2>
-      <p class="text-sm text-muted-foreground mt-1">配置邮件发送服务，用于系统通知和验证邮件</p>
+      <h2 class="text-xl font-semibold tracking-tight">配置 SMTP（可选）</h2>
+      <p class="text-sm text-muted-foreground mt-1">
+        用于系统通知和验证邮件。可跳过，登录后在「设置 → 通知」中再配置。
+      </p>
     </div>
 
     <div v-if="errors._form" class="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -176,14 +179,19 @@ async function saveAndNext() {
       <span v-if="testResult === 'error' && !testing" class="text-sm text-destructive">{{ testError }}</span>
     </div>
 
-    <div class="flex justify-between pt-4 border-t">
+    <div class="flex justify-between pt-4 border-t gap-2">
       <Button variant="outline" @click="emit('back')">
         上一步
       </Button>
-      <Button @click="saveAndNext" :disabled="saving">
+      <div class="flex gap-2">
+        <Button variant="ghost" @click="emit('skip')">
+          跳过
+        </Button>
+        <Button @click="saveAndNext" :disabled="saving">
           <Loader2 v-if="saving" class="mr-2 h-4 w-4 animate-spin" />
           {{ saving ? '保存中...' : '保存并继续' }}
         </Button>
+      </div>
     </div>
   </div>
 </template>

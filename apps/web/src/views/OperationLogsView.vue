@@ -1,11 +1,18 @@
 ﻿<template>
   <div class="min-h-screen bg-background">
     <div class="max-w-7xl mx-auto px-4 py-8">
-      <div class="flex items-center mb-6">
+      <div class="flex items-center mb-6 gap-2">
         <Button variant="ghost" size="icon" @click="$router.push('/dashboard')">
           <ArrowLeft class="h-5 w-5" />
         </Button>
-        <h1 class="text-2xl font-bold text-foreground">操作日志</h1>
+        <div class="min-w-0 flex-1">
+          <h1 class="text-2xl font-bold text-foreground">操作日志</h1>
+          <p class="text-sm text-muted-foreground mt-0.5">审计域名、解析与团队相关操作</p>
+        </div>
+        <Button variant="outline" size="sm" :disabled="exporting" @click="handleExport">
+          <Download class="mr-1.5 h-4 w-4" />
+          {{ exporting ? '导出中…' : '导出 CSV' }}
+        </Button>
       </div>
 
       <div class="flex flex-wrap gap-3 mb-4">
@@ -65,17 +72,20 @@
         />
       </div>
 
-      <div v-if="store.loading" class="text-center py-12 text-muted-foreground">加载中...</div>
+      <div v-if="store.loading" class="space-y-2 py-2">
+        <div v-for="i in 6" :key="i" class="h-12 animate-pulse rounded-lg bg-muted" />
+      </div>
 
-      <div v-else-if="store.logs.length === 0" class="text-center py-16">
-        <p class="text-muted-foreground">暂无操作日志</p>
+      <div v-else-if="store.logs.length === 0" class="rounded-xl border border-dashed bg-muted/20 py-16 text-center">
+        <p class="font-medium text-foreground">暂无操作日志</p>
+        <p class="mt-1 text-sm text-muted-foreground">调整筛选条件，或等待团队产生新的操作记录</p>
       </div>
 
       <div v-else>
-        <div class="hidden md:block">
+        <div class="hidden md:block overflow-hidden rounded-xl border">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow class="bg-muted/40 hover:bg-muted/40">
                 <TableHead>时间</TableHead>
                 <TableHead>用户</TableHead>
                 <TableHead>操作</TableHead>
@@ -86,7 +96,7 @@
             </TableHeader>
             <TableBody>
               <template v-for="log in store.logs" :key="log.id">
-                <TableRow class="cursor-pointer" @click="toggleExpand(log.id)">
+                <TableRow class="cursor-pointer transition-colors hover:bg-muted/40" @click="toggleExpand(log.id)">
                   <TableCell class="text-muted-foreground whitespace-nowrap">{{ formatTime(log.createdAt) }}</TableCell>
                   <TableCell class="font-medium whitespace-nowrap">{{ log.username || log.userId.slice(0, 8) }}</TableCell>
                   <TableCell class="whitespace-nowrap">
@@ -165,13 +175,15 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { ArrowLeft } from 'lucide-vue-next';
+import { ArrowLeft, Download } from 'lucide-vue-next';
+import { toastError, toastSuccess } from '@/lib/toast-helpers';
 
 const store = useLogStore();
 
 const pageSize = 50;
 const currentPage = ref(1);
 const expandedId = ref<string | null>(null);
+const exporting = ref(false);
 
 const filters = ref({
   action: 'all',
@@ -212,6 +224,30 @@ function fetchPage() {
     page: currentPage.value,
     pageSize,
   });
+}
+
+async function handleExport() {
+  exporting.value = true;
+  try {
+    const params: Record<string, string> = {};
+    if (filters.value.action !== 'all') params.action = filters.value.action;
+    if (filters.value.userId !== 'all') params.userId = filters.value.userId;
+    if (filters.value.domainId !== 'all') params.domainId = filters.value.domainId;
+    if (filters.value.startDate) params.startDate = filters.value.startDate;
+    if (filters.value.endDate) params.endDate = filters.value.endDate;
+    const response = await api.get('/logs/export', { params, responseType: 'blob' });
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `operation-logs-${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toastSuccess('操作日志已导出');
+  } catch (err: any) {
+    toastError('导出失败', err.response?.data?.error || err.message);
+  } finally {
+    exporting.value = false;
+  }
 }
 
 function formatTime(dateStr: string) {

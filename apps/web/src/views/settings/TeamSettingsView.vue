@@ -108,6 +108,30 @@
 
         <Card>
           <CardHeader>
+            <CardTitle>审计与日志</CardTitle>
+            <CardDescription>操作日志保留策略与缓存配置</CardDescription>
+          </CardHeader>
+          <CardContent class="space-y-5">
+            <div>
+              <Label class="mb-1 block">日志保留天数</Label>
+              <Input
+                :model-value="form.logRetentionDays ?? ''"
+                @update:model-value="form.logRetentionDays = $event ? Number($event) : null"
+                type="number"
+                placeholder="0 或留空表示永久保留"
+              />
+              <p class="text-xs text-muted-foreground mt-1">超过该天数的操作日志与监控历史将被定时清理（每天 03:00 执行）</p>
+            </div>
+            <div>
+              <Label class="mb-1 block">Redis 连接地址</Label>
+              <Input v-model="form.redisUrl" type="text" placeholder="redis://localhost:6379" />
+              <p class="text-xs text-muted-foreground mt-1">留空使用进程内存缓存；配置后需重启服务生效，用于验证码、限流等共享状态</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>站外公告</CardTitle>
             <CardDescription>在登录页面向未登录用户展示公告</CardDescription>
           </CardHeader>
@@ -276,6 +300,8 @@ const form = reactive({
   landingBackgroundUrl: '' as string | null,
   footerContent: '',
   footerFormat: 'markdown',
+  logRetentionDays: null as number | null,
+  redisUrl: '',
 });
 
 onMounted(async () => {
@@ -298,6 +324,8 @@ onMounted(async () => {
     form.landingBackgroundUrl = store.settings.landingBackgroundUrl ?? null;
     form.footerContent = store.settings.footerContent ?? '';
     form.footerFormat = store.settings.footerFormat ?? 'markdown';
+    form.logRetentionDays = (store.settings as any).logRetentionDays ?? null;
+    form.redisUrl = (store.settings as any).redisUrl ?? '';
     oldSiteUrl.value = store.settings.siteUrl ?? '';
     oldSmtpHost.value = store.settings.smtpHost ?? '';
     oldSmtpPort.value = store.settings.smtpPort ?? null;
@@ -403,6 +431,8 @@ async function doSave() {
       landingSubtitle: form.landingSubtitle,
       footerContent: form.footerContent,
       footerFormat: form.footerFormat,
+      logRetentionDays: form.logRetentionDays,
+      redisUrl: form.redisUrl || null,
     });
     warnings.value = result.warnings;
     oldSiteUrl.value = form.siteUrl;

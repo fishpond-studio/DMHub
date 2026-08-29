@@ -20,6 +20,11 @@ export default defineConfig({
         target: 'http://localhost:8088',
         changeOrigin: true,
       },
+      // OIDC 简洁回调 https://domain/oauth/oidc
+      '/oauth/oidc': {
+        target: 'http://localhost:8088',
+        changeOrigin: true,
+      },
     },
   },
 });

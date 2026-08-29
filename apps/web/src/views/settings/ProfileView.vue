@@ -64,15 +64,30 @@
       <Card>
         <CardHeader>
           <CardTitle>通知偏好</CardTitle>
-          <CardDescription>控制站内通知的接收</CardDescription>
+          <CardDescription>控制站内信与邮件通知（邮件需团队已配置 SMTP）</CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="flex items-center justify-between gap-4">
+            <div class="min-w-0">
               <Label>站内通知</Label>
-              <p class="text-xs text-muted-foreground mt-0.5">关闭后您将不再收到站内推送通知</p>
+              <p class="text-xs text-muted-foreground mt-0.5">关闭后不再接收铃铛与 Toast 推送</p>
             </div>
             <Switch :checked="notificationsEnabled" @update:checked="toggleNotifications" />
+          </div>
+          <div class="flex items-center justify-between gap-4 border-t pt-4">
+            <div class="min-w-0">
+              <Label>邮件通知</Label>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                可选。开启后，域名分配、审批结果等会发到您的邮箱
+                <span v-if="!user?.email" class="text-destructive">（请先绑定邮箱）</span>
+                <span v-else class="text-muted-foreground">（{{ user.email }}）</span>
+              </p>
+            </div>
+            <Switch
+              :checked="emailNotificationsEnabled"
+              :disabled="!user?.email"
+              @update:checked="toggleEmailNotifications"
+            />
           </div>
         </CardContent>
       </Card>
@@ -100,6 +115,36 @@
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>登录会话</CardTitle>
+          <CardDescription>管理当前账号的登录设备，可注销其他会话</CardDescription>
+        </CardHeader>
+        <CardContent class="space-y-3">
+          <div v-if="sessionStore.loading" class="text-sm text-muted-foreground">加载中...</div>
+          <div v-else-if="sessionStore.sessions.length === 0" class="text-sm text-muted-foreground">暂无会话</div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="s in sessionStore.sessions"
+              :key="s.id"
+              class="flex items-center justify-between gap-3 rounded-md border p-3"
+            >
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium truncate">{{ s.deviceInfo || '未知设备' }}</span>
+                  <Badge v-if="s.current" variant="default" class="bg-primary/15 text-primary border-primary/30">当前</Badge>
+                </div>
+                <p class="text-xs text-muted-foreground mt-0.5">登录于 {{ new Date(s.createdAt).toLocaleString() }} · 过期 {{ new Date(s.expiresAt).toLocaleString() }}</p>
+              </div>
+              <Button v-if="!s.current" variant="outline" size="sm" @click="handleRevokeSession(s.id)">注销</Button>
+            </div>
+          </div>
+          <div v-if="sessionStore.sessions.filter((s: any) => !s.current).length > 0" class="flex justify-end pt-2 border-t">
+            <Button variant="outline" size="sm" @click="handleRevokeOthers">注销其他会话</Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   </div>
 </template>
@@ -114,8 +159,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSessionStore } from '@/stores/session';
+import { toastSuccess, toastError } from '@/lib/toast-helpers';
 
 const authStore = useAuthStore();
+const sessionStore = useSessionStore();
 const loading = ref(true);
 const saving = ref(false);
 const savingEmail = ref(false);
@@ -130,6 +178,7 @@ const form = reactive({
 });
 
 const notificationsEnabled = ref(true);
+const emailNotificationsEnabled = ref(false);
 
 const emailForm = reactive({
   email: '',
@@ -149,10 +198,30 @@ onMounted(async () => {
     form.nickname = user.value?.nickname || '';
     form.avatarUrl = user.value?.avatarUrl || '';
     notificationsEnabled.value = user.value?.notificationsEnabled !== false;
+    emailNotificationsEnabled.value = user.value?.emailNotificationsEnabled === true;
+    sessionStore.fetchSessions().catch(() => {});
   } finally {
     loading.value = false;
   }
 });
+
+async function handleRevokeSession(id: string) {
+  try {
+    await sessionStore.revokeSession(id);
+    toastSuccess('会话已注销');
+  } catch (err: any) {
+    toastError('注销失败', err.response?.data?.error || err.message);
+  }
+}
+
+async function handleRevokeOthers() {
+  try {
+    await sessionStore.revokeOthers();
+    toastSuccess('其他会话已注销');
+  } catch (err: any) {
+    toastError('注销失败', err.response?.data?.error || err.message);
+  }
+}
 
 async function saveProfile() {
   saving.value = true;
@@ -178,6 +247,22 @@ async function toggleNotifications(checked: boolean) {
     });
     authStore.user = data.user;
     notificationsEnabled.value = checked;
+  } catch (err: any) {
+    alert(err.response?.data?.error || '操作失败');
+  }
+}
+
+async function toggleEmailNotifications(checked: boolean) {
+  if (checked && !user.value?.email) {
+    alert('请先绑定邮箱后再开启邮件通知');
+    return;
+  }
+  try {
+    const { data } = await api.put('/auth/me/profile', {
+      emailNotificationsEnabled: checked,
+    });
+    authStore.user = data.user;
+    emailNotificationsEnabled.value = checked;
   } catch (err: any) {
     alert(err.response?.data?.error || '操作失败');
   }

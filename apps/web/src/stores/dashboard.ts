@@ -33,26 +33,49 @@ export interface RecordsDistribution {
   data: number[];
 }
 
+export interface DomainHealthItem {
+  domainId: string;
+  name: string;
+  score: number;
+  level: 'healthy' | 'warning' | 'critical';
+  issues: string[];
+  recordCount: number;
+  daysRemaining: number | null;
+}
+
+export interface DomainHealthSummary {
+  avgScore: number;
+  healthy: number;
+  warning: number;
+  critical: number;
+  total: number;
+}
+
 export const useDashboardStore = defineStore('dashboard', () => {
   const stats = ref<DashboardStats | null>(null);
   const expiring = ref<ExpiringDomain[]>([]);
   const activity = ref<ActivityItem[]>([]);
   const distribution = ref<RecordsDistribution | null>(null);
+  const healthSummary = ref<DomainHealthSummary | null>(null);
+  const healthDomains = ref<DomainHealthItem[]>([]);
   const loading = ref(false);
 
   async function fetchAll() {
     loading.value = true;
     try {
-      const [statsRes, expiringRes, activityRes, distRes] = await Promise.all([
+      const [statsRes, expiringRes, activityRes, distRes, healthRes] = await Promise.all([
         api.get('/dashboard/stats'),
         api.get('/dashboard/expiring'),
         api.get('/dashboard/activity'),
         api.get('/dashboard/records-distribution'),
+        api.get('/dashboard/health'),
       ]);
       stats.value = statsRes.data;
       expiring.value = Array.isArray(expiringRes.data) ? expiringRes.data : [];
       activity.value = Array.isArray(activityRes.data) ? activityRes.data : [];
       distribution.value = distRes.data;
+      healthSummary.value = healthRes.data?.summary ?? null;
+      healthDomains.value = Array.isArray(healthRes.data?.domains) ? healthRes.data.domains : [];
     } catch {
       console.error('Dashboard data fetch failed, keeping existing values');
     } finally {
@@ -60,5 +83,14 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  return { stats, expiring, activity, distribution, loading, fetchAll };
+  return {
+    stats,
+    expiring,
+    activity,
+    distribution,
+    healthSummary,
+    healthDomains,
+    loading,
+    fetchAll,
+  };
 });

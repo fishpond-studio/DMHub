@@ -30,6 +30,12 @@ export interface AssignmentRequest {
   displayName?: string;
 }
 
+export interface MyDomainAssignment {
+  id: string | null;
+  subdomainPattern: string;
+  permission: 'dns_edit' | 'dns_readonly' | string;
+}
+
 export interface MyDomain {
   id: string;
   name: string;
@@ -39,6 +45,8 @@ export interface MyDomain {
   permission: 'dns_edit' | 'dns_readonly';
   assignmentId: string | null;
   subdomainPattern?: string;
+  /** 同一域名下的全部指派范围（可能多条） */
+  assignments?: MyDomainAssignment[];
 }
 
 export interface DomainOption {
@@ -48,12 +56,53 @@ export interface DomainOption {
   groupName: string | null;
 }
 
+export interface AssignmentOverviewItem {
+  id: string;
+  domainId: string;
+  domainName: string;
+  domainStatus: string;
+  userId: string;
+  username: string;
+  displayName: string | null;
+  userStatus: string;
+  subdomainPattern: string;
+  host: string;
+  permission: string;
+  createdAt: string;
+  scopeStatus: 'empty' | 'active' | 'member_disabled' | 'domain_issue';
+  recordCount: number;
+  proxiedCount: number;
+  typeCounts: Record<string, number>;
+  lastRecordUpdatedAt: string | null;
+  records: Array<{
+    id: string;
+    recordType: string;
+    name: string;
+    value: string;
+    ttl: number;
+    proxied: boolean;
+    status: string;
+    updatedAt: string;
+  }>;
+}
+
+export interface AssignmentOverviewSummary {
+  total: number;
+  active: number;
+  empty: number;
+  memberDisabled: number;
+  domainIssue: number;
+  totalRecords: number;
+}
+
 export const useAssignmentStore = defineStore('assignment', () => {
   const memberAssignments = ref<DomainAssignment[]>([]);
   const pendingRequests = ref<AssignmentRequest[]>([]);
   const myRequests = ref<AssignmentRequest[]>([]);
   const myDomains = ref<MyDomain[]>([]);
   const domains = ref<DomainOption[]>([]);
+  const overview = ref<AssignmentOverviewItem[]>([]);
+  const overviewSummary = ref<AssignmentOverviewSummary | null>(null);
   const loading = ref(false);
 
   async function fetchMemberAssignments(userId: string) {
@@ -131,12 +180,25 @@ export const useAssignmentStore = defineStore('assignment', () => {
     domains.value = data.domains;
   }
 
+  async function fetchOverview() {
+    loading.value = true;
+    try {
+      const { data } = await api.get('/assignments/overview');
+      overview.value = data.assignments || [];
+      overviewSummary.value = data.summary || null;
+    } finally {
+      loading.value = false;
+    }
+  }
+
   return {
     memberAssignments,
     pendingRequests,
     myRequests,
     myDomains,
     domains,
+    overview,
+    overviewSummary,
     loading,
     fetchMemberAssignments,
     createAssignment,
@@ -147,5 +209,6 @@ export const useAssignmentStore = defineStore('assignment', () => {
     fetchMyRequests,
     fetchMyDomains,
     fetchDomains,
+    fetchOverview,
   };
 });

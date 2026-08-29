@@ -77,6 +77,11 @@ const router = createRouter({
       component: () => import('@/views/DomainsView.vue'),
     },
     {
+      path: '/search',
+      name: 'global-search',
+      component: () => import('@/views/GlobalSearchView.vue'),
+    },
+    {
       path: '/domains/:id',
       name: 'domain-detail',
       component: () => import('@/views/DomainDetailView.vue'),
@@ -96,10 +101,19 @@ const router = createRouter({
 
 let setupStatusChecked = false;
 let isInitialized = false;
+let statusCheckedAt = 0;
+const STATUS_TTL_MS = 30_000;
 
 export function setInitialized(value: boolean) {
   isInitialized = value;
   setupStatusChecked = true;
+  statusCheckedAt = Date.now();
+}
+
+/** 强制下次导航重新拉取 /setup/status（安装完成或调试时用） */
+export function invalidateSetupStatus() {
+  setupStatusChecked = false;
+  statusCheckedAt = 0;
 }
 
 const publicRoutes = new Set(['landing', 'login', 'register', '2fa-verify', 'setup', 'oauth-callback']);
@@ -107,14 +121,21 @@ const publicRoutes = new Set(['landing', 'login', 'register', '2fa-verify', 'set
 let refreshingPromise: Promise<void> | null = null;
 
 router.beforeEach(async (to) => {
-  if (!setupStatusChecked) {
+  const stale = Date.now() - statusCheckedAt > STATUS_TTL_MS;
+  // 进入引导页时始终重查，避免缓存的 false 把已安装实例锁在 setup
+  const mustRecheck = !setupStatusChecked || stale || to.name === 'setup';
+
+  if (mustRecheck) {
     try {
       const { data } = await api.get('/setup/status');
-      isInitialized = data.initialized ?? false;
+      // 有管理员即视为已安装（与后端 getSetupStatus 对齐）
+      isInitialized = !!(data.initialized || data.adminRegistered);
     } catch {
-      isInitialized = false;
+      // 仅在从未成功检查过时保持 false；短暂网络错误不把已安装打成未安装
+      if (!setupStatusChecked) isInitialized = false;
     }
     setupStatusChecked = true;
+    statusCheckedAt = Date.now();
   }
 
   if (!isInitialized && to.name !== 'setup') {
@@ -122,7 +143,7 @@ router.beforeEach(async (to) => {
   }
 
   if (isInitialized && to.name === 'setup') {
-    return { name: 'landing' };
+    return { name: 'login' };
   }
 
   if (isInitialized && !publicRoutes.has(to.name as string) && !getAccessToken()) {

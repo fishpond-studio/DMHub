@@ -1,33 +1,34 @@
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-background px-4">
+  <div class="relative flex min-h-screen items-center justify-center bg-background px-4">
+    <div class="absolute right-4 top-4"><LanguageSwitcher /></div>
     <Card class="w-full max-w-sm animate-scale-in">
       <CardHeader class="text-center">
         <CardTitle class="text-2xl font-bold">DMHub</CardTitle>
-        <CardDescription>登录到您的账户</CardDescription>
+        <CardDescription>{{ t('auth.welcomeBack') }}</CardDescription>
       </CardHeader>
 
       <CardContent>
         <form class="space-y-4" @submit.prevent="handleLogin">
           <div class="space-y-2">
-            <Label for="username">用户名 / 邮箱</Label>
+            <Label for="username">{{ t('auth.username') }} / {{ t('auth.email') }}</Label>
             <Input
               id="username"
               v-model="form.username"
               type="text"
               autocomplete="username"
-              placeholder="请输入用户名或邮箱"
+              :placeholder="t('auth.username')"
             />
           </div>
 
           <div class="space-y-2">
-            <Label for="password">密码</Label>
+            <Label for="password">{{ t('auth.password') }}</Label>
             <div class="relative">
               <Input
                 id="password"
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
-                placeholder="请输入密码"
+                :placeholder="t('auth.password')"
                 class="pr-10"
               />
               <Button
@@ -45,16 +46,16 @@
 
           <div class="flex items-center space-x-2">
             <Checkbox id="rememberMe" :checked="form.rememberMe" @update:checked="form.rememberMe = $event" />
-            <Label for="rememberMe" class="text-sm cursor-pointer">记住我</Label>
+            <Label for="rememberMe" class="text-sm cursor-pointer">{{ t('auth.rememberMe') }}</Label>
           </div>
 
-          <div v-if="registered" class="rounded-md bg-primary/10 p-3 text-sm text-primary">注册成功，请登录</div>
+          <div v-if="registered" class="rounded-md bg-primary/10 p-3 text-sm text-primary">{{ t('auth.registerSuccess') }}</div>
 
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
           <Button type="submit" :disabled="loading" class="w-full">
             <Loader2 v-if="loading" class="mr-2 h-4 w-4 animate-spin" />
-            {{ loading ? '登录中...' : '登录' }}
+            {{ loading ? '...' : t('auth.login') }}
           </Button>
         </form>
       </CardContent>
@@ -87,8 +88,8 @@
         </div>
 
         <p v-if="registrationEnabled" class="text-center text-sm text-muted-foreground">
-          没有账户？
-          <router-link to="/register" class="font-medium text-primary hover:underline">注册</router-link>
+          {{ t('auth.noAccount') }}
+          <router-link to="/register" class="font-medium text-primary hover:underline">{{ t('auth.register') }}</router-link>
         </p>
       </CardFooter>
     </Card>
@@ -98,10 +99,12 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '@/stores/auth';
 import { useOAuthStore } from '@/stores/oauth';
 import api from '@/lib/axios';
 import { marked } from 'marked';
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -124,6 +127,7 @@ function sanitizeHtml(html: string): string {
 
 const router = useRouter();
 const route = useRoute();
+const { t } = useI18n();
 const authStore = useAuthStore();
 const oauthStore = useOAuthStore();
 

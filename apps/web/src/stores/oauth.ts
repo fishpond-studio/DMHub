@@ -55,5 +55,10 @@ export const useOAuthStore = defineStore('oauth', () => {
     return `/api/auth/oauth/${providerId}/authorize`;
   }
 
-  return { providers, loading, fetchProviders, getAuthorizeUrl };
+  async function startBind(providerId: string): Promise<string> {
+    const { data } = await api.post(`/auth/oauth/${providerId}/bind/start`);
+    return data.authorizeUrl as string;
+  }
+
+  return { providers, loading, fetchProviders, getAuthorizeUrl, startBind };
 });

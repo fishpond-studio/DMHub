@@ -141,6 +141,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
+import { NOTIFICATION_EVENTS } from '@dmhub/shared';
 import { useNotificationStore, type NotificationConfig } from '@/stores/notification';
 import { Plus, Bell } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
@@ -182,25 +183,7 @@ const confirmSave = reactive({
   open: false,
 });
 
-const allEvents = [
-  { value: 'domain.expiring', label: '域名即将过期' },
-  { value: 'domain.expired', label: '域名已过期' },
-  { value: 'record.created', label: '记录创建' },
-  { value: 'record.updated', label: '记录更新' },
-  { value: 'record.deleted', label: '记录删除' },
-  { value: 'member.joined', label: '成员加入' },
-  { value: 'member.removed', label: '成员移除' },
-  { value: 'member.role_changed', label: '角色变更' },
-  { value: 'assignment.requested', label: '权限申请' },
-  { value: 'assignment.approved', label: '权限审批通过' },
-  { value: 'assignment.rejected', label: '权限审批拒绝' },
-  { value: 'login.suspicious', label: '可疑登录' },
-  { value: 'team_settings.updated', label: '团队设置变更' },
-  { value: 'oauth_provider.deleted', label: 'OAuth 提供商删除' },
-  { value: 'dns_provider.deleted', label: 'DNS 服务商删除' },
-  { value: 'admin_reset.requested', label: '备用码重置请求' },
-  { value: 'notification.update', label: '通知配置变更' },
-];
+const allEvents = NOTIFICATION_EVENTS.map((e) => ({ value: e.event, label: e.label }));
 
 function channelLabel(channel: string) {
   const map: Record<string, string> = {
