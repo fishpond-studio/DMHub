@@ -46,8 +46,13 @@ function recordsToCsv(rows: any[]): string {
     const values = headers.map((h) => {
       const v = (row as any)[h === 'domain_id' ? 'domainId' : h === 'record_type' ? 'recordType' : h];
       const s = v == null ? '' : String(v);
-      if (/["\n,]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-      return s;
+      let cell = s;
+      // Prevent CSV formula injection (e.g. malicious TXT records starting with =, +, -, @)
+      if (/^[=+\-@\t\r]/.test(cell)) {
+        cell = "'" + cell;
+      }
+      if (/["\n,]/.test(cell)) return `"${cell.replace(/"/g, '""')}"`;
+      return cell;
     });
     lines.push(values.join(','));
   }

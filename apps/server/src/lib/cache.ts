@@ -41,6 +41,10 @@ export function getCacheBackend(): 'redis' | 'memory' {
   return redis ? 'redis' : 'memory';
 }
 
+export function isRedisConnected(): boolean {
+  return !!redis && !redisBroken;
+}
+
 async function getRedis(): Promise<Redis | null> {
   if (!redisUrl || redisBroken && Date.now() < nextRetryAt) return redis;
   if (redis) return redis;

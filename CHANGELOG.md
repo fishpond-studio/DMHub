@@ -1,5 +1,37 @@
 # 更新日志
 
+## [0.3.0] — 2026-09-17
+
+本版本聚焦 **核心安全性加固**、**SSRF 深度防护**、**分级云原生健康检查探针**、**OpenAPI 权限隔离与防越权** 以及 **安全响应头中间件**。
+
+### 亮点
+
+| 方向 | 说明 |
+|------|------|
+| 权限 | 修复 OpenAPI 接口管理员权限逃逸；增加批量解析记录子域名范围强制校验 |
+| SSRF | 精准 32 位 CIDR 运算，覆盖 CGNAT、云元数据服务等保留网段；`safeFetch` 强制拦截 30x 重定向绕过 |
+| 探针 | 区分存活探针（Liveness `/api/health`）、就绪探针（Readiness `/api/health/ready`）与系统诊断（`/api/health/diagnostics`） |
+| 安全头 | 新增安全响应头中间件（CSP、nosniff、XSS-Protection、DENY frame）与敏感接口防缓存 |
+| 防护 | 2FA 核心核验与邮件发送细粒度频控；个人 Token 权限严格白名单；头像输入防 XSS 注入 |
+
+### 修复与安全加固
+
+- **OpenAPI 鉴权与越权拦截**：`apps/server/src/routes/open-api.ts` 引入 `checkUserDomainAccess`，普通用户通过 Token 访问只能管理授权内的域名和子域名范围，禁止提权。
+- **批量解析记录权限旁路**：`requireRecordWriteAccess` 中间件增加对 `recordIds` 批量操作的逐项子域名权限预检。
+- **SSRF 深度拦截**：`apps/server/src/lib/ssrf-guard.ts` 重写为位运算 CIDR 匹配；新增 `safeFetch` 与 `safeValidateUrl`，全面防御反向探测和 30x 重定向内网窃听。
+- **2FA 接口频控**：`apps/server/src/routes/twofa.ts` 为核验（10次/分）和发送（5次/分）增加限流，并将生产环境 Cookie `sameSite` 提升为 `strict`。
+- **个人资料与 Token 安全**：`apps/server/src/routes/me.ts` 限制头像协议为 HTTP/HTTPS/相对路径，个人 Token 限制为普通权限白名单。
+
+### 新增
+
+- **云原生分级健康检查探针**：
+  - `GET /api/health`：轻量 Liveness 探针，返回运行时间与存活状态。
+  - `GET /api/health/ready`：Readiness 探针，实时检测数据库连接状态，异常返回 503。
+  - `GET /api/health/diagnostics`：管理员专属系统诊断接口，展示内存、数据库延迟、Redis 状态与安全基线。
+- **生产级安全响应头中间件**：`apps/server/src/middleware/security-headers.ts`，自动配置安全头及对 `/api/*` 下发防缓存策略。
+
+---
+
 ## [0.2.0] — 2026-07-25
 
 本版本聚焦 **OIDC 可用化**、**协作指派体验**、**站内信/邮件通知**、**可用性监控**、**审计与会话管理** 与 **前端交互**，并全面同步文档。

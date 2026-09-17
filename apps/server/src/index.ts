@@ -38,6 +38,7 @@ import { ensureSchemaPatches } from './services/setup.js';
 import { processOidcShortCallback } from './routes/oauth.js';
 import { configureCache, initCacheFromEnv } from './lib/cache.js';
 import { getTeamSettings } from './services/team.js';
+import { registerSecurityHeaders } from './middleware/security-headers.js';
 
 const isProduction = config.NODE_ENV === 'production';
 
@@ -45,6 +46,9 @@ const app = Fastify({
   logger: true,
   bodyLimit: 5 * 1024 * 1024, // 5MB
 });
+
+// 企业级安全响应头与敏感防缓存增强中间件
+registerSecurityHeaders(app);
 
 // 安全响应头
 await app.register(helmet, {

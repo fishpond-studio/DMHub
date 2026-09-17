@@ -241,8 +241,10 @@ export async function uploadLogo(
 
   if (current?.logoUrl) {
     try {
-      const oldPath = path.join(process.cwd(), current.logoUrl.replace(/^\//, ''));
-      if (fs.existsSync(oldPath)) {
+      const resolvedUploadDir = path.resolve(uploadDir);
+      const oldPath = path.resolve(process.cwd(), current.logoUrl.replace(/^\//, ''));
+      // 路径遍历防护：严格限制删除目标必须在 uploads/logo 目录内
+      if (oldPath.startsWith(resolvedUploadDir) && fs.existsSync(oldPath)) {
         fs.unlinkSync(oldPath);
       }
     } catch {}
@@ -297,8 +299,10 @@ export async function uploadBackground(
 
   if (current?.landingBackgroundUrl) {
     try {
-      const oldPath = path.join(process.cwd(), current.landingBackgroundUrl.replace(/^\//, ''));
-      if (fs.existsSync(oldPath)) {
+      const resolvedUploadDir = path.resolve(uploadDir);
+      const oldPath = path.resolve(process.cwd(), current.landingBackgroundUrl.replace(/^\//, ''));
+      // 路径遍历防护：严格限制删除目标必须在 uploads/background 目录内
+      if (oldPath.startsWith(resolvedUploadDir) && fs.existsSync(oldPath)) {
         fs.unlinkSync(oldPath);
       }
     } catch {}

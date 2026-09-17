@@ -69,6 +69,7 @@ export async function importRoutes(app: FastifyInstance) {
       csvText,
       request.ip,
       request.headers['user-agent'],
+      request.user!.role,
     );
     return result;
   });
@@ -130,7 +131,14 @@ export async function importRoutes(app: FastifyInstance) {
     const buffer = await data.toBuffer();
     try {
       const csvText = await parseExcelToCsv(buffer);
-      const result = await importRecordsCsv(request.user!.userId, domainId, csvText, request.ip, request.headers['user-agent']);
+      const result = await importRecordsCsv(
+        request.user!.userId,
+        domainId,
+        csvText,
+        request.ip,
+        request.headers['user-agent'],
+        request.user!.role,
+      );
       return result;
     } catch (err: any) {
       return reply.status(400).send({ error: 'Excel 解析失败：' + (err.message || '未知错误') });

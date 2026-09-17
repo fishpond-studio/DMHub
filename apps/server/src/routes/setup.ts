@@ -22,10 +22,10 @@ import { getDb } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { readSetupState } from '../lib/setup-state.js';
 
+import { isPublicDomain } from '../lib/ssrf-guard.js';
+
 /**
  * 核心安装步骤保护：已有管理员后禁止重跑数据库/迁移/注册。
- * 注意：与「前端是否离开引导」不完全同一概念——有管理员即可登录，
- * 但站点 URL / SMTP 等可选步骤在引导完成前仍可能调用。
  */
 async function guardCoreSetup(_request: FastifyRequest, reply: FastifyReply) {
   try {
@@ -38,13 +38,14 @@ async function guardCoreSetup(_request: FastifyRequest, reply: FastifyReply) {
   }
 }
 
-/** 可选配置：仅在完全未安装时通过 setup 接口写入；已初始化请走登录后设置页 */
+/**
+ * 可选配置保护：已初始化（已注册管理员或系统已就绪）时禁止未经认证的修改。
+ * 阻止未经身份校验篡改 SMTP、管理员邮箱、站点 URL 等风险。
+ */
 async function guardOptionalSetup(_request: FastifyRequest, reply: FastifyReply) {
   try {
     const status = await getSetupStatus();
-    // 允许：未初始化，或已有管理员但仍在引导收尾（文件/库标志尚未全部同步时）
-    // 若已有管理员且 DB 明确 initialized，仍允许 complete / 邮箱验证收尾，禁止被滥用改 SMTP 的风险用 complete 后关闭
-    if (status.initialized && status.adminRegistered && status.smtpConfigured && status.siteUrlConfigured) {
+    if (status.initialized || status.adminRegistered) {
       return reply.status(403).send({ error: '系统已初始化，请登录后在设置中修改' });
     }
   } catch {
@@ -69,7 +70,7 @@ const databaseConfigSchema = z.object({
   port: z.coerce.number().int().positive(),
   username: z.string().min(1),
   password: z.string(),
-  database: z.string().min(1),
+  database: z.string().regex(/^[a-zA-Z0-9_]+$/, '数据库名称仅允许英文字母、数字和下划线'),
   redisUrl: z.string().optional().or(z.literal('')),
 });
 
@@ -136,7 +137,7 @@ export async function setupRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  app.post('/database/test', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/database/test', { preHandler: [guardCoreSetup] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = databaseConfigSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
@@ -181,7 +182,7 @@ export async function setupRoutes(app: FastifyInstance) {
     return { siteUrl: parsed.data.siteUrl };
   });
 
-  app.post('/site-url/check-dns', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/site-url/check-dns', { preHandler: [guardOptionalSetup] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = siteUrlSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
@@ -230,12 +231,18 @@ export async function setupRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  app.post('/smtp/test', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/smtp/test', { preHandler: [guardOptionalSetup] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = smtpTestSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
     }
     const data = parsed.data;
+    if (data.host) {
+      const isPublic = await isPublicDomain(data.host);
+      if (!isPublic) {
+        return reply.status(400).send({ success: false, error: 'SSRF 拦截：不允许向内网或保留地址建立 SMTP 连接' });
+      }
+    }
     let smtpOverride: SmtpConfig | undefined;
     if (data.host && data.port && data.user && data.password && data.from) {
       smtpOverride = {

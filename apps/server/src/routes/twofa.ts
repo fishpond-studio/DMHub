@@ -80,7 +80,10 @@ export async function twofaRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post('/verify', { preHandler: [require2FA] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/verify', {
+    preHandler: [require2FA],
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { method, code } = request.body as { method?: 'totp' | 'backup' | 'email'; code?: string };
     if (!method || !code) {
       return reply.status(400).send({ error: '请提供验证方式和验证码' });
@@ -94,7 +97,7 @@ export async function twofaRoutes(app: FastifyInstance) {
       reply.setCookie('refresh_token', result.refreshToken, {
         httpOnly: true,
         secure: config.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: config.NODE_ENV === 'production' ? 'strict' : 'lax',
         path: '/api/auth',
         maxAge: 7 * 24 * 60 * 60,
       });
@@ -272,7 +275,9 @@ export async function twofaRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post('/email/send', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/email/send', {
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = extractUserId(request);
     if (!userId) {
       return reply.status(401).send({ error: '未认证' });

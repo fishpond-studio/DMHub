@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { teamSettings, domains } from '../db/schema.js';
-import { isPublicDomain } from '../lib/ssrf-guard.js';
+import { isPublicDomain, safeFetch } from '../lib/ssrf-guard.js';
 
 interface HealthCheckResult {
   up: boolean;
@@ -56,7 +56,7 @@ export async function configureUptimePushUrl(pushUrl: string): Promise<{ configu
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    await fetch(testUrl, { method: 'GET', signal: controller.signal });
+    await safeFetch(testUrl, { method: 'GET', signal: controller.signal });
     clearTimeout(timeout);
   } catch {}
   await db
@@ -138,6 +138,16 @@ async function performHealthCheck(domainName: string): Promise<{
   responseTime: number;
   statusCode: number;
 }> {
+  // SSRF 防护：禁止向内网或保留地址发起探测
+  const safe = await isPublicDomain(domainName);
+  if (!safe) {
+    return {
+      up: false,
+      responseTime: 0,
+      statusCode: 0,
+    };
+  }
+
   const url = `https://${domainName}`;
   const start = Date.now();
   try {
@@ -146,7 +156,7 @@ async function performHealthCheck(domainName: string): Promise<{
     const response = await fetch(url, {
       method: 'HEAD',
       signal: controller.signal,
-      redirect: 'follow',
+      redirect: 'manual', // 阻止自动跟随重定向导致 SSRF 绕过
     });
     clearTimeout(timeout);
     const elapsed = Date.now() - start;

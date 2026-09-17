@@ -4,6 +4,7 @@ import { domains, monitorChecks } from '../db/schema.js';
 import { insertReturningOne } from '../db/helpers.js';
 import { triggerNotification } from './notification.js';
 import { getUptimePushUrl, extractPushTokenSafe } from './uptime.js';
+import { isPublicDomain, safeFetch } from '../lib/ssrf-guard.js';
 
 export interface MonitorCheckRow {
   id: string;
@@ -25,13 +26,22 @@ interface CheckOutcome {
 
 async function performHttpCheck(domainName: string): Promise<CheckOutcome> {
   const start = Date.now();
+  const safe = await isPublicDomain(domainName);
+  if (!safe) {
+    return {
+      up: false,
+      statusCode: null,
+      responseMs: 0,
+      error: 'SSRF 拦截：不允许探测私网或保留地址',
+    };
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const response = await fetch(`https://${domainName}`, {
+    const response = await safeFetch(`https://${domainName}`, {
       method: 'GET',
       signal: controller.signal,
-      redirect: 'follow',
     });
     clearTimeout(timeout);
     return {

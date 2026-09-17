@@ -1,6 +1,6 @@
 # DMHub API 文档
 
-**版本：0.2.0**
+**版本：0.3.0**
 
 所有 API 端点前缀为 `/api`（OIDC 简洁回调 `/oauth/oidc` 除外）。需认证的接口在请求头携带 `Authorization: Bearer <access_token>`。
 

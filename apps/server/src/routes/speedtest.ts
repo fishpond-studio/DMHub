@@ -5,7 +5,7 @@ import { requireDomainAccess } from '../middleware/domain-permission.js';
 import { getDb } from '../db/index.js';
 import { domains } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { isValidDomain } from '../lib/ssrf-guard.js';
+import { isValidDomain, isPublicDomain, safeFetch } from '../lib/ssrf-guard.js';
 
 export async function speedtestRoutes(app: FastifyInstance) {
   app.post('/dns/:domainId', { preHandler: [authenticate, requireDomainAccess('domainId')] }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -78,6 +78,11 @@ export async function speedtestRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: '域名格式无效' });
     }
 
+    const isPublic = await isPublicDomain(domain.name);
+    if (!isPublic) {
+      return reply.status(400).send({ error: 'SSRF 拦截：不允许测速内网或保留地址' });
+    }
+
     const url = `https://${domain.name}`;
     const start = Date.now();
     let ttfb = 0;
@@ -86,10 +91,9 @@ export async function speedtestRoutes(app: FastifyInstance) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
 
-      const response = await fetch(url, {
+      const response = await safeFetch(url, {
         method: 'GET',
         signal: controller.signal,
-        redirect: 'follow',
       });
 
       ttfb = Date.now() - start;

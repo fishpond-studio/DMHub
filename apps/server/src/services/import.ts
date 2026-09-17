@@ -1,9 +1,10 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { domains, dnsRecords, providerConfigs } from '../db/schema.js';
+import { domains, dnsRecords, providerConfigs, domainAssignments } from '../db/schema.js';
 import { createDomain } from './domain.js';
 import { createRecord } from './dns-record.js';
 import { logOperation } from '../lib/log.js';
+import { matchesAnyPattern } from '../lib/subdomain-match.js';
 
 interface CsvError {
   row: number;
@@ -168,6 +169,7 @@ export async function importRecordsCsv(
   csvText: string,
   ipAddress?: string,
   userAgent?: string,
+  userRole?: string,
 ): Promise<ImportResult> {
   const db = getDb();
 
@@ -179,6 +181,20 @@ export async function importRecordsCsv(
 
   if (!domain) {
     return { imported: 0, skipped: 0, errors: [{ row: 0, message: '域名不存在' }] };
+  }
+
+  // 越权防御：非管理员必须校验其被指派的子域名匹配模式
+  let allowedSubdomainPatterns: string[] | null = null;
+  if (userRole && userRole !== 'admin') {
+    const assignments = await db
+      .select({ subdomainPattern: domainAssignments.subdomainPattern, permission: domainAssignments.permission })
+      .from(domainAssignments)
+      .where(and(eq(domainAssignments.userId, userId), eq(domainAssignments.domainId, domainId)));
+    const writable = assignments.filter((a: { permission: string }) => a.permission === 'dns_edit');
+    if (writable.length === 0) {
+      return { imported: 0, skipped: 0, errors: [{ row: 0, message: '无权向该域名添加解析记录' }] };
+    }
+    allowedSubdomainPatterns = writable.map((a: { subdomainPattern: string }) => a.subdomainPattern);
   }
 
   const rows = parseCsv(csvText);
@@ -219,6 +235,16 @@ export async function importRecordsCsv(
 
     if (!type || !name || !value) {
       errors.push({ row: rowNum, message: 'type, name, value 不能为空' });
+      continue;
+    }
+
+    if (allowedSubdomainPatterns && !matchesAnyPattern(name, allowedSubdomainPatterns)) {
+      errors.push({ row: rowNum, message: `无权导入记录 "${name}"：该记录不在您被指派的子域名范围内` });
+      continue;
+    }
+
+    if (allowedSubdomainPatterns && !matchesAnyPattern(name, allowedSubdomainPatterns)) {
+      errors.push({ row: rowNum, message: `无权导入记录 "${name}"：该主机不在您被指派的子域名范围内` });
       continue;
     }
 

@@ -22,6 +22,10 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
       return reply.status(401).send({ error: '无效的令牌' });
     }
     const accessPayload = payload as AccessPayload;
+    // 令牌类型校验：防止将 RefreshToken 当作 AccessToken 使用
+    if (!accessPayload.role || typeof accessPayload.role !== 'string') {
+      return reply.status(401).send({ error: '无效的访问令牌' });
+    }
     request.user = { userId: accessPayload.userId, role: accessPayload.role };
   } catch {
     return reply.status(401).send({ error: '令牌无效或已过期' });

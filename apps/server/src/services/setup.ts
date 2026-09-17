@@ -75,6 +75,10 @@ interface DatabaseConfigInput {
 }
 
 async function ensureDatabaseExists(config: DatabaseConfigInput): Promise<void> {
+  if (!/^[a-zA-Z0-9_]+$/.test(config.database)) {
+    throw new Error('数据库名称不合法：仅支持英文字母、数字和下划线');
+  }
+
   if (isMysqlDbType(config.dbType)) {
     let conn: mysql.Connection | null = null;
     try {

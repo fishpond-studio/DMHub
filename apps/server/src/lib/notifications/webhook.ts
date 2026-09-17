@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import type { NotificationChannel, NotificationMessage } from './index.js';
-import { isPublicDomain } from '../ssrf-guard.js';
+import { isPublicDomain, safeFetch } from '../ssrf-guard.js';
 
 export const webhookChannel: NotificationChannel = {
   id: 'webhook',
@@ -42,7 +42,7 @@ export const webhookChannel: NotificationChannel = {
       headers['X-Hub-Signature-256'] = `sha256=${signature}`;
     }
 
-    const response = await fetch(webhookUrl, {
+    const response = await safeFetch(webhookUrl, {
       method: 'POST',
       headers,
       body: jsonBody,

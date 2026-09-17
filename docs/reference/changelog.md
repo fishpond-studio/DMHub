@@ -1,5 +1,21 @@
 # 更新日志
 
+## 0.3.0 — 2026-09-17
+
+聚焦 **核心安全性加固**、**SSRF 深度防护**、**分级云原生健康检查探针**、**OpenAPI 权限隔离与防越权** 以及 **安全响应头中间件**。
+
+### 亮点
+
+| 方向 | 说明 |
+|------|------|
+| 权限 | 修复 OpenAPI 接口管理员权限逃逸；增加批量解析记录子域名范围强制校验 |
+| SSRF | 精准 32 位 CIDR 运算，覆盖 CGNAT、云元数据服务等保留网段；`safeFetch` 强制拦截 30x 重定向绕过 |
+| 探针 | 区分存活探针（`/api/health`）、就绪探针（`/api/health/ready`）与系统诊断（`/api/health/diagnostics`） |
+| 安全头 | 新增安全响应头中间件与敏感接口防缓存 |
+| 防护 | 2FA 核心核验频控；个人 Token 权限严格白名单；头像输入防 XSS 协议注入 |
+
+---
+
 ## 0.2.0 — 2026-07-25
 
 完整说明见仓库根目录 [CHANGELOG.md](https://github.com/fishpond-studio/DMHub/blob/main/CHANGELOG.md)。

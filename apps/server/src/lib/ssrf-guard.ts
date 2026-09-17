@@ -1,63 +1,109 @@
 /**
  * SSRF 防护 — 校验域名/IP 是否为公共地址
- * 阻止对私网、保留地址的请求
+ * 阻止对私网、保留地址、元数据服务的请求
  */
 import dns from 'dns';
 import net from 'net';
 
-const PRIVATE_IP_RANGES = [
-  // 10.0.0.0/8
-  /^10\./,
-  // 172.16.0.0/12
-  /^172\.(1[6-9]|2[0-9]|3[01])\./,
-  // 192.168.0.0/16
-  /^192\.168\./,
-  // 127.0.0.0/8 (loopback)
-  /^127\./,
-  // 169.254.0.0/16 (link-local)
-  /^169\.254\./,
-  // 0.0.0.0/8
-  /^0\./,
-  // 100.64.0.0/10 (CGNAT)
-  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
+/**
+ * 将 IPv4 转换为无符号 32 位整型进行精准 CIDR 范围判断
+ */
+function ipToLong(ip: string): number | null {
+  const parts = ip.split('.');
+  if (parts.length !== 4) return null;
+  let num = 0;
+  for (const p of parts) {
+    if (!/^\d+$/.test(p)) return null;
+    const n = Number(p);
+    if (n < 0 || n > 255) return null;
+    num = (num << 8) + n;
+  }
+  return num >>> 0;
+}
+
+function inSubnet(ipNum: number, subnetNum: number, maskBits: number): boolean {
+  const mask = maskBits === 0 ? 0 : (~0 << (32 - maskBits)) >>> 0;
+  return (ipNum & mask) === (subnetNum & mask);
+}
+
+const RESERVED_IPV4_SUBNETS: Array<{ subnet: string; bits: number }> = [
+  { subnet: '0.0.0.0', bits: 8 },         // Current network (RFC 1122)
+  { subnet: '10.0.0.0', bits: 8 },        // Private-Use (RFC 1918)
+  { subnet: '100.64.0.0', bits: 10 },     // Shared Address Space / CGNAT (RFC 6598)
+  { subnet: '127.0.0.0', bits: 8 },       // Loopback (RFC 1122)
+  { subnet: '169.254.0.0', bits: 16 },    // Link Local / Cloud Metadata (RFC 3927)
+  { subnet: '172.16.0.0', bits: 12 },     // Private-Use (RFC 1918)
+  { subnet: '192.0.0.0', bits: 24 },      // IETF Protocol Assignments (RFC 6890)
+  { subnet: '192.0.2.0', bits: 24 },      // TEST-NET-1 (RFC 5737)
+  { subnet: '192.88.99.0', bits: 24 },    // 6to4 Relay Anycast (RFC 7526)
+  { subnet: '192.168.0.0', bits: 16 },    // Private-Use (RFC 1918)
+  { subnet: '198.18.0.0', bits: 15 },     // Benchmarking (RFC 2544)
+  { subnet: '198.51.100.0', bits: 24 },   // TEST-NET-2 (RFC 5737)
+  { subnet: '203.0.113.0', bits: 24 },    // TEST-NET-3 (RFC 5737)
+  { subnet: '224.0.0.0', bits: 4 },       // Multicast (RFC 5771)
+  { subnet: '240.0.0.0', bits: 4 },       // Reserved for future use (RFC 1112)
+  { subnet: '255.255.255.255', bits: 32 },// Limited Broadcast (RFC 919)
 ];
 
-const IPV6_PRIVATE_PATTERNS = [
-  /^::1$/,           // loopback
-  /^fc00:/i,         // ULA
-  /^fd/i,            // ULA
-  /^fe80:/i,         // link-local
-  /^::ffff:0{0,3}:10\./i,  // IPv4-mapped 10.x
-  /^::ffff:0{0,3}:192\.168\./i,
-  /^::ffff:0{0,3}:172\./i,
-  /^::ffff:0{0,3}:127\./i,
-];
+const PARSED_IPV4_RANGES = RESERVED_IPV4_SUBNETS.map((r) => ({
+  num: ipToLong(r.subnet)!,
+  bits: r.bits,
+}));
 
-const BLOCKED_HOSTNAMES = [
+const BLOCKED_HOSTNAMES = new Set([
   'localhost',
   'localhost.localdomain',
   'ip6-localhost',
   'ip6-loopback',
   'broadcasthost',
-];
+  'instance-data',
+  'metadata.google.internal',
+]);
 
 export function isPrivateIPv4(ip: string): boolean {
-  return PRIVATE_IP_RANGES.some((re) => re.test(ip));
+  const num = ipToLong(ip);
+  if (num === null) return true;
+  return PARSED_IPV4_RANGES.some((range) => inSubnet(num, range.num, range.bits));
 }
 
 export function isPrivateIPv6(ip: string): boolean {
-  return IPV6_PRIVATE_PATTERNS.some((re) => re.test(ip));
+  const norm = ip.toLowerCase().trim();
+
+  // loopback / unspecified
+  if (norm === '::' || norm === '::1' || /^0+(?::0+)*(:1)?$/.test(norm)) {
+    return true;
+  }
+
+  // IPv4-mapped IPv6 address (e.g. ::ffff:127.0.0.1 or ::ffff:7f00:1)
+  const v4Mapped = norm.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+  if (v4Mapped) {
+    return isPrivateIPv4(v4Mapped[1]);
+  }
+
+  // ULA (Unique Local Address fc00::/7 -> fc00... to fdff...)
+  if (/^f[cd][0-9a-f]{2}:/i.test(norm)) return true;
+
+  // Link-Local (fe80::/10 -> fe80... to febf...)
+  if (/^fe[89ab][0-9a-f]:/i.test(norm)) return true;
+
+  // Multicast (ff00::/8)
+  if (/^ff[0-9a-f]{2}:/i.test(norm)) return true;
+
+  // Documentation prefix (2001:db8::/32)
+  if (/^2001:0?db8:/i.test(norm)) return true;
+
+  return false;
 }
 
 export function isPrivateOrReservedIP(ip: string): boolean {
   if (net.isIPv4(ip)) return isPrivateIPv4(ip);
   if (net.isIPv6(ip)) return isPrivateIPv6(ip);
-  return false;
+  return true;
 }
 
 export function isValidDomain(domain: string): boolean {
   if (!domain || domain.length > 253) return false;
-  // 不允许 IP 地址作为域名
+  // 不允许直接使用 IP 地址作为域名
   if (net.isIP(domain)) return false;
   // 基本域名格式校验
   const labels = domain.split('.');
@@ -65,17 +111,23 @@ export function isValidDomain(domain: string): boolean {
   for (const label of labels) {
     if (!label || label.length > 63) return false;
     if (!/^[a-zA-Z0-9_-]+$/.test(label)) return false;
+    if (label.startsWith('-') || label.endsWith('-')) return false;
   }
   // 阻止已知危险主机名
-  if (BLOCKED_HOSTNAMES.includes(domain.toLowerCase())) return false;
+  if (BLOCKED_HOSTNAMES.has(domain.toLowerCase())) return false;
   return true;
 }
 
 /**
  * 校验域名是否为公共域名（非私网/非保留地址）
- * 会进行 DNS 解析并检查解析结果
+ * 进行 DNS 解析并检查所有解析结果
  */
 export async function isPublicDomain(domain: string): Promise<boolean> {
+  // 如果输入是 IP 地址，直接按 IP 地址检验
+  if (net.isIP(domain)) {
+    return !isPrivateOrReservedIP(domain);
+  }
+
   if (!isValidDomain(domain)) return false;
 
   return new Promise((resolve) => {
@@ -100,4 +152,70 @@ export async function isPublicDomain(domain: string): Promise<boolean> {
  */
 export function isPublicDomainSync(domain: string): boolean {
   return isValidDomain(domain);
+}
+
+/**
+ * 安全 URL 验证器：校验 URL 协议必须为 http/https，主机名必须解析到公网地址
+ */
+export async function safeValidateUrl(
+  urlString: string,
+  options: { allowHttp?: boolean } = { allowHttp: true },
+): Promise<{ safe: boolean; url?: URL; reason?: string }> {
+  let parsed: URL;
+  try {
+    parsed = new URL(urlString);
+  } catch {
+    return { safe: false, reason: 'URL 格式无效' };
+  }
+
+  if (parsed.protocol !== 'https:' && (!options.allowHttp || parsed.protocol !== 'http:')) {
+    return { safe: false, reason: `仅支持 ${options.allowHttp ? 'HTTP/HTTPS' : 'HTTPS'} 协议` };
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  const safe = await isPublicDomain(hostname);
+  if (!safe) {
+    return { safe: false, reason: '目标地址为内网或保留地址' };
+  }
+
+  return { safe: true, url: parsed };
+}
+
+/**
+ * 安全 fetch 封装：阻止重定向到内网地址（SSRF 防御）
+ */
+export async function safeFetch(
+  urlStr: string,
+  init?: RequestInit,
+  maxRedirects = 3,
+): Promise<Response> {
+  let currentUrl = urlStr;
+  let redirectsCount = 0;
+
+  while (true) {
+    const val = await safeValidateUrl(currentUrl);
+    if (!val.safe) {
+      throw new Error(`SSRF 拦截: ${val.reason || '不允许访问目标地址'} (${currentUrl})`);
+    }
+
+    const res = await fetch(currentUrl, {
+      ...init,
+      redirect: 'manual',
+    });
+
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location');
+      if (!location) {
+        return res;
+      }
+      redirectsCount++;
+      if (redirectsCount > maxRedirects) {
+        throw new Error('SSRF 拦截: 重定向次数过多');
+      }
+      currentUrl = new URL(location, currentUrl).toString();
+      continue;
+    }
+
+    return res;
+  }
 }

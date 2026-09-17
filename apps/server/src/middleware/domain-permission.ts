@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { domainAssignments, dnsRecords } from '../db/schema.js';
 import { matchesAnyPattern } from '../lib/subdomain-match.js';
@@ -103,9 +103,28 @@ export function requireRecordWriteAccess(opts: { domainIdParam: string; recordId
 
     const namesToCheck: string[] = [];
 
-    const body = (request.body ?? {}) as { name?: unknown };
+    const body = (request.body ?? {}) as { name?: unknown; recordIds?: unknown };
     if (typeof body.name === 'string') {
       namesToCheck.push(body.name);
+    }
+
+    // 批量操作防护：校验批量 recordIds 对应的所有解析记录均落在权限子域名范围内
+    if (Array.isArray(body.recordIds) && body.recordIds.length > 0) {
+      const db = getDb();
+      const stringIds = body.recordIds.filter((id): id is string => typeof id === 'string');
+      if (stringIds.length > 0) {
+        const matchingRecords = await db
+          .select({ id: dnsRecords.id, name: dnsRecords.name })
+          .from(dnsRecords)
+          .where(and(inArray(dnsRecords.id, stringIds), eq(dnsRecords.domainId, domainId)));
+
+        if (matchingRecords.length !== stringIds.length) {
+          return reply.status(404).send({ error: '部分待操作记录不存在或不属于该域名' });
+        }
+        for (const rec of matchingRecords) {
+          namesToCheck.push(rec.name);
+        }
+      }
     }
 
     if (opts.recordIdParam) {

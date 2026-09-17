@@ -1,6 +1,6 @@
 import net from 'net';
 import https from 'https';
-import { isPublicDomainSync } from './ssrf-guard.js';
+import { isPublicDomainSync, isPublicDomain } from './ssrf-guard.js';
 
 interface WhoisResult {
   expiresAt: string | null;
@@ -378,10 +378,14 @@ async function queryWhois(domain: string): Promise<WhoisResult | null> {
       const referral = extractReferralServer(raw);
       if (referral && referral.toLowerCase() !== server.toLowerCase()) {
         try {
-          raw = await queryWhoisRaw(referral, domain.toLowerCase());
-          expiresAt = extractExpiryFromWhois(raw);
-          registrar = extractRegistrarFromWhois(raw) || registrar;
-          source = 'whois-referral';
+          // SSRF 防护：校验注册商 referral 服务器必须为合法公网主机
+          const safe = await isPublicDomain(referral);
+          if (safe) {
+            raw = await queryWhoisRaw(referral, domain.toLowerCase());
+            expiresAt = extractExpiryFromWhois(raw);
+            registrar = extractRegistrarFromWhois(raw) || registrar;
+            source = 'whois-referral';
+          }
         } catch {
           // ignore referral failure
         }
