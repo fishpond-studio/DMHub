@@ -10,26 +10,34 @@ declare module 'fastify' {
   }
 }
 
+/**
+ * 校验 Bearer 令牌并取出访问身份。
+ *
+ * 这里同时拒绝 2FA 临时令牌与刷新令牌：两者都只是合法的 JWT 签名，
+ * 但只有携带 `role` 的访问令牌才允许当作登录态使用。
+ */
+export function resolveAccessToken(token: string): { userId: string; role: string } | null {
+  try {
+    const payload = verifyToken(token);
+    if ('scope' in payload && (payload as TwoFAPayload).scope === '2fa') return null;
+    const accessPayload = payload as AccessPayload;
+    if (!accessPayload.role || typeof accessPayload.role !== 'string') return null;
+    return { userId: accessPayload.userId, role: accessPayload.role };
+  } catch {
+    return null;
+  }
+}
+
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
   const authHeader = request.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     return reply.status(401).send({ error: '未认证' });
   }
-  const token = authHeader.slice(7);
-  try {
-    const payload = verifyToken(token);
-    if ('scope' in payload && (payload as TwoFAPayload).scope === '2fa') {
-      return reply.status(401).send({ error: '无效的令牌' });
-    }
-    const accessPayload = payload as AccessPayload;
-    // 令牌类型校验：防止将 RefreshToken 当作 AccessToken 使用
-    if (!accessPayload.role || typeof accessPayload.role !== 'string') {
-      return reply.status(401).send({ error: '无效的访问令牌' });
-    }
-    request.user = { userId: accessPayload.userId, role: accessPayload.role };
-  } catch {
+  const user = resolveAccessToken(authHeader.slice(7));
+  if (!user) {
     return reply.status(401).send({ error: '令牌无效或已过期' });
   }
+  request.user = user;
 }
 
 export function requireRole(...roles: string[]) {

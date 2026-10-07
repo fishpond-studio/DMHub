@@ -29,3 +29,15 @@ export function decrypt(ciphertext: string): string {
   const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
   return decrypted.toString('utf8');
 }
+
+/**
+ * 常量时间比较，用于校验验证码、重置码这类短凭据。
+ * `===` 会在首个不同字符处提前返回，比较耗时与已匹配前缀长度相关。
+ */
+export function safeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  // timingSafeEqual 要求等长入参；长度本身不敏感，可以直接返回
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}

@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { EMAIL_CODE_EXPIRY_MINUTES } from '@dmhub/shared';
 import { cacheGet, cacheSet, cacheDel } from './cache.js';
+import { safeCompare } from './crypto.js';
 
 interface EmailCodeEntry {
   code: string;
@@ -49,7 +50,7 @@ export async function verifyEmailCodeEntry(userId: string, code: string): Promis
     await cacheDel(keyOf(userId));
     return false;
   }
-  if (entry.code !== code) {
+  if (!safeCompare(entry.code, code)) {
     await cacheSet(keyOf(userId), JSON.stringify(entry), EMAIL_CODE_EXPIRY_MINUTES * 60 + 60);
     return false;
   }

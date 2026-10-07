@@ -1,11 +1,10 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { eq } from 'drizzle-orm';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, resolveAccessToken } from '../middleware/auth.js';
 import { getDb } from '../db/index.js';
 import { notificationConfigs } from '../db/schema.js';
 import { insertReturningAll } from '../db/helpers.js';
 import { notificationConfigSchema } from '@dmhub/shared';
-import { verifyToken, type AccessPayload } from '../lib/jwt.js';
 import { logOperation } from '../lib/log.js';
 import {
   addSSEClient,
@@ -30,13 +29,12 @@ export async function notificationRoutes(app: FastifyInstance) {
       return reply.status(401).send({ error: '未认证' });
     }
 
-    let userId: string;
-    try {
-      const payload = verifyToken(token) as AccessPayload;
-      userId = payload.userId;
-    } catch {
+    // EventSource 无法自定义请求头，令牌只能走查询参数
+    const user = resolveAccessToken(token);
+    if (!user) {
       return reply.status(401).send({ error: '令牌无效或已过期' });
     }
+    const userId = user.userId;
 
     // SSE 连接数限制
     if (getSSEClientCount(userId) >= MAX_CONNECTIONS_PER_USER) {

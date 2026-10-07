@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { cacheGet, cacheSet, cacheDel, cacheKeys } from './cache.js';
+import { safeCompare } from './crypto.js';
 
 interface AdminResetRequest {
   requestId: string;
@@ -83,7 +84,7 @@ export async function verifyResetEmail(requestId: string, code: string): Promise
     await cacheDel(keyOf(requestId));
     return false;
   }
-  if (req.emailCode !== code) {
+  if (!safeCompare(req.emailCode, code)) {
     await saveRequest(req);
     return false;
   }
@@ -145,7 +146,7 @@ export async function validateResetCode(userId: string, resetCode: string): Prom
         return null;
       }
       await saveRequest(req);
-      if (req.resetCode === resetCode) {
+      if (req.resetCode && safeCompare(req.resetCode, resetCode)) {
         await cacheDel(key);
         return req;
       }
