@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import type { NotificationChannel, NotificationMessage } from './index.js';
-import { isPublicDomain } from '../ssrf-guard.js';
+import { isPublicDomain, safeFetch } from '../ssrf-guard.js';
 
 export const dingtalkChannel: NotificationChannel = {
   id: 'dingtalk',
@@ -47,7 +47,7 @@ export const dingtalkChannel: NotificationChannel = {
       url = `${webhookUrl}&timestamp=${timestamp}&sign=${sign}`;
     }
 
-    const response = await fetch(url, {
+    const response = await safeFetch(url, {
       method: 'POST',
       headers,
       body: jsonBody,

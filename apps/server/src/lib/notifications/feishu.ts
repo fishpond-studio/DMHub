@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import type { NotificationChannel, NotificationMessage } from './index.js';
-import { isPublicDomain } from '../ssrf-guard.js';
+import { isPublicDomain, safeFetch } from '../ssrf-guard.js';
 
 export const feishuChannel: NotificationChannel = {
   id: 'feishu',
@@ -56,7 +56,7 @@ export const feishuChannel: NotificationChannel = {
       headers['X-Lark-Signature'] = `${timestamp}:${sign}`;
     }
 
-    const response = await fetch(webhookUrl, {
+    const response = await safeFetch(webhookUrl, {
       method: 'POST',
       headers,
       body: jsonBody,

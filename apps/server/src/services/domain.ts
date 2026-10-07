@@ -10,6 +10,7 @@ import {
 } from '../db/schema.js';
 import { lookupDomainExpiry } from '../lib/whois.js';
 import { logOperation } from '../lib/log.js';
+import { isValidDomain, isPublicDomain } from '../lib/ssrf-guard.js';
 
 export async function listDomains(
   userId: string,
@@ -440,6 +441,11 @@ export async function checkDomainSsl(domainId: string, hostname?: string) {
   if (!domain) throw new Error('域名不存在');
 
   const host = (hostname || domain.name).trim().toLowerCase();
+  // hostname 允许指定其他主机（如子域）做证书探测，但必须能解析到公网地址，
+  // 否则该参数就成了对内网主机 443 端口的探测通道
+  if (hostname && (!isValidDomain(host) || !(await isPublicDomain(host)))) {
+    throw new Error('hostname 必须是能够解析到公网地址的域名');
+  }
   const result = await checkSslCertificate(host, 443);
 
   if (result.success && result.expiresAt) {
