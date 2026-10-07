@@ -31,16 +31,23 @@ async function assertPublicUrl(urlStr: string, label: string) {
 }
 
 /**
- * OIDC 端点请求封装。
+ * OIDC discovery 请求。
  *
- * discovery / token / userinfo 的目标可能来自 Well-Known 文档，必须逐跳校验：
- * 生产环境走 safeFetch，遇到 30x 重定向会重新校验目标地址，避免被重定向到内网；
+ * 生产环境走 safeFetch，30x 按 Fetch 规范跟随并逐跳校验，不会把 POST body 重放出去。
  * 非生产环境保留内网 IdP 联调能力（与 assertPublicUrl 的环境判定保持一致）。
  */
 const oidcFetch: (urlStr: string, init?: RequestInit) => Promise<Response> =
   process.env.NODE_ENV === 'production'
     ? (urlStr, init) => safeFetch(urlStr, init)
     : (urlStr, init) => fetch(urlStr, init);
+
+/**
+ * token / userinfo 携带 client_secret 或 Bearer，不允许跟随重定向。
+ */
+const oidcFetchNoRedirect: (urlStr: string, init?: RequestInit) => Promise<Response> =
+  process.env.NODE_ENV === 'production'
+    ? (urlStr, init) => safeFetch(urlStr, init, 0)
+    : (urlStr, init) => fetch(urlStr, { ...init, redirect: 'error' });
 
 /**
  * 从完整 Well-Known URL 拉取 discovery 文档。
@@ -177,7 +184,7 @@ class GenericOidcProvider implements OAuthProvider {
       throw new Error('OIDC 回调缺少 redirect_uri，无法交换令牌');
     }
 
-    const tokenResponse = await oidcFetch(tokenUrl, {
+    const tokenResponse = await oidcFetchNoRedirect(tokenUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -214,7 +221,7 @@ class GenericOidcProvider implements OAuthProvider {
     }
 
     if (userInfoUrl) {
-      const userResponse = await oidcFetch(userInfoUrl, {
+      const userResponse = await oidcFetchNoRedirect(userInfoUrl, {
         headers: {
           Authorization: `Bearer ${tokenData.access_token}`,
           Accept: 'application/json',

@@ -10,7 +10,7 @@ import {
 } from '../db/schema.js';
 import { lookupDomainExpiry } from '../lib/whois.js';
 import { logOperation } from '../lib/log.js';
-import { isValidDomain, isPublicDomain } from '../lib/ssrf-guard.js';
+import { assertCreatableDomain, isValidDomain, resolvePublicAddress } from '../lib/ssrf-guard.js';
 
 export async function listDomains(
   userId: string,
@@ -123,6 +123,9 @@ export async function createDomain(
 ) {
   const db = getDb();
 
+  const name = input.name.trim().toLowerCase().replace(/\.$/, '');
+  await assertCreatableDomain(name);
+
   if (input.providerConfigId) {
     const [config] = await db
       .select({ id: providerConfigs.id })
@@ -135,7 +138,7 @@ export async function createDomain(
   }
 
   const insertData: typeof domains.$inferInsert = {
-    name: input.name,
+    name,
     status: 'active',
   };
   if (input.providerConfigId) insertData.providerConfigId = input.providerConfigId;
@@ -177,7 +180,7 @@ export async function createDomain(
     action: 'domain.add',
     targetType: 'domain',
     targetId: domain.id,
-    detail: { name: input.name, providerConfigId: input.providerConfigId },
+    detail: { name, providerConfigId: input.providerConfigId },
     ipAddress,
     userAgent,
   });
@@ -440,13 +443,18 @@ export async function checkDomainSsl(domainId: string, hostname?: string) {
     .limit(1);
   if (!domain) throw new Error('域名不存在');
 
-  const host = (hostname || domain.name).trim().toLowerCase();
-  // hostname 允许指定其他主机（如子域）做证书探测，但必须能解析到公网地址，
-  // 否则该参数就成了对内网主机 443 端口的探测通道
-  if (hostname && (!isValidDomain(host) || !(await isPublicDomain(host)))) {
-    throw new Error('hostname 必须是能够解析到公网地址的域名');
+  const host = (hostname || domain.name).trim().toLowerCase().replace(/\.$/, '');
+  const base = domain.name.trim().toLowerCase().replace(/\.$/, '');
+  // 存储的域名和 hostname 覆盖都要校验。覆盖只允许该域名本身或其子域，
+  // 连接使用已经校验过的 IP，避免解析和建连之间被换成内网地址。
+  if (!isValidDomain(host) || (host !== base && !host.endsWith(`.${base}`))) {
+    throw new Error('hostname 必须是该域名或其子域，并且能够解析到公网地址');
   }
-  const result = await checkSslCertificate(host, 443);
+  const address = await resolvePublicAddress(host);
+  if (!address) {
+    throw new Error('hostname 必须是该域名或其子域，并且能够解析到公网地址');
+  }
+  const result = await checkSslCertificate(host, 443, 10_000, address);
 
   if (result.success && result.expiresAt) {
     await db

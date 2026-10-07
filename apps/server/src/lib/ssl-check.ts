@@ -29,20 +29,18 @@ export async function checkSslCertificate(
   hostname: string,
   port = 443,
   timeoutMs = 10000,
+  connectAddress?: string,
 ): Promise<SslCheckResult> {
   const host = hostname.trim().toLowerCase().replace(/\.$/, '');
   const checkedAt = new Date().toISOString();
-
-  if (!host || net.isIP(host)) {
-    // IP 也可试，但 SNI 可能异常
-  }
+  const connectHost = connectAddress || host;
 
   return new Promise((resolve) => {
     const socket = tls.connect(
       {
-        host: host,
+        host: connectHost,
         port,
-        servername: host,
+        servername: net.isIP(host) ? undefined : host,
         rejectUnauthorized: false,
         timeout: timeoutMs,
       },

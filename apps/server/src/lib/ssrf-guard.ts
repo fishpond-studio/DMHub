@@ -182,7 +182,71 @@ export async function safeValidateUrl(
 }
 
 /**
- * 安全 fetch 封装：阻止重定向到内网地址（SSRF 防御）
+ * 按 Fetch 规范准备下一跳。
+ * 301/302/303 把非 GET/HEAD 改成 GET 并丢掉 body，避免把 client_secret 重放到跳转目标。
+ * 跨源时去掉 Authorization 和 Cookie。
+ */
+function initForRedirect(currentUrl: string, nextUrl: URL, status: number, init?: RequestInit): RequestInit {
+  const headers = new Headers(init?.headers);
+  if (nextUrl.origin !== new URL(currentUrl).origin) {
+    headers.delete('authorization');
+    headers.delete('cookie');
+  }
+
+  const method = (init?.method || 'GET').toUpperCase();
+  if ((status === 301 || status === 302 || status === 303) && method !== 'GET' && method !== 'HEAD') {
+    headers.delete('content-type');
+    headers.delete('content-length');
+    const redirected: RequestInit = { ...(init ?? {}), method: 'GET', headers };
+    delete redirected.body;
+    return redirected;
+  }
+
+  return { ...(init ?? {}), method, headers };
+}
+
+/**
+ * 解析一个公网地址并返回可直接连接的 IP。
+ * 任一解析结果落在内网或保留地址时返回 null，调用方应连接返回的 IP 而不是再解析一次主机名。
+ */
+export async function resolvePublicAddress(hostname: string): Promise<string | null> {
+  const host = hostname.trim().toLowerCase().replace(/\.$/, '');
+  if (net.isIP(host)) {
+    return isPrivateOrReservedIP(host) ? null : host;
+  }
+  if (!isValidDomain(host)) return null;
+
+  try {
+    const addresses = await dns.promises.lookup(host, { all: true });
+    if (addresses.length === 0) return null;
+    if (addresses.some((addr) => isPrivateOrReservedIP(addr.address))) return null;
+    return addresses[0].address;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 新建域名：格式必须合法。已经解析到内网则拒绝；DNS 尚未生效（NXDOMAIN）仍允许入库。
+ */
+export async function assertCreatableDomain(hostname: string): Promise<void> {
+  const host = hostname.trim().toLowerCase().replace(/\.$/, '');
+  if (!isValidDomain(host)) {
+    throw new Error('域名格式无效');
+  }
+  try {
+    const addresses = await dns.promises.lookup(host, { all: true });
+    if (addresses.some((addr) => isPrivateOrReservedIP(addr.address))) {
+      throw new Error('域名不能解析到内网或保留地址');
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message === '域名不能解析到内网或保留地址') throw err;
+  }
+}
+
+/**
+ * 安全 fetch 封装：阻止重定向到内网地址（SSRF 防御）。
+ * maxRedirects 为 0 时遇到 30x 直接拒绝，供携带密钥的请求使用。
  */
 export async function safeFetch(
   urlStr: string,
@@ -190,6 +254,7 @@ export async function safeFetch(
   maxRedirects = 3,
 ): Promise<Response> {
   let currentUrl = urlStr;
+  let nextInit = init;
   let redirectsCount = 0;
 
   while (true) {
@@ -199,23 +264,29 @@ export async function safeFetch(
     }
 
     const res = await fetch(currentUrl, {
-      ...init,
+      ...nextInit,
       redirect: 'manual',
     });
 
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get('location');
-      if (!location) {
-        return res;
-      }
-      redirectsCount++;
-      if (redirectsCount > maxRedirects) {
-        throw new Error('SSRF 拦截: 重定向次数过多');
-      }
-      currentUrl = new URL(location, currentUrl).toString();
-      continue;
+    if (res.status < 300 || res.status >= 400) {
+      return res;
     }
 
-    return res;
+    const location = res.headers.get('location');
+    if (!location) {
+      return res;
+    }
+
+    redirectsCount++;
+    if (redirectsCount > maxRedirects) {
+      throw new Error(maxRedirects === 0
+        ? 'SSRF 拦截: 该请求不允许跟随重定向'
+        : 'SSRF 拦截: 重定向次数过多');
+    }
+
+    const nextUrl = new URL(location, currentUrl);
+    nextInit = initForRedirect(currentUrl, nextUrl, res.status, nextInit);
+    currentUrl = nextUrl.toString();
+    await res.body?.cancel().catch(() => {});
   }
 }
