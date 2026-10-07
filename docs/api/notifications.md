@@ -4,10 +4,15 @@
 
 ### GET /api/notifications/stream
 
-SSE 实时流。认证：Query `token` 或（部分客户端）Bearer。
+SSE 实时流。先用登录态申请一次性票据，再用票据连接。票据 30 秒有效，只能使用一次。不要把 access token 放进查询参数。
 
 ```
-GET /api/notifications/stream?token=<access_token>
+POST /api/notifications/stream-ticket
+Authorization: Bearer <access_token>
+
+{ "ticket": "<one-time>", "expiresIn": 30 }
+
+GET /api/notifications/stream?ticket=<one-time>
 Content-Type: text/event-stream
 ```
 

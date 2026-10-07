@@ -119,6 +119,25 @@ export async function cacheSet(key: string, value: string, ttlSeconds?: number):
   });
 }
 
+/** 取出并删除。Redis 用 GETDEL；内存路径在同一次同步操作里删除。 */
+export async function cacheGetDel(key: string): Promise<string | null> {
+  const k = KEY_PREFIX + key;
+  const fromRedis = await withRedis((c) => c.getdel(k));
+  if (fromRedis !== null) {
+    memoryStore.delete(k);
+    return fromRedis;
+  }
+  if (redis) {
+    memoryStore.delete(k);
+    return null;
+  }
+  const entry = memoryStore.get(k);
+  memoryStore.delete(k);
+  if (!entry) return null;
+  if (entry.expiresAt !== null && Date.now() > entry.expiresAt) return null;
+  return entry.value;
+}
+
 export async function cacheDel(key: string): Promise<void> {
   const k = KEY_PREFIX + key;
   await withRedis((c) => c.del(k));

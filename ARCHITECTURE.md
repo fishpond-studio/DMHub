@@ -285,7 +285,7 @@ DNSProviderAdapter (interface)
         → dispatch：钉钉 / 飞书 / 邮件列表 / Webhook
 ```
 
-- SSE：`GET /api/notifications/stream?token=xxx`
+- SSE：`POST /api/notifications/stream-ticket` 换 30 秒一次性票据，再 `GET /api/notifications/stream?ticket=xxx`
 - 站内信存进程内存，重启清空；支持已读 / 清空 API
 - `notificationsEnabled` 控制站内；`emailNotificationsEnabled` 控制个人邮件（默认关）
 - 域名指派创建/删除/审批会 `notifyUser` 对应成员

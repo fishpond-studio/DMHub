@@ -57,7 +57,8 @@ DMHub 支持多渠道通知，包括站内 SSE 推送和外部渠道分发。
 ## SSE 连接
 
 ```
-GET /api/notifications/stream?token=<access_token>
+POST /api/notifications/stream-ticket
+GET  /api/notifications/stream?ticket=<one-time>
 ```
 
 SSE 连接用于实时推送站内通知。连接断开后会自动重连。
