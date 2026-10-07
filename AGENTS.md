@@ -8,7 +8,7 @@
 
 ## 0. 适用范围
 
-本文件适用于 Fishpond Studio 组织下的所有 Git 仓库。若子目录中存在更近的 `AGENTS.md`，以更近的为准（closest-file-wins）；子目录规则不得与本文件的红线冲突。
+本文件是 DMHub 仓库的 Agent 工作规范。§1 的红线和 §2 的组织约定与 Fishpond Studio 团队规范一致；§6 的命令只适用于本仓库，其他仓库须各自维护命令表。若子目录中存在更近的 `AGENTS.md`，以更近的为准（closest-file-wins）；子目录规则不得与本文件的红线冲突。
 
 本文件只保留**需要 Agent 执行或遵守**的内容。OOPz 频道准入、合作伙伴管理、娱乐联机等属于人类成员的管理规范，Agent 不参与、不执行、不得代替人类邀请或授权任何人。
 
@@ -60,7 +60,7 @@
 
 - **type 必须用英文**（见下表）；subject 用英文祈使句，建议不超过 72 字符，结尾不加句号。
 - **body 中英文均可，推荐英文**；解释"为什么"而非"做了什么"。
-- **推荐（不强制）声明 AI 参与**：如认为合适，可在 footer 加一行 `Co-authored-by: AI Agent`。
+- **推荐（不强制）声明 AI 参与**：如认为合适，可在 footer 加一行 `Co-authored-by: AI Agent <ai-agent@users.noreply.github.com>`。GitHub 只认带邮箱的形式。
 - 关联 issue 使用 `Closes #12` 或 `Refs #12`。
 
 | type | 用途 |
@@ -82,7 +82,7 @@ feat: add user authentication module
 Implement JWT-based login and registration flow.
 
 Closes #12
-Co-authored-by: AI Agent
+Co-authored-by: AI Agent <ai-agent@users.noreply.github.com>
 ```
 
 ---
@@ -91,8 +91,8 @@ Co-authored-by: AI Agent
 
 - 功能分支从最新的 `main` 切出，命名 `feat/<english-kebab-case>` 或 `fix/<english-kebab-case>`，例如 `feat/user-auth`、`fix/login-timeout`。分支名用**英文**。
 - 一个分支只做一件事；PR 标题与分支首个 Commit 保持一致。
-- **PR 必须经 Review 通过后才可合并**。Agent 可以承担 Review 工作，包括提交审查意见与批准。但团队规范 6.4 列出的敏感改动——安全敏感改动（认证、授权、加密、密钥）、数据库 schema 与迁移、CI/CD 与 `.github/` 配置、依赖增删与锁文件、对外发布、大范围结构调整——须经核心成员审查；该审查可由核心成员亲自完成或安排 Agent 代为完成。**审查不转移责任——PR 内容的责任始终由提交者承担。**
-- **Agent 不得自行合并自己发起的 PR**，不得在审查要求未满足时合并，也不得未经授权关闭他人的 PR，或代替人类留下 Review 意见。另见 §7。
+- **PR 必须经 Review 通过后才可合并**。核心成员可以亲自审查，也可以明确安排 Agent 审查。团队规范 6.4 列出的敏感改动——安全敏感改动（认证、授权、加密、密钥）、数据库 schema 与迁移、CI/CD 与 `.github/` 配置、依赖增删与锁文件、对外发布、大范围结构调整——须经核心成员审查，或由核心成员安排 Agent 代为审查。**审查不转移责任——PR 内容的责任始终由提交者承担。**
+- **Agent 不得自行合并自己发起的 PR**，不得在审查要求未满足时合并，也不得未经授权关闭他人的 PR。Agent 留下的 Review 必须标明是 Agent 审查，不能冒充人类成员。另见 §7。
 - 合并后及时删除已合并的功能分支。
 - PR 描述写清四件事：改了什么、为什么改、如何验证、有何风险。
 
