@@ -13,6 +13,7 @@ const BACKGROUND_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'imag
 import { logOperation } from '../lib/log.js';
 import { triggerNotification, notifyAdmins } from './notification.js';
 import { encrypt, decrypt } from '../lib/crypto.js';
+import { sanitizeRichHtml } from '../lib/html-sanitize.js';
 
 // SVG 清理（防止 XSS）
 let DOMPurify: any = null;
@@ -124,10 +125,22 @@ export async function updateTeamSettings(
   if (input.smtpSecure !== undefined) updateData.smtpSecure = input.smtpSecure;
   if (input.inviteCodeEnabled !== undefined) updateData.inviteCodeEnabled = input.inviteCodeEnabled;
   if (input.registrationEnabled !== undefined) updateData.registrationEnabled = input.registrationEnabled;
-  if (input.announcement !== undefined) updateData.announcement = input.announcement || null;
+  const announcementFormat = input.announcementFormat ?? current.announcementFormat ?? 'markdown';
+  const footerFormat = input.footerFormat ?? current.footerFormat ?? 'markdown';
+  if (input.announcement !== undefined) {
+    const raw = input.announcement || null;
+    updateData.announcement = raw && announcementFormat === 'html' ? await sanitizeRichHtml(raw) : raw;
+  } else if (input.announcementFormat === 'html' && current.announcement) {
+    updateData.announcement = await sanitizeRichHtml(current.announcement);
+  }
   if (input.announcementFormat !== undefined) updateData.announcementFormat = input.announcementFormat;
   if (input.landingSubtitle !== undefined) updateData.landingSubtitle = input.landingSubtitle || null;
-  if (input.footerContent !== undefined) updateData.footerContent = input.footerContent || null;
+  if (input.footerContent !== undefined) {
+    const raw = input.footerContent || null;
+    updateData.footerContent = raw && footerFormat === 'html' ? await sanitizeRichHtml(raw) : raw;
+  } else if (input.footerFormat === 'html' && current.footerContent) {
+    updateData.footerContent = await sanitizeRichHtml(current.footerContent);
+  }
   if (input.footerFormat !== undefined) updateData.footerFormat = input.footerFormat;
   if (input.logRetentionDays !== undefined) updateData.logRetentionDays = input.logRetentionDays;
   if (input.redisUrl !== undefined) updateData.redisUrl = input.redisUrl || null;

@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { sanitizeRichHtml } from '../lib/html-sanitize.js';
 import {
   getTeamSettings,
   updateTeamSettings,
@@ -241,9 +242,13 @@ export async function publicTeamRoutes(app: FastifyInstance) {
       subtitle: settings.landingSubtitle || '',
       logoUrl: settings.logoUrl || null,
       backgroundUrl: settings.landingBackgroundUrl || null,
-      footerContent: settings.footerContent || '',
+      footerContent: settings.footerFormat === 'html'
+        ? await sanitizeRichHtml(settings.footerContent || '')
+        : (settings.footerContent || ''),
       footerFormat: settings.footerFormat || 'markdown',
-      announcement: settings.announcement || null,
+      announcement: settings.announcement && settings.announcementFormat === 'html'
+        ? await sanitizeRichHtml(settings.announcement)
+        : (settings.announcement || null),
       announcementFormat: settings.announcementFormat || 'markdown',
       inviteCodeEnabled: settings.inviteCodeEnabled ?? true,
       registrationEnabled: settings.registrationEnabled ?? true,

@@ -40,16 +40,16 @@ const EMPTY_ATTRS: ReadonlySet<string> = new Set();
 
 const URL_ATTRS = new Set(['href', 'src']);
 
-/** 允许出现在 URL 属性中的协议；相对路径与锚点解析后同样落到 http(s) */
-const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
-
-function isSafeUrlAttribute(value: string): boolean {
+function isSafeUrlAttribute(attrName: string, value: string): boolean {
   const raw = value.trim();
   if (!raw) return false;
   try {
     // 交给 URL 解析器：它按规范先剥离制表符与换行，`java\nscript:` 这类写法
-    // 会在这一步还原成 `javascript:`，从而被协议白名单拦下
-    return ALLOWED_PROTOCOLS.has(new URL(raw, window.location.origin).protocol);
+    // 会在这一步还原成 `javascript:`，从而被协议白名单拦下。
+    // mailto / tel 只允许出现在链接上，不能作为图片地址。
+    const protocol = new URL(raw, window.location.origin).protocol;
+    if (protocol === 'http:' || protocol === 'https:') return true;
+    return attrName === 'href' && (protocol === 'mailto:' || protocol === 'tel:');
   } catch {
     return false;
   }
@@ -82,7 +82,7 @@ function cleanNode(node: Node, doc: Document): Node | null {
   for (const attr of Array.from(el.attributes)) {
     const name = attr.name.toLowerCase();
     if (!allowedAttrs.has(name)) continue;
-    if (URL_ATTRS.has(name) && !isSafeUrlAttribute(attr.value)) continue;
+    if (URL_ATTRS.has(name) && !isSafeUrlAttribute(name, attr.value)) continue;
     clean.setAttribute(name, attr.value);
   }
   if (tag === 'a' && clean.getAttribute('target') === '_blank') {
