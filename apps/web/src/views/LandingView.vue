@@ -2,23 +2,12 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '@/lib/axios';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { marked } from 'marked';
 import { Globe, Shield, Bell, Users, ArrowRight, LayoutDashboard } from 'lucide-vue-next';
 import { getAccessToken } from '@/lib/axios';
-
-function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[\s\S]*?\/>/gi, '')
-    .replace(/\bon\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/\bon\w+\s*=\s*'[^']*'/gi, '')
-    .replace(/\bon\w+\s*=\s*[^\s>]+/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/<iframe[\s\S]*?\/>/gi, '');
-}
 
 const router = useRouter();
 
