@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-background">
-    <div class="mx-auto max-w-6xl px-4 py-8">
+  <div class="min-h-screen bg-background ">
+    <div class="app-container py-6 md:py-8">
       <PageHeader
         title="仪表盘"
         description="域名健康、到期风险与团队动态一览"
@@ -35,14 +35,14 @@
             class="card-hover animate-fade-in overflow-hidden"
             :class="'stagger-' + (i + 1)"
           >
-            <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardDescription>{{ card.label }}</CardDescription>
+            <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardDescription class="text-[13px] font-medium">{{ card.label }}</CardDescription>
               <div class="flex h-8 w-8 items-center justify-center rounded-lg" :class="card.iconBg">
                 <component :is="card.icon" class="h-4 w-4" :class="card.iconColor" />
               </div>
             </CardHeader>
             <CardContent>
-              <div class="text-3xl font-bold tabular-nums tracking-tight">{{ card.value }}</div>
+              <div class="tnum text-[28px] font-semibold leading-none tracking-tight">{{ card.value }}</div>
               <div v-if="card.subHtml" class="mt-1.5 text-xs text-muted-foreground" v-html="card.subHtml" />
               <p v-else-if="card.hint" class="mt-1.5 text-xs text-muted-foreground">{{ card.hint }}</p>
             </CardContent>
@@ -126,8 +126,8 @@
                   {{ d.score }}
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-medium">{{ d.name }}</div>
-                  <div class="truncate text-xs text-muted-foreground">
+                  <div class="truncate font-record font-medium">{{ d.name }}</div>
+                  <div class="truncate tnum text-xs text-muted-foreground">
                     {{ d.issues[0] || '状态良好' }}
                     <span v-if="d.daysRemaining != null"> · {{ d.daysRemaining }} 天到期</span>
                     · {{ d.recordCount }} 条记录
@@ -235,8 +235,8 @@
                     :class="'stagger-' + Math.min(di + 1, 8)"
                     @click="$router.push(`/domains/${d.domainId}`)"
                   >
-                    <TableCell class="font-medium">{{ d.domain }}</TableCell>
-                    <TableCell class="text-xs text-muted-foreground">{{ formatDate(d.expiresAt) }}</TableCell>
+                    <TableCell class="font-record font-medium">{{ d.domain }}</TableCell>
+                    <TableCell class="tnum text-xs text-muted-foreground">{{ formatDate(d.expiresAt) }}</TableCell>
                     <TableCell class="text-right">
                       <Badge :variant="urgencyVariant(d.daysRemaining)">{{ d.daysRemaining }} 天</Badge>
                     </TableCell>
@@ -539,10 +539,10 @@ function actionLabel(action: string) {
 }
 
 function actionColor(action: string) {
-  if (action.includes('add') || action.includes('create') || action.includes('import')) return 'text-primary'
+  if (action.includes('add') || action.includes('create') || action.includes('import')) return 'text-success'
   if (action.includes('delete')) return 'text-destructive'
-  if (action.includes('update')) return 'text-blue-500 dark:text-blue-400'
-  if (action.includes('sync')) return 'text-purple-500 dark:text-purple-400'
+  if (action.includes('update')) return 'text-info'
+  if (action.includes('sync')) return 'text-chart-3'
   return 'text-muted-foreground'
 }
 
@@ -558,16 +558,8 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('zh-CN')
 }
 
-const barColors = [
-  'bg-blue-500',
-  'bg-primary',
-  'bg-purple-500',
-  'bg-orange-500',
-  'bg-pink-500',
-  'bg-teal-500',
-  'bg-indigo-500',
-  'bg-yellow-500',
-]
+// 图表色走 chart-1..5 令牌，浅色/深色各有一套取值，避免写死 Tailwind 调色板
+const barColors = ['bg-chart-1', 'bg-chart-2', 'bg-chart-3', 'bg-chart-4', 'bg-chart-5']
 
 function escapeHtml(str: string): string {
   return str
@@ -582,8 +574,8 @@ const statCards = computed(() => [
     label: '域名总数',
     value: store.stats?.totalDomains ?? 0,
     icon: Globe,
-    iconBg: 'bg-blue-500/10',
-    iconColor: 'text-blue-500',
+    iconBg: 'bg-chart-1/15',
+    iconColor: 'text-chart-1',
     subHtml: `<span class="text-primary">${escapeHtml(String(store.stats?.activeDomains ?? 0))} 正常</span><span class="mx-1">/</span><span class="text-destructive">${escapeHtml(String(store.stats?.expiredDomains ?? 0))} 已过期</span>`,
     hint: '',
   },
@@ -591,8 +583,8 @@ const statCards = computed(() => [
     label: 'DNS 记录',
     value: store.stats?.totalRecords ?? 0,
     icon: FileText,
-    iconBg: 'bg-violet-500/10',
-    iconColor: 'text-violet-500',
+    iconBg: 'bg-chart-2/15',
+    iconColor: 'text-chart-2',
     subHtml: Object.entries(store.stats?.recordsByType ?? {})
       .slice(0, 4)
       .map(
@@ -606,8 +598,8 @@ const statCards = computed(() => [
     label: '团队成员',
     value: store.stats?.totalMembers ?? 0,
     icon: Users,
-    iconBg: 'bg-emerald-500/10',
-    iconColor: 'text-emerald-500',
+    iconBg: 'bg-chart-4/15',
+    iconColor: 'text-chart-4',
     subHtml: '',
     hint: '当前团队规模',
   },
@@ -615,8 +607,8 @@ const statCards = computed(() => [
     label: '近7天变更',
     value: store.stats?.recentChanges ?? 0,
     icon: Activity,
-    iconBg: 'bg-orange-500/10',
-    iconColor: 'text-orange-500',
+    iconBg: 'bg-chart-3/15',
+    iconColor: 'text-chart-3',
     subHtml: '',
     hint: '解析与域名相关操作',
   },

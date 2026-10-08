@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
+import BrandMark from '@/components/BrandMark.vue'
 import {
   LayoutDashboard,
   Globe,
@@ -113,35 +114,33 @@ watch(route, () => {
   <div class="min-h-screen bg-background">
     <header
       v-if="showNav"
-      class="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70"
+      class="sticky top-0 z-50 w-full border-b border-border/70 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70"
     >
-      <div class="mx-auto flex h-14 w-full max-w-screen-2xl items-center justify-between px-4">
+      <div class="app-container flex h-14 items-center justify-between gap-4">
         <div class="flex min-w-0 items-center">
-          <router-link to="/dashboard" class="mr-4 flex items-center space-x-2 md:mr-6">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              <Globe class="h-4.5 w-4.5 text-primary" />
-            </div>
-            <span class="hidden font-bold tracking-tight sm:inline-block">DMHub</span>
+          <router-link to="/dashboard" class="mr-3 flex items-center gap-2.5 md:mr-5">
+            <BrandMark class="h-8 w-8" />
+            <span class="hidden font-semibold tracking-tight sm:inline-block">DMHub</span>
           </router-link>
-          <nav class="hidden items-center gap-0.5 text-sm font-medium md:flex">
+          <nav class="hidden items-center gap-0.5 md:flex">
             <router-link
               v-for="item in navItems"
               :key="item.to"
               :to="item.to"
               :class="[
-                'relative flex items-center rounded-md px-3 py-2 text-sm font-medium transition-all duration-200',
+                'relative flex items-center rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors duration-150',
                 isActive(item.to)
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground',
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground',
               ]"
             >
-              <component :is="item.icon" class="mr-1.5 h-4 w-4" />
+              <component :is="item.icon" class="mr-1.5 h-4 w-4 shrink-0" />
               <span>{{ item.label }}</span>
             </router-link>
           </nav>
         </div>
 
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1">
           <Button
             variant="outline"
             size="sm"
@@ -149,8 +148,8 @@ watch(route, () => {
             @click="openCommandPalette"
           >
             <Search class="h-3.5 w-3.5" />
-            <span class="text-xs">搜索</span>
-            <kbd class="pointer-events-none ml-1 hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:inline-flex">
+            <span class="text-xs">{{ t('common.search') }}</span>
+            <kbd class="pointer-events-none ml-1 hidden h-5 select-none items-center gap-0.5 rounded border border-border/80 bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
               ⌘K
             </kbd>
           </Button>
@@ -158,7 +157,7 @@ watch(route, () => {
             variant="ghost"
             size="icon"
             class="h-8 w-8 lg:hidden"
-            title="搜索 (Ctrl+K)"
+            :title="`${t('common.search')} (Ctrl+K)`"
             @click="openCommandPalette"
           >
             <Search class="h-4 w-4" />
@@ -172,7 +171,7 @@ watch(route, () => {
             <DropdownMenuTrigger as-child>
               <Button variant="ghost" class="relative h-8 w-8 rounded-full">
                 <Avatar class="h-8 w-8">
-                  <AvatarFallback class="bg-primary/10 text-primary text-xs font-semibold">
+                  <AvatarFallback class="bg-primary/10 text-xs font-semibold text-primary">
                     {{ (authStore.user?.username || 'U').slice(0, 1).toUpperCase() }}
                   </AvatarFallback>
                 </Avatar>
@@ -180,11 +179,11 @@ watch(route, () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" class="w-60">
               <DropdownMenuLabel class="font-normal">
-                <div class="flex flex-col space-y-1">
+                <div class="flex flex-col gap-1">
                   <p class="text-sm font-medium leading-none">{{ authStore.user?.username || '用户' }}</p>
                   <div class="flex items-center gap-2 pt-1">
-                    <p class="text-xs text-muted-foreground truncate">{{ authStore.user?.email || '' }}</p>
-                    <Badge v-if="roleLabel" variant="secondary" class="text-[10px] px-1.5 py-0">
+                    <p class="truncate text-xs text-muted-foreground">{{ authStore.user?.email || '' }}</p>
+                    <Badge v-if="roleLabel" variant="secondary" class="shrink-0">
                       {{ roleLabel }}
                     </Badge>
                   </div>
@@ -192,25 +191,25 @@ watch(route, () => {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem @click="router.push('/settings/profile')">
-                <User class="mr-2 h-4 w-4" />
-                个人资料
+                <User class="h-4 w-4" />
+                {{ t('nav.profile') }}
               </DropdownMenuItem>
               <DropdownMenuItem @click="router.push('/settings/2fa')">
-                <Shield class="mr-2 h-4 w-4" />
-                2FA 设置
+                <Shield class="h-4 w-4" />
+                {{ t('nav.twoFactor') }}
               </DropdownMenuItem>
               <DropdownMenuItem @click="router.push('/settings/user-tokens')">
-                <FileKey class="mr-2 h-4 w-4" />
-                我的令牌
+                <FileKey class="h-4 w-4" />
+                {{ t('nav.userTokens') }}
               </DropdownMenuItem>
               <DropdownMenuItem @click="router.push('/settings/account-binding')">
-                <KeyRound class="mr-2 h-4 w-4" />
-                账号绑定
+                <KeyRound class="h-4 w-4" />
+                {{ t('nav.accountBinding') }}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem class="text-destructive focus:text-destructive" @click="handleLogout">
-                <LogOut class="mr-2 h-4 w-4" />
-                退出登录
+                <LogOut class="h-4 w-4" />
+                {{ t('nav.logout') }}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -218,7 +217,7 @@ watch(route, () => {
           <Button
             variant="ghost"
             size="icon"
-            class="md:hidden"
+            class="h-8 w-8 md:hidden"
             @click="mobileMenuOpen = !mobileMenuOpen"
           >
             <X v-if="mobileMenuOpen" class="h-5 w-5" />
@@ -232,16 +231,16 @@ watch(route, () => {
       v-if="mobileMenuOpen && showNav"
       class="fixed inset-0 top-14 z-40 bg-background/95 backdrop-blur md:hidden"
     >
-      <nav class="flex flex-col space-y-1 p-4">
+      <nav class="flex flex-col gap-1 p-4">
         <router-link
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
           :class="[
-            'flex items-center rounded-md px-4 py-3 text-base font-medium transition-all duration-200',
+            'flex items-center rounded-lg px-4 py-3 text-base font-medium transition-colors',
             isActive(item.to)
-              ? 'bg-accent text-accent-foreground'
-              : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground',
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground',
           ]"
           @click="mobileMenuOpen = false"
         >

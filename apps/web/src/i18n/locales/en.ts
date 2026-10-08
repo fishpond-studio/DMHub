@@ -1,4 +1,13 @@
 export default {
+  brand: {
+    tagline: 'One hub for DNS collaboration and records',
+    feature1: 'Every provider, one list',
+    feature1Desc: 'Cloudflare, Aliyun, Tencent Cloud and more',
+    feature2: 'Changes traced and reversible',
+    feature2Desc: 'Each edit keeps a snapshot you can roll back to',
+    feature3: 'Certificate and renewal alerts',
+    feature3Desc: 'Notified over multiple channels before things expire',
+  },
   common: {
     save: 'Save',
     cancel: 'Cancel',

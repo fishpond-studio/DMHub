@@ -24,22 +24,22 @@ function goBack() {
 </script>
 
 <template>
-  <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-    <div class="flex min-w-0 items-start gap-2">
+  <div class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div class="flex min-w-0 items-start gap-1.5">
       <Button
         v-if="showBack || backTo"
         variant="ghost"
         size="icon"
-        class="mt-0.5 shrink-0"
+        class="-ml-2 mt-0.5 h-8 w-8 shrink-0"
         @click="goBack"
       >
-        <ArrowLeft class="h-5 w-5" />
+        <ArrowLeft class="h-4 w-4" />
       </Button>
       <div class="min-w-0">
-        <h1 class="truncate text-xl font-bold tracking-tight text-foreground md:text-2xl">
+        <h1 class="truncate text-xl font-semibold tracking-tight text-foreground md:text-[22px]">
           {{ title }}
         </h1>
-        <p v-if="description" class="mt-1 text-sm text-muted-foreground">
+        <p v-if="description" class="mt-1 text-[13px] text-muted-foreground">
           {{ description }}
         </p>
         <slot name="meta" />
