@@ -719,12 +719,15 @@ admin 查看全部，member 仅查看指派范围域名。
 
 | 接口 | 方法 | 权限 | 说明 |
 |------|------|------|------|
-| `/notifications/stream` | GET | Query `token` | SSE 实时流 |
+| `/notifications/stream-ticket` | POST | 认证用户 | 申请 SSE 一次性票据 `{ ticket, expiresIn: 30 }` |
+| `/notifications/stream` | GET | Query `ticket` | SSE 实时流，票据 30 秒内有效且只能用一次 |
 | `/notifications` | GET | 认证用户 | `{ notifications, unreadCount }` |
 | `/notifications/:id/read` | POST | 认证用户 | 标记已读 |
 | `/notifications/read-all` | POST | 认证用户 | 全部已读 |
 | `/notifications/:id` | DELETE | 认证用户 | 删除单条 |
 | `/notifications` | DELETE | 认证用户 | 清空全部 |
+
+`EventSource` 无法自定义请求头，因此 SSE 不再接受查询参数里的 access token：先带 `Authorization: Bearer` 调 `/notifications/stream-ticket` 换取一次性票据，再用 `?ticket=` 建流。仍带 `?token=` 的连接会被拒绝（401）。
 
 站内信为进程内存存储，**服务重启后清空**。
 

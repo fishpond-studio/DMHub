@@ -154,7 +154,7 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  function connectSSE() {
+  async function connectSSE() {
     const token = getAccessToken();
     if (!token) return;
 
@@ -168,8 +168,17 @@ export const useNotificationStore = defineStore('notification', () => {
       return;
     }
 
+    let ticket: string;
+    try {
+      const { data } = await api.post<{ ticket: string }>('/notifications/stream-ticket');
+      ticket = data.ticket;
+    } catch {
+      startPolling();
+      return;
+    }
+
     const base = api.defaults.baseURL || '/api';
-    const url = `${base}/notifications/stream?token=${encodeURIComponent(token)}`;
+    const url = `${base}/notifications/stream?ticket=${encodeURIComponent(ticket)}`;
 
     eventSource = new EventSource(url);
 
@@ -233,7 +242,7 @@ export const useNotificationStore = defineStore('notification', () => {
     if (started) return;
     started = true;
     await fetchNotifications();
-    connectSSE();
+    await connectSSE();
   }
 
   return {

@@ -1,11 +1,11 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { eq } from 'drizzle-orm';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, resolveAccessToken } from '../middleware/auth.js';
+import { consumeSseTicket, issueSseTicket, SSE_TICKET_TTL_SECONDS } from '../lib/sse-ticket.js';
 import { getDb } from '../db/index.js';
 import { notificationConfigs } from '../db/schema.js';
 import { insertReturningAll } from '../db/helpers.js';
 import { notificationConfigSchema } from '@dmhub/shared';
-import { verifyToken, type AccessPayload } from '../lib/jwt.js';
 import { logOperation } from '../lib/log.js';
 import {
   addSSEClient,
@@ -23,23 +23,30 @@ import {
 const MAX_CONNECTIONS_PER_USER = 5;
 
 export async function notificationRoutes(app: FastifyInstance) {
+  app.post('/stream-ticket', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
+    const ticket = await issueSseTicket(request.user!.userId);
+    return { ticket, expiresIn: SSE_TICKET_TTL_SECONDS };
+  });
+
   app.get('/stream', async (request: FastifyRequest, reply: FastifyReply) => {
-    const query = request.query as { token?: string };
-    const token = query.token || request.headers.authorization?.slice(7);
-    if (!token) {
-      return reply.status(401).send({ error: '未认证' });
+    const query = request.query as { ticket?: string; token?: string };
+    if (query.token) {
+      return reply.status(401).send({ error: '请使用一次性票据连接' });
     }
 
-    let userId: string;
-    try {
-      const payload = verifyToken(token) as AccessPayload;
-      userId = payload.userId;
-    } catch {
-      return reply.status(401).send({ error: '令牌无效或已过期' });
+    let userId: string | null = null;
+    if (query.ticket) {
+      userId = await consumeSseTicket(query.ticket);
+    } else if (request.headers.authorization?.startsWith('Bearer ')) {
+      userId = resolveAccessToken(request.headers.authorization.slice(7))?.userId ?? null;
     }
+    if (!userId) {
+      return reply.status(401).send({ error: '票据无效或已过期' });
+    }
+    const connectedUserId = userId;
 
     // SSE 连接数限制
-    if (getSSEClientCount(userId) >= MAX_CONNECTIONS_PER_USER) {
+    if (getSSEClientCount(connectedUserId) >= MAX_CONNECTIONS_PER_USER) {
       return reply.status(429).send({ error: 'SSE 连接数已达上限' });
     }
 
@@ -55,12 +62,12 @@ export async function notificationRoutes(app: FastifyInstance) {
       } catch {}
     } };
 
-    addSSEClient(userId, client);
+    addSSEClient(connectedUserId, client);
 
     reply.raw.write(`data: ${JSON.stringify({ event: 'connected' })}\n\n`);
 
     request.raw.on('close', () => {
-      removeSSEClient(userId, client);
+      removeSSEClient(connectedUserId, client);
     });
   });
 
