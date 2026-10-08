@@ -53,7 +53,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-background px-4 py-8">
+  <div class="min-h-screen flex flex-col items-center justify-center bg-background px-6 py-6 md:py-8">
     <div class="w-full max-w-2xl">
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold">DMHub</h1>
