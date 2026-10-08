@@ -133,7 +133,7 @@ Co-authored-by: AI Agent <ai-agent@users.noreply.github.com>
 | 安装依赖 | `pnpm install` |
 | 本地启动 | `pnpm dev:server`（后端）/ `pnpm dev:web`（前端） |
 | 构建 | `pnpm build`（`shared` → `dns-providers` → `web` → `server`） |
-| 运行测试 | 仓库当前未配置测试脚本（各 package.json 均无 `test`），需要时先与人类成员确认方案 |
+| 运行测试 | `pnpm --filter @dmhub/server test:sanitize`（服务端富文本净化用例）；其余包暂无测试脚本 |
 | Lint / 格式化 | `pnpm lint` / `pnpm format` |
 | 类型检查 | `pnpm --filter @dmhub/shared build && pnpm --filter @dmhub/dns-providers build && pnpm --filter @dmhub/server build`（`tsc`）/ `pnpm --filter @dmhub/web exec vue-tsc --noEmit` |
 
