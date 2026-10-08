@@ -32,10 +32,10 @@
                   <Copy class="h-4 w-4" />
                 </Button>
                 <Badge v-if="isExpired(code)" variant="destructive" class="sm:hidden">已过期</Badge>
-                <Badge v-else-if="code.maxUses > 0 && code.currentUses >= code.maxUses" variant="secondary" class="bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30 sm:hidden">已用完</Badge>
+                <Badge v-else-if="code.maxUses > 0 && code.currentUses >= code.maxUses" variant="warning" class="sm:hidden">已用完</Badge>
                 <Badge v-else variant="default" class="bg-primary/15 text-primary border-primary/30 sm:hidden">可用</Badge>
               </div>
-              <div class="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <div class="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground tnum">
                 <span>已使用 {{ code.currentUses }} 次</span>
                 <span v-if="code.maxUses > 0">/ 最多 {{ code.maxUses }} 次</span>
                 <span v-else>/ 无限次</span>
@@ -45,7 +45,7 @@
             </div>
             <div class="hidden sm:block">
               <Badge v-if="isExpired(code)" variant="destructive">已过期</Badge>
-              <Badge v-else-if="code.maxUses > 0 && code.currentUses >= code.maxUses" variant="secondary" class="bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30">已用完</Badge>
+              <Badge v-else-if="code.maxUses > 0 && code.currentUses >= code.maxUses" variant="warning">已用完</Badge>
               <Badge v-else variant="default" class="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">可用</Badge>
             </div>
           </CardContent>

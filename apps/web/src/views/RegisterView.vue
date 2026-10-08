@@ -1,5 +1,9 @@
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-background px-4">
+  <div class="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-6 md:py-8">
+    <router-link to="/" class="mb-6 flex items-center gap-2.5">
+      <BrandMark class="h-8 w-8" />
+      <span class="text-sm font-semibold tracking-tight">DMHub</span>
+    </router-link>
     <Card class="w-full max-w-sm animate-scale-in">
       <CardHeader class="text-center">
         <CardTitle class="text-2xl font-bold">DMHub</CardTitle>
@@ -145,6 +149,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import BrandMark from '@/components/BrandMark.vue';
 import { Loader2, Eye, EyeOff } from 'lucide-vue-next';
 
 const router = useRouter();

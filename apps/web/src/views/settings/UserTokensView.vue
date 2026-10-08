@@ -31,7 +31,7 @@
           <TableBody>
             <TableRow v-for="token in tokens" :key="token.id">
               <TableCell class="font-medium">{{ token.name }}</TableCell>
-              <TableCell class="font-mono text-muted-foreground">{{ token.tokenPrefix }}...</TableCell>
+              <TableCell class="font-record text-muted-foreground">{{ token.tokenPrefix }}...</TableCell>
               <TableCell>
                 <div class="flex gap-1 flex-wrap">
                   <Badge v-for="perm in token.permissions" :key="perm" variant="secondary">
@@ -39,10 +39,10 @@
                   </Badge>
                 </div>
               </TableCell>
-              <TableCell class="text-muted-foreground">
+              <TableCell class="text-muted-foreground tnum">
                 {{ token.lastUsedAt ? new Date(token.lastUsedAt).toLocaleString('zh-CN') : '从未使用' }}
               </TableCell>
-              <TableCell class="text-muted-foreground">
+              <TableCell class="text-muted-foreground tnum">
                 {{ new Date(token.createdAt).toLocaleString('zh-CN') }}
               </TableCell>
               <TableCell class="text-right">
@@ -63,13 +63,13 @@
               吊销
             </Button>
           </div>
-          <div class="text-xs font-mono text-muted-foreground mb-2">{{ token.tokenPrefix }}...</div>
+          <div class="font-record text-muted-foreground mb-2">{{ token.tokenPrefix }}...</div>
           <div class="flex gap-1 flex-wrap mb-2">
             <Badge v-for="perm in token.permissions" :key="perm" variant="secondary" class="text-xs">
               {{ permissionLabel(perm) }}
             </Badge>
           </div>
-          <div class="text-xs text-muted-foreground">
+          <div class="text-xs text-muted-foreground tnum">
             创建: {{ new Date(token.createdAt).toLocaleString('zh-CN') }} ·
             {{ token.lastUsedAt ? '最后使用: ' + new Date(token.lastUsedAt).toLocaleString('zh-CN') : '从未使用' }}
           </div>
@@ -112,10 +112,10 @@
         <DialogHeader>
           <DialogTitle>个人令牌已生成</DialogTitle>
         </DialogHeader>
-        <div class="rounded-md bg-yellow-500/10 p-3 mb-4">
-          <p class="text-sm text-yellow-700 dark:text-yellow-300 font-medium">请立即复制并妥善保存此令牌，关闭后将无法再次查看！</p>
+        <div class="rounded-md border border-warning/25 bg-warning/15 p-3 mb-4">
+          <p class="text-sm text-warning font-medium">请立即复制并妥善保存此令牌，关闭后将无法再次查看！</p>
         </div>
-        <div class="rounded-md bg-muted p-3 mb-4 break-all font-mono text-sm select-all">
+        <div class="rounded-md bg-muted p-3 mb-4 break-all font-record select-all">
           {{ generatedToken?.token }}
         </div>
         <div class="text-sm text-muted-foreground mb-4">

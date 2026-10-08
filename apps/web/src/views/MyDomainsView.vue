@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-background">
-    <div class="mx-auto max-w-5xl px-4 py-8">
+    <div class="app-container py-6 md:py-8">
       <PageHeader
         title="我的域名"
         description="管理员指派给你的域名与可管理的子域名范围"
@@ -61,7 +61,7 @@
               >
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
-                    <div class="truncate font-mono text-sm font-medium text-foreground">
+                    <div class="truncate font-record font-medium text-foreground">
                       {{ formatHostPreview(d.name, scope.subdomainPattern) }}
                     </div>
                     <div class="mt-0.5 text-xs text-muted-foreground">

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-background px-4">
+  <div class="flex min-h-screen items-center justify-center bg-background px-6 py-6 md:py-8">
     <Card class="w-full max-w-sm animate-scale-in">
       <CardHeader class="text-center">
         <CardTitle class="text-2xl font-bold">DMHub</CardTitle>

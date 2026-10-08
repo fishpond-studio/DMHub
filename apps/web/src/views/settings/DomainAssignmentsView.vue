@@ -92,7 +92,7 @@
                       <div class="text-xs text-muted-foreground">@{{ a.username }}</div>
                     </TableCell>
                     <TableCell>
-                      <div class="font-mono text-sm">{{ a.host }}</div>
+                      <div class="font-record">{{ a.host }}</div>
                       <div class="text-xs text-muted-foreground">
                         {{ a.domainName }} · {{ a.subdomainPattern }}
                       </div>
@@ -116,7 +116,7 @@
                     <TableCell class="tabular-nums text-muted-foreground">
                       {{ a.proxiedCount ? `${a.proxiedCount} 开` : '—' }}
                     </TableCell>
-                    <TableCell class="text-xs text-muted-foreground whitespace-nowrap">
+                    <TableCell class="text-xs text-muted-foreground whitespace-nowrap tnum">
                       {{ a.lastRecordUpdatedAt ? formatDateTime(a.lastRecordUpdatedAt) : '—' }}
                     </TableCell>
                   </TableRow>
@@ -153,16 +153,16 @@
                             <TableBody>
                               <TableRow v-for="r in a.records" :key="r.id">
                                 <TableCell><Badge variant="secondary">{{ r.recordType }}</Badge></TableCell>
-                                <TableCell class="font-mono text-xs">{{ r.name }}</TableCell>
-                                <TableCell class="font-mono text-xs max-w-[14rem] truncate" :title="r.value">
+                                <TableCell class="font-record">{{ r.name }}</TableCell>
+                                <TableCell class="font-record max-w-[14rem] truncate" :title="r.value">
                                   {{ r.value }}
                                 </TableCell>
                                 <TableCell class="tabular-nums text-muted-foreground">{{ r.ttl }}</TableCell>
                                 <TableCell>
-                                  <span v-if="r.proxied" class="text-orange-500 text-xs font-medium">已代理</span>
+                                  <span v-if="r.proxied" class="text-warning text-xs font-medium">已代理</span>
                                   <span v-else class="text-muted-foreground text-xs">—</span>
                                 </TableCell>
-                                <TableCell class="text-xs text-muted-foreground whitespace-nowrap">
+                                <TableCell class="text-xs text-muted-foreground whitespace-nowrap tnum">
                                   {{ formatDateTime(r.updatedAt) }}
                                 </TableCell>
                               </TableRow>
@@ -191,13 +191,13 @@
               <div class="flex items-start justify-between gap-2">
                 <div>
                   <div class="font-medium">{{ a.displayName || a.username }}</div>
-                  <div class="font-mono text-sm">{{ a.host }}</div>
+                  <div class="font-record">{{ a.host }}</div>
                 </div>
                 <Badge :variant="scopeBadgeVariant(a.scopeStatus)">
                   {{ scopeStatusLabel(a.scopeStatus) }}
                 </Badge>
               </div>
-              <div class="text-xs text-muted-foreground">
+              <div class="text-xs text-muted-foreground tnum">
                 {{ a.recordCount }} 条记录
                 <span v-if="a.proxiedCount"> · CDN {{ a.proxiedCount }}</span>
               </div>
@@ -205,7 +205,7 @@
                 <div
                   v-for="r in a.records.slice(0, 8)"
                   :key="r.id"
-                  class="text-xs font-mono text-muted-foreground"
+                  class="font-record text-muted-foreground"
                 >
                   {{ r.recordType }} {{ r.name }} → {{ r.value }}
                 </div>
@@ -257,7 +257,7 @@
                 <Input v-model="form.subdomainPattern" type="text" placeholder="* / blog / *.dev / @" />
                 <p v-if="selectedDomainName" class="mt-1 text-xs text-muted-foreground">
                   成员将看到：
-                  <span class="font-mono text-foreground">{{ formatHostPreview(selectedDomainName, form.subdomainPattern) }}</span>
+                  <span class="font-record text-foreground">{{ formatHostPreview(selectedDomainName, form.subdomainPattern) }}</span>
                   · {{ formatScopeLabel(form.subdomainPattern) }}
                 </p>
               </div>
@@ -301,7 +301,7 @@
                 <TableRow v-for="a in assignments" :key="a.id">
                   <TableCell class="font-medium">{{ a.domainName }}</TableCell>
                   <TableCell>
-                    <div class="font-mono text-sm">{{ formatHostPreview(a.domainName || '', a.subdomainPattern) }}</div>
+                    <div class="font-record">{{ formatHostPreview(a.domainName || '', a.subdomainPattern) }}</div>
                     <div class="text-xs text-muted-foreground">{{ a.subdomainPattern }} · {{ formatScopeLabel(a.subdomainPattern) }}</div>
                   </TableCell>
                   <TableCell>
@@ -327,7 +327,7 @@
                 <Badge v-if="a.permission === 'dns_edit'" variant="default">可编辑</Badge>
                 <Badge v-else variant="secondary">只读</Badge>
               </div>
-              <div class="font-mono text-sm">{{ formatHostPreview(a.domainName || '', a.subdomainPattern) }}</div>
+              <div class="font-record">{{ formatHostPreview(a.domainName || '', a.subdomainPattern) }}</div>
               <Button variant="ghost" size="sm" class="text-destructive mt-2 -ml-2" @click="pendingDelete = a">移除</Button>
             </div>
           </div>
@@ -418,7 +418,7 @@ const summaryCards = computed(() => {
   return [
     { label: '总指派', value: s?.total ?? 0, class: '' },
     { label: '有记录', value: s?.active ?? 0, class: 'text-primary' },
-    { label: '无记录', value: s?.empty ?? 0, class: 'text-amber-600 dark:text-amber-400' },
+    { label: '无记录', value: s?.empty ?? 0, class: 'text-warning' },
     { label: '成员停用', value: s?.memberDisabled ?? 0, class: 'text-destructive' },
     { label: '域名异常', value: s?.domainIssue ?? 0, class: 'text-destructive' },
     { label: '覆盖记录数', value: s?.totalRecords ?? 0, class: '' },

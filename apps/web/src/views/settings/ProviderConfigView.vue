@@ -28,7 +28,7 @@
                   <h3 class="text-base font-semibold text-foreground">{{ provider.name }}</h3>
                   <Badge v-if="!provider.enabled" variant="secondary">已禁用</Badge>
                 </div>
-                <p class="mt-1 text-xs text-muted-foreground">
+                <p class="mt-1 text-xs text-muted-foreground tnum">
                   创建于 {{ formatDate(provider.createdAt) }}
                 </p>
               </div>
@@ -50,7 +50,7 @@
             </div>
 
             <div v-if="syncResult && syncResult.id === provider.id" class="mt-3">
-              <div class="rounded-md bg-primary/10 p-3 text-sm text-primary">
+              <div class="rounded-md bg-primary/10 p-3 text-sm text-primary tnum">
                 同步完成: {{ syncResult.result.syncedDomains }} 个域名, {{ syncResult.result.syncedRecords }} 条记录
               </div>
             </div>

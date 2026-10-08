@@ -48,7 +48,7 @@ function navigateOnMobile() {
 
 <template>
   <div class="min-h-screen bg-background">
-    <div class="max-w-7xl mx-auto px-4 py-6 md:py-8">
+    <div class="app-container py-6 md:py-8">
       <div class="flex items-center mb-4 md:mb-6">
         <Button variant="ghost" size="icon" @click="$router.push('/dashboard')" class="mr-3">
           <ArrowLeft class="h-5 w-5" />
@@ -70,7 +70,7 @@ function navigateOnMobile() {
         <div class="hidden md:block w-52 flex-shrink-0 space-y-2">
           <Card v-if="isAdmin">
             <CardContent class="p-3">
-              <p class="text-xs font-semibold text-muted-foreground uppercase mb-2">管理员</p>
+              <p class="label-micro mb-2">管理员</p>
               <nav class="space-y-0.5">
                 <router-link
                   v-for="item in adminItems"
@@ -92,7 +92,7 @@ function navigateOnMobile() {
 
           <Card>
             <CardContent class="p-3">
-              <p class="text-xs font-semibold text-muted-foreground uppercase mb-2">个人</p>
+              <p class="label-micro mb-2">个人</p>
               <nav class="space-y-0.5">
                 <router-link
                   v-for="item in userItems"
@@ -117,7 +117,7 @@ function navigateOnMobile() {
           <Card>
             <CardContent class="p-3">
               <nav v-if="isAdmin" class="space-y-0.5 mb-3">
-                <p class="text-xs font-semibold text-muted-foreground uppercase mb-2">管理员</p>
+                <p class="label-micro mb-2">管理员</p>
                 <router-link
                   v-for="item in adminItems"
                   :key="item.to"
@@ -135,7 +135,7 @@ function navigateOnMobile() {
                 </router-link>
               </nav>
               <nav class="space-y-0.5">
-                <p class="text-xs font-semibold text-muted-foreground uppercase mb-2">个人</p>
+                <p class="label-micro mb-2">个人</p>
                 <router-link
                   v-for="item in userItems"
                   :key="item.to"

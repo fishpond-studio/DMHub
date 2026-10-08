@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="min-h-screen bg-background">
-    <div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="app-container py-6 md:py-8">
       <div class="flex items-center mb-6 gap-2">
         <Button variant="ghost" size="icon" @click="$router.push('/dashboard')">
           <ArrowLeft class="h-5 w-5" />
@@ -97,14 +97,14 @@
             <TableBody>
               <template v-for="log in store.logs" :key="log.id">
                 <TableRow class="cursor-pointer transition-colors hover:bg-muted/40" @click="toggleExpand(log.id)">
-                  <TableCell class="text-muted-foreground whitespace-nowrap">{{ formatTime(log.createdAt) }}</TableCell>
+                  <TableCell class="text-muted-foreground whitespace-nowrap tnum">{{ formatTime(log.createdAt) }}</TableCell>
                   <TableCell class="font-medium whitespace-nowrap">{{ log.username || log.userId.slice(0, 8) }}</TableCell>
                   <TableCell class="whitespace-nowrap">
                     <Badge :variant="actionBadgeVariant(log.action)">{{ actionLabel(log.action) }}</Badge>
                   </TableCell>
                   <TableCell class="text-muted-foreground whitespace-nowrap">{{ targetLabel(log) }}</TableCell>
                   <TableCell class="text-muted-foreground max-w-xs truncate">{{ detailPreview(log) }}</TableCell>
-                  <TableCell class="text-muted-foreground font-mono whitespace-nowrap">{{ log.ipAddress || '-' }}</TableCell>
+                  <TableCell class="text-muted-foreground font-record whitespace-nowrap">{{ log.ipAddress || '-' }}</TableCell>
                 </TableRow>
                 <TableRow v-if="expandedId === log.id && log.detail">
                   <TableCell colspan="6" class="bg-muted/50">
@@ -126,11 +126,11 @@
             <CardContent class="p-3">
               <div class="flex items-center justify-between mb-1">
                 <Badge :variant="actionBadgeVariant(log.action)">{{ actionLabel(log.action) }}</Badge>
-                <span class="text-xs text-muted-foreground">{{ formatTimeShort(log.createdAt) }}</span>
+                <span class="text-xs text-muted-foreground tnum">{{ formatTimeShort(log.createdAt) }}</span>
               </div>
               <div class="text-sm font-medium">{{ log.username || log.userId.slice(0, 8) }}</div>
               <div class="text-xs text-muted-foreground">{{ targetLabel(log) }}</div>
-              <div v-if="log.ipAddress" class="text-xs text-muted-foreground font-mono mt-1">IP: {{ log.ipAddress }}</div>
+              <div v-if="log.ipAddress" class="text-xs text-muted-foreground font-record mt-1">IP: {{ log.ipAddress }}</div>
               <div v-if="expandedId === log.id && log.detail" class="mt-2 pt-2 border-t">
                 <pre class="text-xs whitespace-pre-wrap break-all">{{ JSON.stringify(log.detail, null, 2) }}</pre>
               </div>
@@ -139,7 +139,7 @@
         </div>
 
         <div class="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
-          <p class="text-sm text-muted-foreground">共 {{ store.total }} 条记录</p>
+          <p class="text-sm text-muted-foreground tnum">共 {{ store.total }} 条记录</p>
           <div class="flex gap-2 items-center">
             <Button
               :disabled="currentPage <= 1"
@@ -149,7 +149,7 @@
             >
               上一页
             </Button>
-            <span class="text-sm text-muted-foreground">{{ currentPage }} / {{ totalPages }}</span>
+            <span class="text-sm text-muted-foreground tnum">{{ currentPage }} / {{ totalPages }}</span>
             <Button
               :disabled="currentPage >= totalPages"
               @click="goPage(currentPage + 1)"

@@ -5,9 +5,9 @@
     </CardHeader>
     <CardContent class="space-y-3">
       <div class="flex gap-6 text-sm">
-        <span class="text-primary">成功导入: <strong>{{ result.imported }}</strong></span>
-        <span class="text-amber-600">跳过重复: <strong>{{ result.skipped }}</strong></span>
-        <span class="text-destructive">错误: <strong>{{ result.errors.length }}</strong></span>
+        <span class="text-primary tnum">成功导入: <strong>{{ result.imported }}</strong></span>
+        <span class="text-warning tnum">跳过重复: <strong>{{ result.skipped }}</strong></span>
+        <span class="text-destructive tnum">错误: <strong>{{ result.errors.length }}</strong></span>
       </div>
       <div v-if="result.errors.length > 0">
         <p class="text-sm font-medium text-destructive mb-2">错误详情:</p>
@@ -20,7 +20,7 @@
           </TableHeader>
           <TableBody>
             <TableRow v-for="(err, i) in result.errors" :key="i">
-              <TableCell class="text-destructive">第 {{ err.row }} 行</TableCell>
+              <TableCell class="text-destructive tnum">第 {{ err.row }} 行</TableCell>
               <TableCell class="text-destructive">{{ err.message }}</TableCell>
             </TableRow>
           </TableBody>
