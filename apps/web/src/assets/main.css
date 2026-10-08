@@ -2,50 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * 设计令牌。整体是"冷灰墨色 + 靛蓝主色"：
+ * - 中性色带一点冷调（220–224 色相），避免默认 shadcn 那种高饱和海军蓝底
+ * - 主色从出厂默认的 221.2 83.2% 53.3%（就是每个 shadcn 示例的蓝）换成靛蓝
+ * - success / warning / info 三个语义色同时要能用作实底按钮（白字）与浅底徽章的文本色，
+ *   所以明度都压在能被白字读到的区间
+ * - 阴影走 CSS 变量，深色模式下单独加深，避免用 Tailwind 默认黑色阴影在深色背景上发灰
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 220 30% 99%;
+    --foreground: 224 24% 12%;
+    --surface: 220 22% 97%;
+    --surface-foreground: 224 24% 14%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 224 24% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --popover-foreground: 224 24% 12%;
+    --primary: 243 66% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 20% 96%;
+    --secondary-foreground: 224 24% 18%;
+    --muted: 220 20% 96%;
+    --muted-foreground: 220 12% 44%;
+    --accent: 222 24% 95%;
+    --accent-foreground: 224 24% 14%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 158 64% 30%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 90% 36%;
+    --warning-foreground: 0 0% 100%;
+    --info: 201 90% 36%;
+    --info-foreground: 0 0% 100%;
+    --border: 220 18% 90%;
+    --input: 220 18% 87%;
+    --ring: 243 66% 56%;
+    --field: 0 0% 100%;
+
+    --chart-1: 243 66% 56%;
+    --chart-2: 190 80% 42%;
+    --chart-3: 32 90% 48%;
+    --chart-4: 158 60% 36%;
+    --chart-5: 330 70% 56%;
+
+    --radius: 0.625rem;
+
+    --shadow-sm: 0 1px 2px 0 hsl(224 40% 12% / 0.05), 0 1px 3px 0 hsl(224 40% 12% / 0.03);
+    --shadow-md: 0 4px 10px -2px hsl(224 40% 12% / 0.07), 0 1px 3px -1px hsl(224 40% 12% / 0.05);
+    --shadow-lg: 0 12px 28px -6px hsl(224 40% 12% / 0.12), 0 4px 10px -4px hsl(224 40% 12% / 0.06);
+    --shadow-xl: 0 24px 48px -12px hsl(224 40% 12% / 0.18);
+    --shadow-pop: 0 10px 30px -6px hsl(224 40% 12% / 0.14), 0 2px 8px -2px hsl(224 40% 12% / 0.06);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --background: 224 24% 7.5%;
+    --foreground: 220 18% 93%;
+    --surface: 224 22% 10%;
+    --surface-foreground: 220 18% 93%;
+    --card: 224 22% 11%;
+    --card-foreground: 220 18% 95%;
+    --popover: 224 22% 12%;
+    --popover-foreground: 220 18% 95%;
+    --primary: 243 82% 70%;
+    --primary-foreground: 243 40% 12%;
+    --secondary: 224 18% 17%;
+    --secondary-foreground: 220 18% 92%;
+    --muted: 224 18% 16%;
+    --muted-foreground: 220 14% 63%;
+    --accent: 224 18% 18%;
+    --accent-foreground: 220 18% 95%;
+    --destructive: 0 66% 62%;
+    --destructive-foreground: 0 40% 10%;
+    --success: 158 55% 55%;
+    --success-foreground: 158 40% 10%;
+    --warning: 32 90% 62%;
+    --warning-foreground: 32 60% 10%;
+    --info: 201 85% 62%;
+    --info-foreground: 201 60% 10%;
+    --border: 224 16% 20%;
+    --input: 224 16% 22%;
+    --ring: 243 82% 70%;
+    --field: 224 20% 14%;
+
+    --chart-1: 243 82% 70%;
+    --chart-2: 190 70% 60%;
+    --chart-3: 32 90% 62%;
+    --chart-4: 158 55% 55%;
+    --chart-5: 330 72% 68%;
+
+    --shadow-sm: 0 1px 2px 0 hsl(224 60% 2% / 0.4);
+    --shadow-md: 0 4px 12px -2px hsl(224 60% 2% / 0.5);
+    --shadow-lg: 0 14px 32px -8px hsl(224 60% 2% / 0.6), 0 4px 12px -4px hsl(224 60% 2% / 0.4);
+    --shadow-xl: 0 28px 56px -14px hsl(224 60% 2% / 0.7);
+    --shadow-pop: 0 12px 32px -8px hsl(224 60% 2% / 0.6), 0 2px 8px -2px hsl(224 60% 2% / 0.4);
   }
 }
 
@@ -53,20 +104,73 @@
   * {
     @apply border-border;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
   body {
     @apply bg-background text-foreground antialiased;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+  }
+  /* 标题统一收紧字距，中文下也不至于散开 */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-semibold tracking-tight;
+    text-wrap: balance;
+  }
+  /* 表单控件默认继承字体，避免 select/input 回落到系统 UI 字体 */
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+  /* 键盘可达性：只在键盘聚焦时出现焦点环，并与组件自身的 ring 保持同一色阶 */
+  :focus-visible {
+    @apply outline-none;
   }
   ::selection {
     @apply bg-primary/20;
+  }
+  /* 细滚动条，深色模式下默认白条太扎眼 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }
 
 @layer components {
   .card-hover {
-    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    transition:
+      box-shadow 0.2s ease,
+      transform 0.2s ease,
+      border-color 0.2s ease;
   }
   .card-hover:hover {
-    box-shadow: 0 8px 24px -8px hsl(var(--foreground) / 0.08);
+    box-shadow: var(--shadow-md);
     transform: translateY(-1px);
   }
 
@@ -74,11 +178,111 @@
     @apply transition-colors;
   }
   .table-row-interactive:hover {
-    @apply bg-muted/50;
+    @apply bg-muted/60;
+  }
+
+  /* 页面统一容器：所有一级页面用同一个横向节奏 */
+  .app-container {
+    @apply mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8;
+  }
+
+  /* 小标签：表格表头、分组标题用同一套排版，避免各页自己写 */
+  .label-micro {
+    @apply text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground;
+  }
+
+  /* 结构化数据（域名、IP、记录值、时间）走等宽 + 等宽数字 */
+  .font-record {
+    @apply font-mono text-[13px] tabular-nums tracking-tight;
+  }
+
+  /*
+   * 富文本渲染（团队公告、落地页页脚都由管理员填写并 v-html 注入）。
+   * 仓库没有装 @tailwindcss/typography，此前的 `prose` 类是空转的，
+   * 这里用一层紧凑的后代选择器给渲染结果补上排版。
+   */
+  .rich-text {
+    @apply text-sm leading-relaxed;
+  }
+  .rich-text > * + * {
+    @apply mt-3;
+  }
+  .rich-text h1,
+  .rich-text h2,
+  .rich-text h3,
+  .rich-text h4 {
+    @apply mt-5 font-semibold leading-snug tracking-tight text-foreground;
+  }
+  .rich-text h1 { @apply text-lg; }
+  .rich-text h2 { @apply text-base; }
+  .rich-text h3,
+  .rich-text h4 { @apply text-sm; }
+  .rich-text p {
+    @apply text-muted-foreground;
+  }
+  .rich-text strong {
+    @apply font-semibold text-foreground;
+  }
+  .rich-text a {
+    @apply font-medium text-primary underline underline-offset-4;
+  }
+  .rich-text ul,
+  .rich-text ol {
+    @apply space-y-1 pl-5;
+  }
+  .rich-text ul { @apply list-disc; }
+  .rich-text ol { @apply list-decimal; }
+  .rich-text blockquote {
+    @apply border-l-2 border-border pl-3 text-muted-foreground;
+  }
+  .rich-text code {
+    @apply rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
+  }
+  .rich-text pre {
+    @apply overflow-x-auto rounded-lg border bg-muted/60 p-3 font-mono text-[13px];
+  }
+  .rich-text pre code {
+    @apply bg-transparent p-0;
+  }
+  .rich-text hr {
+    @apply border-border;
+  }
+  .rich-text table {
+    @apply w-full border-collapse text-[13px];
+  }
+  .rich-text th,
+  .rich-text td {
+    @apply border-b border-border/70 px-2 py-1.5 text-left;
+  }
+  .rich-text th {
+    @apply text-xs font-medium text-muted-foreground;
+  }
+  .rich-text img {
+    @apply max-w-full rounded-lg;
   }
 }
 
 @layer utilities {
+  /* 等宽数字：表格里的日期、TTL、计数对齐后列才整齐 */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 落地页/登录页的网格底纹 */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.7) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.7) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* 主色柔光，用于 hero 与空状态，避免大块纯色平铺 */
+  .bg-glow {
+    background-image:
+      radial-gradient(60% 50% at 50% 0%, hsl(var(--primary) / 0.16), transparent 70%),
+      radial-gradient(40% 40% at 85% 15%, hsl(var(--chart-2) / 0.12), transparent 70%);
+  }
+
   .stagger-1 { animation-delay: 0.05s; }
   .stagger-2 { animation-delay: 0.1s; }
   .stagger-3 { animation-delay: 0.15s; }
@@ -166,4 +370,14 @@
 }
 .list-move {
   transition: transform 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

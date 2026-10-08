@@ -10,7 +10,7 @@ const props = defineProps<{
 
 <template>
   <DialogTitlePrimitive
-    :class="cn('text-lg font-semibold leading-none tracking-tight', props.class)"
+    :class="cn('text-base font-semibold leading-tight tracking-tight', props.class)"
   >
     <slot />
   </DialogTitlePrimitive>
