@@ -1,4 +1,13 @@
 export default {
+  brand: {
+    tagline: '域名协作与解析管理中枢',
+    feature1: '多服务商域名集中管理',
+    feature1Desc: 'Cloudflare、阿里云、腾讯云等在一处查看',
+    feature2: '解析变更留痕可回滚',
+    feature2Desc: '每次改动都留存快照，出错能退回',
+    feature3: '证书与到期智能提醒',
+    feature3Desc: 'SSL 证书与域名到期前多渠道通知',
+  },
   common: {
     save: '保存',
     cancel: '取消',

@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-background">
-    <div class="mx-auto max-w-7xl px-4 py-6 md:py-8">
+    <div class="app-container py-6 md:py-8">
       <PageHeader
         title="域名管理"
         description="管理团队域名、分组、标签与到期状态"
@@ -13,7 +13,7 @@
             :variant="onlyFavorites ? 'secondary' : 'outline'"
             @click="onlyFavorites = !onlyFavorites"
           >
-            <Star class="mr-1.5 h-4 w-4" :class="onlyFavorites ? 'fill-yellow-400 text-yellow-500' : ''" />
+            <Star class="mr-1.5 h-4 w-4" :class="onlyFavorites ? 'fill-warning/40 text-warning' : ''" />
             收藏
           </Button>
           <Button v-if="isAdmin" variant="outline" size="sm" :disabled="batchChecking" @click="handleBatchExpiry">
@@ -93,39 +93,37 @@
       </div>
 
       <div class="flex gap-6">
-        <aside class="hidden w-56 shrink-0 md:block">
-          <Card class="mb-4 sticky top-20">
-            <CardHeader class="px-4 pb-2 pt-4">
-              <CardTitle class="text-xs font-semibold uppercase text-muted-foreground">分组</CardTitle>
-            </CardHeader>
-            <CardContent class="space-y-1 px-2 pb-3">
-              <Button
-                size="sm"
-                class="w-full justify-start"
-                :variant="!groupFilter ? 'secondary' : 'ghost'"
-                @click="groupFilter = ''; fetchList()"
-              >
-                全部
-              </Button>
-              <Button
-                v-for="g in store.groups"
-                :key="g.name"
-                size="sm"
-                class="w-full justify-between"
-                :variant="groupFilter === g.name ? 'secondary' : 'ghost'"
-                @click="groupFilter = g.name; fetchList()"
-              >
-                <span class="truncate">{{ g.name }}</span>
-                <span class="text-xs text-muted-foreground">{{ g.count }}</span>
-              </Button>
-            </CardContent>
-          </Card>
+        <aside class="hidden w-52 shrink-0 md:block">
+          <div class="sticky top-20 space-y-6">
+            <div>
+              <p class="label-micro mb-2">分组</p>
+              <div class="space-y-0.5">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  class="w-full justify-start"
+                  :class="!groupFilter ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary' : 'text-muted-foreground'"
+                  @click="groupFilter = ''; fetchList()"
+                >
+                  全部
+                </Button>
+                <Button
+                  v-for="g in store.groups"
+                  :key="g.name"
+                  size="sm"
+                  variant="ghost"
+                  class="w-full justify-between"
+                  :class="groupFilter === g.name ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary' : 'text-muted-foreground'"
+                  @click="groupFilter = g.name; fetchList()"
+                >
+                  <span class="truncate">{{ g.name }}</span>
+                  <span class="tnum text-[11px] opacity-70">{{ g.count }}</span>
+                </Button>
+              </div>
+            </div>
 
-          <Card class="sticky top-[22rem]">
-            <CardHeader class="px-4 pb-2 pt-4">
-              <CardTitle class="text-xs font-semibold uppercase text-muted-foreground">标签</CardTitle>
-            </CardHeader>
-            <CardContent class="px-4 pb-4">
+            <div>
+              <p class="label-micro mb-2">标签</p>
               <div class="flex flex-wrap gap-1.5">
                 <Badge
                   v-for="t in store.tags"
@@ -135,12 +133,12 @@
                   @click="toggleTagFilter(t.name)"
                 >
                   {{ t.name }}
-                  <span class="ml-1 opacity-60">{{ t.count }}</span>
+                  <span class="tnum ml-1 opacity-60">{{ t.count }}</span>
                 </Badge>
                 <div v-if="store.tags.length === 0" class="text-xs text-muted-foreground">暂无标签</div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </aside>
 
         <div class="min-w-0 flex-1">
