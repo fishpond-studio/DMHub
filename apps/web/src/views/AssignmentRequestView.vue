@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="min-h-screen bg-background">
-    <div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="mx-auto w-full max-w-3xl px-6 py-6 md:py-8">
       <div class="flex items-center mb-6">
         <Button variant="ghost" size="icon" @click="$router.push('/dashboard')">
           <ArrowLeft class="h-5 w-5" />
@@ -87,7 +87,7 @@
                   <Badge :variant="statusVariant(r.status)">{{ statusLabel(r.status) }}</Badge>
                 </TableCell>
                 <TableCell class="text-muted-foreground">{{ r.reviewComment || '-' }}</TableCell>
-                <TableCell class="text-muted-foreground">{{ formatDate(r.createdAt) }}</TableCell>
+                <TableCell class="text-muted-foreground tnum">{{ formatDate(r.createdAt) }}</TableCell>
               </TableRow>
             </TableBody>
           </Table>

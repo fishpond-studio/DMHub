@@ -3,7 +3,7 @@
     <Card>
       <CardHeader>
         <CardTitle>备用验证码</CardTitle>
-        <CardDescription class="text-amber-600">请妥善保存这些备用验证码，它们只会显示一次。每个备用码只能使用一次。</CardDescription>
+        <CardDescription class="text-warning">请妥善保存这些备用验证码，它们只会显示一次。每个备用码只能使用一次。</CardDescription>
       </CardHeader>
       <CardContent>
         <div class="grid grid-cols-2 gap-2 mb-4">
@@ -12,7 +12,7 @@
             :key="i"
             class="flex items-center justify-center rounded-md bg-muted border px-3 py-2"
           >
-            <code class="text-sm font-mono tracking-wider select-all">{{ code }}</code>
+            <code class="font-record tracking-wider select-all">{{ code }}</code>
           </div>
         </div>
 

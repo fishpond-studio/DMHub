@@ -14,7 +14,7 @@
           <div class="w-full">
             <Label class="mb-1">手动密钥</Label>
             <div class="flex items-center space-x-2">
-              <code class="flex-1 rounded-md bg-muted px-3 py-2 text-sm font-mono select-all break-all">{{ secret }}</code>
+              <code class="flex-1 rounded-md bg-muted px-3 py-2 font-record select-all break-all">{{ secret }}</code>
               <Button @click="copySecret" variant="outline" size="sm">
                 {{ copied ? '已复制' : '复制' }}
               </Button>

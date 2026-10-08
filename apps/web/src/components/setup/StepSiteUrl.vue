@@ -93,7 +93,7 @@ async function saveAndNext() {
         />
         {{ dnsChecking ? '检查中...' : '检查域名解析' }}
       </Button>
-      <span v-if="dnsResult?.success" class="text-sm" :class="dnsResult.matchesServer ? 'text-primary' : 'text-amber-600'">域名 {{ dnsResult.hostname }} 解析到 {{ dnsResult.addresses?.join(', ') }}{{ dnsResult.matchesServer ? '（已指向本服务器）' : '（未指向本服务器，请检查 DNS 配置）' }}</span>
+      <span v-if="dnsResult?.success" class="text-sm" :class="dnsResult.matchesServer ? 'text-primary' : 'text-warning'">域名 {{ dnsResult.hostname }} 解析到 {{ dnsResult.addresses?.join(', ') }}{{ dnsResult.matchesServer ? '（已指向本服务器）' : '（未指向本服务器，请检查 DNS 配置）' }}</span>
       <span v-if="dnsResult?.success === false" class="text-sm text-destructive">{{ dnsResult.error }}</span>
     </div>
 

@@ -126,7 +126,7 @@ const restartRequired = ref(false);
             <SelectItem value="mysql">MySQL</SelectItem>
           </SelectContent>
         </Select>
-        <p v-if="form.dbType !== 'postgresql'" class="text-xs text-amber-600 dark:text-amber-500">
+        <p v-if="form.dbType !== 'postgresql'" class="text-xs text-warning">
           ⚠️ 选择 MariaDB/MySQL 后，保存配置时需要重启服务才能让 schema 切换生效。Docker 环境请执行 <code>docker compose restart app</code>。
         </p>
       </div>
@@ -220,18 +220,18 @@ const restartRequired = ref(false);
       </Button>
     </div>
 
-    <div v-if="restartRequired" class="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 p-4 mt-4">
-      <p class="text-sm font-medium text-amber-900 dark:text-amber-200">需要重启服务</p>
-      <p class="text-sm text-amber-800 dark:text-amber-300 mt-1">
+    <div v-if="restartRequired" class="rounded-md border border-warning/25 bg-warning/15 p-4 mt-4">
+      <p class="text-sm font-medium text-warning">需要重启服务</p>
+      <p class="text-sm text-warning mt-1">
         数据库配置已保存。由于切换了数据库方言（PostgreSQL ↔ MariaDB/MySQL），需要重启服务让 schema 加载对应方言。
       </p>
-      <p class="text-sm text-amber-800 dark:text-amber-300 mt-2">
-        Docker 部署执行：<code class="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900">docker compose restart app</code>
+      <p class="text-sm text-warning mt-2">
+        Docker 部署执行：<code class="px-1.5 py-0.5 rounded bg-warning/15">docker compose restart app</code>
       </p>
-      <p class="text-sm text-amber-800 dark:text-amber-300 mt-1">
-        本地开发执行：先按 Ctrl+C 终止当前进程，再 <code class="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900">pnpm dev:server</code>
+      <p class="text-sm text-warning mt-1">
+        本地开发执行：先按 Ctrl+C 终止当前进程，再 <code class="px-1.5 py-0.5 rounded bg-warning/15">pnpm dev:server</code>
       </p>
-      <p class="text-sm text-amber-800 dark:text-amber-300 mt-2">
+      <p class="text-sm text-warning mt-2">
         重启后，刷新此页面即可继续后续引导步骤。
       </p>
     </div>

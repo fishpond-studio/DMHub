@@ -135,7 +135,7 @@
                   <span class="text-sm font-medium truncate">{{ s.deviceInfo || '未知设备' }}</span>
                   <Badge v-if="s.current" variant="default" class="bg-primary/15 text-primary border-primary/30">当前</Badge>
                 </div>
-                <p class="text-xs text-muted-foreground mt-0.5">登录于 {{ new Date(s.createdAt).toLocaleString() }} · 过期 {{ new Date(s.expiresAt).toLocaleString() }}</p>
+                <p class="text-xs text-muted-foreground mt-0.5 tnum">登录于 {{ new Date(s.createdAt).toLocaleString() }} · 过期 {{ new Date(s.expiresAt).toLocaleString() }}</p>
               </div>
               <Button v-if="!s.current" variant="outline" size="sm" @click="handleRevokeSession(s.id)">注销</Button>
             </div>

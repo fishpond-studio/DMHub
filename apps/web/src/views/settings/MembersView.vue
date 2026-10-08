@@ -45,14 +45,14 @@
                   <Badge v-if="member.twoFactorEnabled" variant="default" class="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">2FA</Badge>
                   <Badge v-else variant="secondary">无2FA</Badge>
                 </TableCell>
-                <TableCell class="text-sm text-muted-foreground">{{ formatDate(member.createdAt) }}</TableCell>
+                <TableCell class="text-sm text-muted-foreground tnum">{{ formatDate(member.createdAt) }}</TableCell>
                 <TableCell class="text-right">
                   <div class="flex items-center justify-end gap-1">
                     <Button
                       v-if="member.id !== currentUserId"
                       variant="ghost"
                       size="sm"
-                      :class="member.status === 'disabled' ? 'text-primary hover:text-primary' : 'text-yellow-600 hover:text-yellow-600'"
+                      :class="member.status === 'disabled' ? 'text-primary hover:text-primary' : 'text-warning hover:text-warning'"
                       @click="handleStatusToggle(member)"
                     >
                       {{ member.status === 'disabled' ? '启用' : '禁用' }}
@@ -82,7 +82,7 @@
               </div>
               <Badge :variant="roleBadgeVariant(member.role)">{{ roleLabel(member.role) }}</Badge>
             </div>
-            <div class="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+            <div class="flex items-center gap-2 text-sm text-muted-foreground mb-2 tnum">
               <span>{{ member.email || '无邮箱' }}</span>
               <span>·</span>
               <span>{{ formatDate(member.createdAt) }}</span>
@@ -107,7 +107,7 @@
                 <Button
                   variant="outline"
                   size="sm"
-                  :class="member.status === 'disabled' ? 'text-primary' : 'text-yellow-600'"
+                  :class="member.status === 'disabled' ? 'text-primary' : 'text-warning'"
                   @click="handleStatusToggle(member)"
                 >
                   {{ member.status === 'disabled' ? '启用' : '禁用' }}

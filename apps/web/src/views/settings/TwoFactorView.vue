@@ -66,7 +66,7 @@
                   <div v-for="pk in passkeys" :key="pk.id" class="flex items-center justify-between rounded-md border px-3 py-2">
                     <div>
                       <p class="text-sm font-medium text-foreground">{{ pk.deviceName || '未命名设备' }}</p>
-                      <p class="text-xs text-muted-foreground">{{ formatTime(pk.lastUsedAt || pk.createdAt) }}</p>
+                      <p class="text-xs text-muted-foreground tnum">{{ formatTime(pk.lastUsedAt || pk.createdAt) }}</p>
                     </div>
                     <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" @click="handleDeletePasskey(pk.id)">删除</Button>
                   </div>
@@ -86,7 +86,7 @@
                 <CardDescription>登录时发送6位验证码到您的邮箱。</CardDescription>
               </CardHeader>
               <CardContent>
-                <div v-if="!userEmail || !userEmailVerified" class="text-sm text-amber-600">
+                <div v-if="!userEmail || !userEmailVerified" class="text-sm text-warning">
                   {{ !userEmail ? '请先设置邮箱' : '请先验证邮箱' }}
                 </div>
                 <template v-else>
@@ -132,7 +132,7 @@
                 <div v-for="pk in passkeys" :key="pk.id" class="flex items-center justify-between rounded-md border px-3 py-2">
                   <div>
                     <p class="text-sm font-medium text-foreground">{{ pk.deviceName || '未命名设备' }}</p>
-                    <p class="text-xs text-muted-foreground">{{ formatTime(pk.lastUsedAt || pk.createdAt) }}</p>
+                    <p class="text-xs text-muted-foreground tnum">{{ formatTime(pk.lastUsedAt || pk.createdAt) }}</p>
                   </div>
                   <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" @click="handleDeletePasskey(pk.id)">删除</Button>
                 </div>
@@ -149,7 +149,7 @@
               <CardDescription>登录时发送6位验证码到您的邮箱。</CardDescription>
             </CardHeader>
             <CardContent>
-              <div v-if="!userEmail || !userEmailVerified" class="text-sm text-amber-600">
+              <div v-if="!userEmail || !userEmailVerified" class="text-sm text-warning">
                 {{ !userEmail ? '请先设置邮箱' : '请先验证邮箱' }}
               </div>
               <template v-else>
