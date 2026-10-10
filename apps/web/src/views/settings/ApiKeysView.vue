@@ -28,7 +28,7 @@
             <TableBody>
               <TableRow v-for="key in store.keys" :key="key.id">
                 <TableCell class="font-medium">{{ key.name }}</TableCell>
-                <TableCell class="font-mono text-muted-foreground">{{ key.keyPrefix }}...</TableCell>
+                <TableCell class="font-record text-muted-foreground">{{ key.keyPrefix }}...</TableCell>
                 <TableCell>
                   <div class="flex gap-1 flex-wrap">
                     <Badge v-for="perm in key.permissions" :key="perm" variant="secondary">
@@ -36,10 +36,10 @@
                     </Badge>
                   </div>
                 </TableCell>
-                <TableCell class="text-muted-foreground">
+                <TableCell class="text-muted-foreground tnum">
                   {{ key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString('zh-CN') : '从未使用' }}
                 </TableCell>
-                <TableCell class="text-muted-foreground">
+                <TableCell class="text-muted-foreground tnum">
                   {{ new Date(key.createdAt).toLocaleString('zh-CN') }}
                 </TableCell>
                 <TableCell class="text-right">
@@ -60,13 +60,13 @@
                 吊销
               </Button>
             </div>
-            <div class="text-xs font-mono text-muted-foreground mb-2">{{ key.keyPrefix }}...</div>
+            <div class="font-record text-muted-foreground mb-2">{{ key.keyPrefix }}...</div>
             <div class="flex gap-1 flex-wrap mb-2">
               <Badge v-for="perm in key.permissions" :key="perm" variant="secondary" class="text-xs">
                 {{ permissionLabel(perm) }}
               </Badge>
             </div>
-            <div class="text-xs text-muted-foreground">
+            <div class="text-xs text-muted-foreground tnum">
               创建: {{ new Date(key.createdAt).toLocaleString('zh-CN') }} ·
               {{ key.lastUsedAt ? '最后使用: ' + new Date(key.lastUsedAt).toLocaleString('zh-CN') : '从未使用' }}
             </div>
@@ -109,10 +109,10 @@
           <DialogHeader>
             <DialogTitle>API 密钥已生成</DialogTitle>
           </DialogHeader>
-          <div class="rounded-md bg-yellow-500/10 p-3 mb-4">
-            <p class="text-sm text-yellow-700 dark:text-yellow-300 font-medium">请立即复制并妥善保存此密钥，关闭后将无法再次查看！</p>
+          <div class="rounded-md border border-warning/25 bg-warning/15 p-3 mb-4">
+            <p class="text-sm text-warning font-medium">请立即复制并妥善保存此密钥，关闭后将无法再次查看！</p>
           </div>
-          <div class="rounded-md bg-muted p-3 mb-4 break-all font-mono text-sm select-all">
+          <div class="rounded-md bg-muted p-3 mb-4 break-all font-record select-all">
             {{ store.generatedKey?.key }}
           </div>
           <div class="text-sm text-muted-foreground mb-4">

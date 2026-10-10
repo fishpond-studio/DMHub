@@ -17,10 +17,10 @@
                 </div>
                 <div class="text-sm text-muted-foreground">
                   子域名模式: <span class="text-foreground">{{ r.subdomainPattern }}</span> |
-                  权限: <span :class="r.permission === 'dns_edit' ? 'text-primary' : 'text-blue-600 dark:text-blue-400'" class="font-medium">{{ r.permission === 'dns_edit' ? '可编辑' : '只读' }}</span>
+                  权限: <span :class="r.permission === 'dns_edit' ? 'text-primary' : 'text-info'" class="font-medium">{{ r.permission === 'dns_edit' ? '可编辑' : '只读' }}</span>
                 </div>
                 <div class="text-sm text-muted-foreground mt-1">理由: <span class="text-foreground">{{ r.reason }}</span></div>
-                <div class="text-xs text-muted-foreground mt-1">{{ formatDate(r.createdAt) }}</div>
+                <div class="text-xs text-muted-foreground mt-1 tnum">{{ formatDate(r.createdAt) }}</div>
               </div>
               <div class="flex space-x-2 ml-4">
                 <Button variant="destructive" size="sm" @click="handleAction(r.id, 'reject')">拒绝</Button>
@@ -50,7 +50,7 @@
             <DialogTitle>批准申请</DialogTitle>
           </DialogHeader>
           <Textarea v-model="reviewComment" rows="3" placeholder="审批备注（可选）" />
-          <div v-if="approveWildcard" class="rounded border border-yellow-500/40 bg-yellow-500/10 p-3 mb-2 text-sm text-yellow-700 dark:text-yellow-300">
+          <div v-if="approveWildcard" class="rounded border border-warning/25 bg-warning/15 p-3 mb-2 text-sm text-warning">
             通配符子域名模式将匹配该域名下所有层级的子域名（如 *.dev 匹配 a.dev 和 x.y.dev），请确认此操作。
           </div>
           <DialogFooter>

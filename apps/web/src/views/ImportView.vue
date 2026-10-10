@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="min-h-screen bg-background">
-    <div class="max-w-5xl mx-auto px-4 py-8">
+    <div class="mx-auto w-full max-w-3xl px-6 py-6 md:py-8">
       <div class="flex items-center mb-6">
         <Button variant="ghost" size="icon" @click="$router.push('/dashboard')">
           <ArrowLeft class="h-5 w-5" />
@@ -14,7 +14,6 @@
           <TabsTrigger value="records">导入记录</TabsTrigger>
           <TabsTrigger value="backup">数据备份</TabsTrigger>
         </TabsList>
-      </Tabs>
 
       <TabsContent value="domains" class="space-y-4">
         <div class="flex items-center gap-3 mb-2">
@@ -94,7 +93,7 @@
           <Button @click="recordFile = null" variant="outline">取消</Button>
         </div>
 
-        <p v-if="selectedDomainId === 'none' && recordFile" class="text-sm text-amber-600">请先选择要导入记录的域名</p>
+        <p v-if="selectedDomainId === 'none' && recordFile" class="text-sm text-warning">请先选择要导入记录的域名</p>
 
         <ImportResult v-if="recordResult" :result="recordResult" />
       </TabsContent>
@@ -119,13 +118,14 @@
                 </Button>
               </div>
               <div v-if="backupResult" class="mt-3 rounded-md border p-3 text-sm">
-                <p>导入域名：{{ backupResult.domainsImported }}（跳过 {{ backupResult.domainsSkipped }}）</p>
-                <p>导入记录：{{ backupResult.recordsImported }}（跳过 {{ backupResult.recordsSkipped }}）</p>
+                <p class="tnum">导入域名：{{ backupResult.domainsImported }}（跳过 {{ backupResult.domainsSkipped }}）</p>
+                <p class="tnum">导入记录：{{ backupResult.recordsImported }}（跳过 {{ backupResult.recordsSkipped }}）</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </TabsContent>
+      </Tabs>
     </div>
   </div>
 </template>

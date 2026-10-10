@@ -209,8 +209,8 @@
           </CardContent>
         </Card>
 
-        <div v-if="warnings.length > 0" class="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-4">
-          <ul class="text-sm text-yellow-700 dark:text-yellow-300 list-disc list-inside">
+        <div v-if="warnings.length > 0" class="rounded-lg border border-warning/25 bg-warning/15 p-4">
+          <ul class="text-sm text-warning list-disc list-inside">
             <li v-for="(w, i) in warnings" :key="i">{{ w }}</li>
           </ul>
         </div>

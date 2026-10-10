@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-background">
-    <div class="mx-auto max-w-5xl px-4 py-8">
+    <div class="app-container py-6 md:py-8">
       <PageHeader
         title="全局搜索"
         description="搜索主机、记录值、备注；输入 IP 可反查指向它的记录"
@@ -52,8 +52,8 @@
             >
               <TableCell class="font-medium text-primary">{{ r.domainName }}</TableCell>
               <TableCell><Badge variant="secondary">{{ r.recordType }}</Badge></TableCell>
-              <TableCell class="font-mono text-xs">{{ r.name }}</TableCell>
-              <TableCell class="max-w-xs truncate font-mono text-xs text-muted-foreground" :title="r.value">
+              <TableCell class="font-record">{{ r.name }}</TableCell>
+              <TableCell class="max-w-xs truncate font-record text-muted-foreground" :title="r.value">
                 {{ r.value }}
               </TableCell>
               <TableCell class="max-w-[8rem] truncate text-xs text-muted-foreground" :title="r.notes || ''">
@@ -72,7 +72,7 @@
             </TableRow>
           </TableBody>
         </Table>
-        <p class="border-t px-3 py-2 text-xs text-muted-foreground">共 {{ results.length }} 条（最多 50）</p>
+        <p class="border-t px-3 py-2 text-xs text-muted-foreground tnum">共 {{ results.length }} 条（最多 50）</p>
       </div>
     </div>
   </div>

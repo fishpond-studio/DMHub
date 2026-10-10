@@ -1,5 +1,9 @@
 ﻿<template>
-  <div class="flex min-h-screen items-center justify-center bg-background px-4">
+  <div class="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-6 md:py-8">
+    <router-link to="/" class="mb-6 flex items-center gap-2.5">
+      <BrandMark class="h-8 w-8" />
+      <span class="text-sm font-semibold tracking-tight">DMHub</span>
+    </router-link>
     <Card class="w-full max-w-sm">
       <CardHeader class="text-center">
         <CardTitle class="text-2xl font-bold">两步验证</CardTitle>
@@ -58,7 +62,7 @@
                   size="sm"
                   @click="handleSendEmailCode"
                   :disabled="emailSending || emailCooldown > 0"
-                  class="px-0"
+                  class="px-0 tnum"
                 >
                   {{ emailCooldown > 0 ? `${emailCooldown}s 后重发` : '重新发送' }}
                 </Button>
@@ -116,8 +120,8 @@
           </TabsContent>
         </Tabs>
 
-        <div v-if="backupCodesWarning && !backupCodesExhausted" class="mt-4 rounded-md bg-amber-50 p-3 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
-          <p class="text-sm text-amber-800 dark:text-amber-300">{{ backupCodesWarning }}</p>
+        <div v-if="backupCodesWarning && !backupCodesExhausted" class="mt-4 rounded-md border border-warning/25 bg-warning/15 p-3">
+          <p class="text-sm text-warning">{{ backupCodesWarning }}</p>
         </div>
 
         <div class="mt-4 text-center">
@@ -140,7 +144,7 @@
         <div v-if="adminHelpStep === 'select'">
           <p class="text-sm text-muted-foreground mb-3">选择一位管理员并发送重置请求：</p>
           <div v-if="adminListLoading" class="text-sm text-muted-foreground">加载中...</div>
-          <div v-else-if="adminList.length === 0" class="text-sm text-amber-600">没有可联系的管理员</div>
+          <div v-else-if="adminList.length === 0" class="text-sm text-warning">没有可联系的管理员</div>
           <div v-else class="space-y-2 mb-4">
             <Button
               v-for="admin in adminList"
@@ -199,7 +203,7 @@
         <div v-if="adminHelpStep === 'success'">
           <p class="text-sm text-primary font-medium mb-3">备用验证码已重置！请妥善保存以下备用码：</p>
           <div class="grid grid-cols-2 gap-2 mb-4">
-            <Badge v-for="(code, i) in newBackupCodes" :key="i" variant="secondary" class="justify-center font-mono text-sm py-1">
+            <Badge v-for="(code, i) in newBackupCodes" :key="i" variant="secondary" class="justify-center font-record py-1">
               {{ code }}
             </Badge>
           </div>
@@ -237,6 +241,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import BrandMark from '@/components/BrandMark.vue';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Loader2, ArrowLeft } from 'lucide-vue-next';

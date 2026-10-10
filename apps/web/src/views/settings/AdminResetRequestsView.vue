@@ -17,7 +17,7 @@
                 <div class="text-sm text-muted-foreground">
                   备用邮箱：<span class="text-foreground">{{ r.alternateEmail }}</span>
                 </div>
-                <div class="text-xs text-muted-foreground mt-1">{{ formatDate(r.createdAt) }}</div>
+                <div class="text-xs text-muted-foreground mt-1 tnum">{{ formatDate(r.createdAt) }}</div>
               </div>
               <div class="flex space-x-2 ml-4">
                 <Button variant="destructive" size="sm" @click="openRejectDialog(r.requestId)">拒绝</Button>

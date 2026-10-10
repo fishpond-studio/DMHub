@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="min-h-screen bg-background">
-    <div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="app-container py-6 md:py-8">
       <div v-if="!domain" class="text-center py-12 text-muted-foreground">加载中...</div>
 
       <template v-else>
@@ -126,7 +126,7 @@
                 :key="scope.id"
                 class="rounded-lg border border-primary/15 bg-background/80 px-3 py-2"
               >
-                <div class="font-mono text-sm font-medium">
+                <div class="font-record text-sm font-medium">
                   {{ formatHostPreview(domain.name, scope.subdomainPattern) }}
                 </div>
                 <div class="mt-0.5 text-[11px] text-muted-foreground">
@@ -451,10 +451,10 @@
                     <TableCell>
                       <Badge variant="secondary">{{ r.recordType }}</Badge>
                     </TableCell>
-                    <TableCell class="font-medium font-mono text-sm">{{ r.name }}</TableCell>
+                    <TableCell class="font-medium font-record text-sm">{{ r.name }}</TableCell>
                     <TableCell class="max-w-xs">
                       <div class="flex items-center gap-1">
-                        <span class="truncate text-muted-foreground font-mono text-xs" :title="r.value">{{ r.value }}</span>
+                        <span class="truncate text-muted-foreground font-record text-xs" :title="r.value">{{ r.value }}</span>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -533,7 +533,7 @@
                         @update:checked="(v: boolean) => toggleRecordSelect(r.id, v)"
                       />
                       <Badge variant="secondary" class="text-xs">{{ r.recordType }}</Badge>
-                      <span class="font-medium text-sm font-mono">{{ r.name }}</span>
+                      <span class="font-medium text-sm font-record">{{ r.name }}</span>
                     </div>
                     <div v-if="canEdit" class="flex gap-1 shrink-0 flex-wrap justify-end">
                       <Button @click="openEditRecord(r)" variant="ghost" size="sm" class="text-primary h-7 px-2">编辑</Button>
@@ -542,7 +542,7 @@
                       <Button @click="handleDeleteRecord(r.id)" variant="ghost" size="sm" class="text-destructive h-7 px-2">删除</Button>
                     </div>
                   </div>
-                  <div class="text-xs text-muted-foreground break-all font-mono flex items-start gap-1">
+                  <div class="text-xs text-muted-foreground break-all font-record flex items-start gap-1">
                     <span class="flex-1">{{ r.value }}</span>
                     <Button variant="ghost" size="icon" class="h-6 w-6 shrink-0" @click="copyText(r.value, '记录值已复制')">
                       <Copy class="h-3 w-3" />
@@ -907,7 +907,7 @@
                   </div>
                   <div v-if="speedtestStore.httpResult.headers && Object.keys(speedtestStore.httpResult.headers).length > 0">
                     <h4 class="text-xs font-medium text-muted-foreground mb-1">响应头</h4>
-                    <div class="rounded-md bg-muted p-2 text-xs font-mono text-muted-foreground max-h-40 overflow-y-auto">
+                    <div class="rounded-md bg-muted p-2 text-xs font-record text-muted-foreground max-h-40 overflow-y-auto">
                       <div v-for="(value, key) in speedtestStore.httpResult.headers" :key="key">
                         {{ key }}: {{ value }}
                       </div>
@@ -961,7 +961,7 @@
           <DialogTitle>解析传播检测</DialogTitle>
           <DialogDescription v-if="propagateResult">
             {{ propagateResult.recordType }} · {{ propagateResult.fqdn }}
-            <span v-if="propagateResult.expectedValue" class="block font-mono text-xs mt-1 truncate">
+            <span v-if="propagateResult.expectedValue" class="block font-record text-xs mt-1 truncate">
               期望: {{ propagateResult.expectedValue }}
             </span>
           </DialogDescription>
@@ -980,13 +980,13 @@
               <div class="flex items-center justify-between gap-2">
                 <div class="font-medium">
                   {{ hit.name }}
-                  <span class="text-xs font-normal text-muted-foreground font-mono ml-1">{{ hit.ip }}</span>
+                  <span class="text-xs font-normal text-muted-foreground font-record ml-1">{{ hit.ip }}</span>
                 </div>
                 <Badge :variant="hit.matched ? 'default' : hit.ok ? 'secondary' : 'destructive'">
                   {{ hit.matched ? '已匹配' : hit.ok ? '不一致' : '失败' }}
                 </Badge>
               </div>
-              <div class="mt-1 text-xs text-muted-foreground font-mono break-all">
+              <div class="mt-1 text-xs text-muted-foreground font-record break-all">
                 <template v-if="hit.ok">{{ hit.values.join(' · ') || '（空）' }} · {{ hit.latencyMs }}ms</template>
                 <template v-else>{{ hit.error }}</template>
               </div>
