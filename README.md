@@ -1,13 +1,13 @@
 # DMHub
 
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-green.svg)](./LICENSE)
 
 Domain Management Hub — 面向小型团队的开源域名协作管理平台。
 
 解决域名分散在个人账号、到期无人管理、解析变更无通知、出问题互相推诿等痛点。
 
-**当前版本：0.3.0** — 详见 [更新日志](./CHANGELOG.md) 与 [0.2.0 新特性](./docs/guide/whats-new.md)。
+**当前版本：0.4.0** — 详见 [更新日志](./CHANGELOG.md) 与 [0.2.0 新特性](./docs/guide/whats-new.md)。
 
 ## 功能概览
 

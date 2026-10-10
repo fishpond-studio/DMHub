@@ -1,7 +1,7 @@
 {
   "name": "dmhub",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Domain Management Hub - 域名协作管理工具",
   "type": "module",
   "license": "AGPL-3.0",
