@@ -27,6 +27,9 @@ import {
   ChevronLeft,
 } from 'lucide-vue-next'
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const props = defineProps<{
   domainId: string
   domainName: string
@@ -109,7 +112,7 @@ async function apply() {
     }))
 
   if (payload.length === 0) {
-    toastError('请至少启用一条有效记录')
+    toastError(t('请至少启用一条有效记录'))
     return
   }
 
@@ -119,16 +122,16 @@ async function apply() {
     const failed = result.total - result.succeeded
     if (failed > 0) {
       toastError(
-        `已添加 ${result.succeeded} 条，失败 ${failed} 条`,
+        t('已添加 {p0} 条，失败 {p1} 条', { p0: result.succeeded, p1: failed }),
         result.results.find((r) => !r.success)?.error,
       )
     } else {
-      toastSuccess(`已应用模板「${selected.value.name}」`, `成功创建 ${result.succeeded} 条记录`)
+      toastSuccess(t('已应用模板「{p0}」', { p0: selected.value.name }), t('成功创建 {p0} 条记录', { p0: result.succeeded }))
     }
     emit('applied')
     close()
   } catch (err: any) {
-    toastError('应用模板失败', err.response?.data?.error || err.message)
+    toastError(t('应用模板失败'), err.response?.data?.error || err.message)
   } finally {
     applying.value = false
   }
@@ -141,15 +144,14 @@ async function apply() {
       <DialogHeader>
         <DialogTitle class="flex items-center gap-2">
           <LayoutTemplate class="h-5 w-5 text-primary" />
-          <span v-if="step === 'pick'">DNS 记录模板</span>
+          <span v-if="step === 'pick'">{{ $t('DNS 记录模板') }}</span>
           <span v-else>{{ selected?.name }}</span>
         </DialogTitle>
         <DialogDescription>
-          <template v-if="step === 'pick'">
-            选择常见场景，一键批量添加解析记录到 {{ domainName }}
+          <template v-if="step === 'pick'">{{ $t('选择常见场景，一键批量添加解析记录到 {p0}', { p0: domainName }) }}
           </template>
           <template v-else>
-            勾选需要的记录，按需修改记录值后应用
+            {{ $t('勾选需要的记录，按需修改记录值后应用') }}
           </template>
         </DialogDescription>
       </DialogHeader>
@@ -171,8 +173,7 @@ async function apply() {
                 <div class="font-medium">{{ t.name }}</div>
                 <p class="mt-0.5 text-xs text-muted-foreground line-clamp-2">{{ t.description }}</p>
                 <Badge variant="secondary" class="mt-2 text-[10px]">
-                  {{ t.records.length }} 条记录
-                </Badge>
+                  {{ $t('{p0} 条记录', { p0: t.records.length }) }}</Badge>
               </div>
             </div>
           </button>
@@ -185,9 +186,9 @@ async function apply() {
               <TableHeader>
                 <TableRow>
                   <TableHead class="w-10"></TableHead>
-                  <TableHead class="w-16">类型</TableHead>
-                  <TableHead class="w-24">主机</TableHead>
-                  <TableHead>记录值</TableHead>
+                  <TableHead class="w-16">{{ $t('类型') }}</TableHead>
+                  <TableHead class="w-24">{{ $t('主机') }}</TableHead>
+                  <TableHead>{{ $t('记录值') }}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -208,7 +209,7 @@ async function apply() {
                         v-model="r.value"
                         :disabled="!r.enabled"
                         class="h-8 font-mono text-xs"
-                        :placeholder="r.remark || '记录值'"
+                        :placeholder="r.remark || $t('记录值')"
                       />
                       <p v-if="r.remark" class="text-[11px] text-muted-foreground">{{ r.remark }}</p>
                     </div>
@@ -222,17 +223,15 @@ async function apply() {
 
       <DialogFooter class="gap-2 sm:gap-0">
         <template v-if="step === 'pick'">
-          <Button variant="outline" @click="close">关闭</Button>
+          <Button variant="outline" @click="close">{{ $t('关闭') }}</Button>
         </template>
         <template v-else>
           <Button variant="outline" @click="goBack">
             <ChevronLeft class="mr-1 h-4 w-4" />
-            返回
+            {{ $t('返回') }}
           </Button>
           <Button :disabled="applying || enabledCount === 0 || missingValues" @click="apply">
-            <Loader2 v-if="applying" class="mr-2 h-4 w-4 animate-spin" />
-            应用 {{ enabledCount }} 条记录
-          </Button>
+            <Loader2 v-if="applying" class="mr-2 h-4 w-4 animate-spin" />{{ $t('应用 {p0} 条记录', { p0: enabledCount }) }}</Button>
         </template>
       </DialogFooter>
     </DialogContent>

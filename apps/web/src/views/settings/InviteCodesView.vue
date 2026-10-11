@@ -1,24 +1,24 @@
 ﻿<template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-foreground">邀请码管理</h1>
+      <h1 class="text-2xl font-bold text-foreground">{{ $t('邀请码管理') }}</h1>
         <div class="flex space-x-3">
           <Button @click="showCreateForm = true">
             <Plus class="h-4 w-4 mr-1" />
-            生成新邀请码
+            {{ $t('生成新邀请码') }}
           </Button>
           <Button variant="outline" @click="confirmRegenerate = true" class="text-destructive hover:text-destructive hover:bg-destructive/10">
             <RefreshCw class="h-4 w-4 mr-1" />
-            重新生成全部
+            {{ $t('重新生成全部') }}
           </Button>
         </div>
       </div>
 
-      <div v-if="loading" class="text-center py-12 text-muted-foreground">加载中...</div>
+      <div v-if="loading" class="text-center py-12 text-muted-foreground">{{ $t('加载中․․․') }}</div>
 
       <div v-else-if="inviteCodes.length === 0" class="text-center py-8">
         <Card>
-          <CardContent class="py-8 text-center text-muted-foreground">暂无邀请码</CardContent>
+          <CardContent class="py-8 text-center text-muted-foreground">{{ $t('暂无邀请码') }}</CardContent>
         </Card>
       </div>
 
@@ -28,25 +28,25 @@
             <div class="space-y-1">
               <div class="flex items-center space-x-3">
                 <code class="text-lg font-mono font-semibold bg-muted px-3 py-1 rounded">{{ code.code }}</code>
-                <Button variant="ghost" size="icon" @click="copyCode(code.code)" class="h-8 w-8" title="复制">
+                <Button variant="ghost" size="icon" @click="copyCode(code.code)" class="h-8 w-8" :title="$t('复制')">
                   <Copy class="h-4 w-4" />
                 </Button>
-                <Badge v-if="isExpired(code)" variant="destructive" class="sm:hidden">已过期</Badge>
-                <Badge v-else-if="code.maxUses > 0 && code.currentUses >= code.maxUses" variant="warning" class="sm:hidden">已用完</Badge>
-                <Badge v-else variant="default" class="bg-primary/15 text-primary border-primary/30 sm:hidden">可用</Badge>
+                <Badge v-if="isExpired(code)" variant="destructive" class="sm:hidden">{{ $t('已过期') }}</Badge>
+                <Badge v-else-if="code.maxUses > 0 && code.currentUses >= code.maxUses" variant="warning" class="sm:hidden">{{ $t('已用完') }}</Badge>
+                <Badge v-else variant="default" class="bg-primary/15 text-primary border-primary/30 sm:hidden">{{ $t('可用') }}</Badge>
               </div>
               <div class="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground tnum">
-                <span>已使用 {{ code.currentUses }} 次</span>
-                <span v-if="code.maxUses > 0">/ 最多 {{ code.maxUses }} 次</span>
-                <span v-else>/ 无限次</span>
-                <span v-if="code.expiresAt">过期：{{ formatDate(code.expiresAt) }}</span>
-                <span v-else>永不过期</span>
+                <span>{{ $t('已使用') }} {{ code.currentUses }} {{ $t('次') }}</span>
+                <span v-if="code.maxUses > 0">{{ $t('/ 最多') }} {{ code.maxUses }} {{ $t('次') }}</span>
+                <span v-else>{{ $t('/ 无限次') }}</span>
+                <span v-if="code.expiresAt">{{ $t('过期：') }}{{ formatDate(code.expiresAt) }}</span>
+                <span v-else>{{ $t('永不过期') }}</span>
               </div>
             </div>
             <div class="hidden sm:block">
-              <Badge v-if="isExpired(code)" variant="destructive">已过期</Badge>
-              <Badge v-else-if="code.maxUses > 0 && code.currentUses >= code.maxUses" variant="warning">已用完</Badge>
-              <Badge v-else variant="default" class="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">可用</Badge>
+              <Badge v-if="isExpired(code)" variant="destructive">{{ $t('已过期') }}</Badge>
+              <Badge v-else-if="code.maxUses > 0 && code.currentUses >= code.maxUses" variant="warning">{{ $t('已用完') }}</Badge>
+              <Badge v-else variant="default" class="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">{{ $t('可用') }}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -55,22 +55,22 @@
       <Dialog :open="showCreateForm" @update:open="showCreateForm = $event">
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>生成新邀请码</DialogTitle>
+            <DialogTitle>{{ $t('生成新邀请码') }}</DialogTitle>
           </DialogHeader>
           <div class="space-y-4">
             <div>
-              <Label class="mb-1 block">最大使用次数（0 为无限）</Label>
-              <Input :model-value="newCode.maxUses" @update:model-value="newCode.maxUses = Number($event)" type="number" min="0" placeholder="0 为无限" />
+              <Label class="mb-1 block">{{ $t('最大使用次数（0 为无限）') }}</Label>
+              <Input :model-value="newCode.maxUses" @update:model-value="newCode.maxUses = Number($event)" type="number" min="0" :placeholder="$t('0 为无限')" />
             </div>
             <div>
-              <Label class="mb-1 block">过期时间（留空为永不过期）</Label>
+              <Label class="mb-1 block">{{ $t('过期时间（留空为永不过期）') }}</Label>
               <Input v-model="newCode.expiresAt" type="datetime-local" />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" @click="showCreateForm = false">取消</Button>
+            <Button variant="outline" @click="showCreateForm = false">{{ $t('取消') }}</Button>
             <Button @click="handleCreate" :disabled="creating">
-              {{ creating ? '生成中...' : '生成' }}
+              {{ creating ? $t('生成中․․․') : $t('生成') }}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -79,12 +79,12 @@
       <AlertDialog :open="confirmRegenerate">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认重新生成邀请码</AlertDialogTitle>
-            <AlertDialogDescription>重新生成会使所有现有邀请码失效，此操作不可撤销。确定继续吗？</AlertDialogDescription>
+            <AlertDialogTitle>{{ $t('确认重新生成邀请码') }}</AlertDialogTitle>
+            <AlertDialogDescription>{{ $t('重新生成会使所有现有邀请码失效，此操作不可撤销。确定继续吗？') }}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel @click="confirmRegenerate = false">取消</AlertDialogCancel>
-            <AlertDialogAction @click="handleRegenerate">确认重新生成</AlertDialogAction>
+            <AlertDialogCancel @click="confirmRegenerate = false">{{ $t('取消') }}</AlertDialogCancel>
+            <AlertDialogAction @click="handleRegenerate">{{ $t('确认重新生成') }}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -102,6 +102,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const store = useTeamStore();
 const loading = ref(true);
@@ -158,7 +161,7 @@ async function handleCreate() {
     showCreateForm.value = false;
     newCode.value = { maxUses: 0, expiresAt: '' };
   } catch (err: any) {
-    alert(err.response?.data?.error || '创建失败');
+    alert(err.response?.data?.error || t('创建失败'));
   } finally {
     creating.value = false;
   }
@@ -169,7 +172,7 @@ async function handleRegenerate() {
   try {
     await store.regenerateInviteCodes(true);
   } catch (err: any) {
-    alert(err.response?.data?.error || '重新生成失败');
+    alert(err.response?.data?.error || t('重新生成失败'));
   }
 }
 </script>

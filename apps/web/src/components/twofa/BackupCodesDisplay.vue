@@ -2,8 +2,8 @@
   <div class="space-y-6">
     <Card>
       <CardHeader>
-        <CardTitle>备用验证码</CardTitle>
-        <CardDescription class="text-warning">请妥善保存这些备用验证码，它们只会显示一次。每个备用码只能使用一次。</CardDescription>
+        <CardTitle>{{ $t('备用验证码') }}</CardTitle>
+        <CardDescription class="text-warning">{{ $t('请妥善保存这些备用验证码，它们只会显示一次。每个备用码只能使用一次。') }}</CardDescription>
       </CardHeader>
       <CardContent>
         <div class="grid grid-cols-2 gap-2 mb-4">
@@ -22,13 +22,13 @@
             variant="outline"
             class="flex-1"
           >
-            {{ copied ? '已复制' : '复制全部' }}
+            {{ copied ? $t('已复制') : $t('复制全部') }}
           </Button>
           <Button
             @click="$emit('done')"
             class="flex-1"
           >
-            已保存，继续
+            {{ $t('已保存，继续') }}
           </Button>
         </div>
       </CardContent>

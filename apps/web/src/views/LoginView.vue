@@ -122,7 +122,7 @@
             </div>
           </template>
           <p v-else-if="!oauthLoading" class="my-6 text-center text-[13px] text-muted-foreground">
-            OIDC/OAuth2 未配置
+            {{ $t('OIDC/OAuth2 未配置') }}
           </p>
 
           <div v-if="announcement" class="mt-6 rounded-lg border border-dashed bg-muted/40 px-3 py-2.5 text-[13px] leading-relaxed text-muted-foreground" v-html="announcementHtml" />
@@ -209,7 +209,7 @@ onMounted(async () => {
 async function handleLogin() {
   error.value = '';
   if (!form.username || !form.password) {
-    error.value = '请填写用户名和密码';
+    error.value = t('请填写用户名和密码');
     return;
   }
   loading.value = true;
@@ -221,7 +221,7 @@ async function handleLogin() {
       router.push('/dashboard');
     }
   } catch (err: any) {
-    error.value = err.response?.data?.error || '登录失败';
+    error.value = err.response?.data?.error || t('登录失败');
   } finally {
     loading.value = false;
   }

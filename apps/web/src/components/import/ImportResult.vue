@@ -1,26 +1,26 @@
 ﻿<template>
   <Card>
     <CardHeader>
-      <CardTitle class="text-base">导入结果</CardTitle>
+      <CardTitle class="text-base">{{ $t('导入结果') }}</CardTitle>
     </CardHeader>
     <CardContent class="space-y-3">
       <div class="flex gap-6 text-sm">
-        <span class="text-primary tnum">成功导入: <strong>{{ result.imported }}</strong></span>
-        <span class="text-warning tnum">跳过重复: <strong>{{ result.skipped }}</strong></span>
-        <span class="text-destructive tnum">错误: <strong>{{ result.errors.length }}</strong></span>
+        <span class="text-primary tnum">{{ $t('成功导入:') }} <strong>{{ result.imported }}</strong></span>
+        <span class="text-warning tnum">{{ $t('跳过重复:') }} <strong>{{ result.skipped }}</strong></span>
+        <span class="text-destructive tnum">{{ $t('错误:') }} <strong>{{ result.errors.length }}</strong></span>
       </div>
       <div v-if="result.errors.length > 0">
-        <p class="text-sm font-medium text-destructive mb-2">错误详情:</p>
+        <p class="text-sm font-medium text-destructive mb-2">{{ $t('错误详情:') }}</p>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>行号</TableHead>
-              <TableHead>错误信息</TableHead>
+              <TableHead>{{ $t('行号') }}</TableHead>
+              <TableHead>{{ $t('错误信息') }}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow v-for="(err, i) in result.errors" :key="i">
-              <TableCell class="text-destructive tnum">第 {{ err.row }} 行</TableCell>
+              <TableCell class="text-destructive tnum">{{ $t('第 {p0} 行', { p0: err.row }) }}</TableCell>
               <TableCell class="text-destructive">{{ err.message }}</TableCell>
             </TableRow>
           </TableBody>

@@ -2,9 +2,9 @@
   <div>
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-foreground">域名分配管理</h1>
+        <h1 class="text-2xl font-bold text-foreground">{{ $t('域名分配管理') }}</h1>
         <p class="mt-1 text-sm text-muted-foreground">
-          给成员分配子域名范围，并观测其名下解析记录状态
+          {{ $t('给成员分配子域名范围，并观测其名下解析记录状态') }}
         </p>
       </div>
       <div class="flex gap-2">
@@ -13,21 +13,21 @@
           :variant="tab === 'overview' ? 'default' : 'outline'"
           @click="switchTab('overview')"
         >
-          状态总览
+          {{ $t('状态总览') }}
         </Button>
         <Button
           size="sm"
           :variant="tab === 'member' ? 'default' : 'outline'"
           @click="switchTab('member')"
         >
-          按成员分配
+          {{ $t('按成员分配') }}
         </Button>
       </div>
     </div>
 
     <!-- ========== 状态总览 ========== -->
     <template v-if="tab === 'overview'">
-      <div v-if="overviewLoading" class="py-12 text-center text-muted-foreground">加载中...</div>
+      <div v-if="overviewLoading" class="py-12 text-center text-muted-foreground">{{ $t('加载中․․․') }}</div>
       <template v-else>
         <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <Card v-for="s in summaryCards" :key="s.label">
@@ -42,22 +42,22 @@
           <Input
             v-model="overviewFilter"
             class="max-w-xs"
-            placeholder="筛选成员 / 域名 / 主机…"
+            :placeholder="$t('筛选成员 / 域名 / 主机…')"
           />
           <Select v-model="statusFilter">
             <SelectTrigger class="w-[140px]">
-              <SelectValue placeholder="全部状态" />
+              <SelectValue :placeholder="$t('全部状态')" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">全部状态</SelectItem>
-              <SelectItem value="active">有记录</SelectItem>
-              <SelectItem value="empty">无记录</SelectItem>
-              <SelectItem value="member_disabled">成员停用</SelectItem>
-              <SelectItem value="domain_issue">域名异常</SelectItem>
+              <SelectItem value="all">{{ $t('全部状态') }}</SelectItem>
+              <SelectItem value="active">{{ $t('有记录') }}</SelectItem>
+              <SelectItem value="empty">{{ $t('无记录') }}</SelectItem>
+              <SelectItem value="member_disabled">{{ $t('成员停用') }}</SelectItem>
+              <SelectItem value="domain_issue">{{ $t('域名异常') }}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" :disabled="overviewLoading" @click="loadOverview">
-            刷新
+            {{ $t('刷新') }}
           </Button>
         </div>
 
@@ -67,19 +67,19 @@
               <TableHeader>
                 <TableRow>
                   <TableHead class="w-8"></TableHead>
-                  <TableHead>成员</TableHead>
-                  <TableHead>可管理主机</TableHead>
-                  <TableHead>权限</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>记录</TableHead>
+                  <TableHead>{{ $t('成员') }}</TableHead>
+                  <TableHead>{{ $t('可管理主机') }}</TableHead>
+                  <TableHead>{{ $t('权限') }}</TableHead>
+                  <TableHead>{{ $t('状态') }}</TableHead>
+                  <TableHead>{{ $t('记录') }}</TableHead>
                   <TableHead>CDN</TableHead>
-                  <TableHead>最近更新</TableHead>
+                  <TableHead>{{ $t('最近更新') }}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow v-if="filteredOverview.length === 0">
                   <TableCell colspan="8" class="py-10 text-center text-sm text-muted-foreground">
-                    暂无分配，或筛选无结果
+                    {{ $t('暂无分配，或筛选无结果') }}
                   </TableCell>
                 </TableRow>
                 <template v-for="a in filteredOverview" :key="a.id">
@@ -99,7 +99,7 @@
                     </TableCell>
                     <TableCell>
                       <Badge :variant="a.permission === 'dns_edit' ? 'default' : 'secondary'">
-                        {{ a.permission === 'dns_edit' ? '可编辑' : '只读' }}
+                        {{ a.permission === 'dns_edit' ? $t('可编辑') : $t('只读') }}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -114,7 +114,7 @@
                       </span>
                     </TableCell>
                     <TableCell class="tabular-nums text-muted-foreground">
-                      {{ a.proxiedCount ? `${a.proxiedCount} 开` : '—' }}
+                      {{ a.proxiedCount ? $t('{p0} 开', { p0: a.proxiedCount }) : '—' }}
                     </TableCell>
                     <TableCell class="text-xs text-muted-foreground whitespace-nowrap tnum">
                       {{ a.lastRecordUpdatedAt ? formatDateTime(a.lastRecordUpdatedAt) : '—' }}
@@ -125,29 +125,29 @@
                       <div class="p-4 space-y-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                           <p class="text-sm text-muted-foreground">
-                            范围内 DNS 记录（最多展示 50 条）
+                            {{ $t('范围内 DNS 记录（最多展示 50 条）') }}
                           </p>
                           <Button
                             size="sm"
                             variant="outline"
                             @click.stop="$router.push(`/domains/${a.domainId}`)"
                           >
-                            打开域名
+                            {{ $t('打开域名') }}
                           </Button>
                         </div>
                         <div v-if="!a.records.length" class="text-sm text-muted-foreground py-4 text-center">
-                          该范围内暂无解析记录
+                          {{ $t('该范围内暂无解析记录') }}
                         </div>
                         <div v-else class="overflow-x-auto rounded-lg border bg-background">
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>类型</TableHead>
-                                <TableHead>主机</TableHead>
-                                <TableHead>值</TableHead>
+                                <TableHead>{{ $t('类型') }}</TableHead>
+                                <TableHead>{{ $t('主机') }}</TableHead>
+                                <TableHead>{{ $t('值') }}</TableHead>
                                 <TableHead>TTL</TableHead>
                                 <TableHead>CDN</TableHead>
-                                <TableHead>更新</TableHead>
+                                <TableHead>{{ $t('更新') }}</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -159,7 +159,7 @@
                                 </TableCell>
                                 <TableCell class="tabular-nums text-muted-foreground">{{ r.ttl }}</TableCell>
                                 <TableCell>
-                                  <span v-if="r.proxied" class="text-warning text-xs font-medium">已代理</span>
+                                  <span v-if="r.proxied" class="text-warning text-xs font-medium">{{ $t('已代理') }}</span>
                                   <span v-else class="text-muted-foreground text-xs">—</span>
                                 </TableCell>
                                 <TableCell class="text-xs text-muted-foreground whitespace-nowrap tnum">
@@ -180,7 +180,7 @@
           <!-- mobile overview -->
           <div class="md:hidden divide-y">
             <div v-if="filteredOverview.length === 0" class="py-10 text-center text-sm text-muted-foreground">
-              暂无分配
+              {{ $t('暂无分配') }}
             </div>
             <div
               v-for="a in filteredOverview"
@@ -198,8 +198,7 @@
                 </Badge>
               </div>
               <div class="text-xs text-muted-foreground tnum">
-                {{ a.recordCount }} 条记录
-                <span v-if="a.proxiedCount"> · CDN {{ a.proxiedCount }}</span>
+                {{ $t('{p0} 条记录', { p0: a.recordCount }) }}<span v-if="a.proxiedCount"> · CDN {{ a.proxiedCount }}</span>
               </div>
               <div v-if="expandedId === a.id && a.records.length" class="space-y-1 pt-2 border-t">
                 <div
@@ -219,10 +218,10 @@
     <!-- ========== 按成员分配（原逻辑） ========== -->
     <template v-else>
       <div class="mb-6">
-        <Label class="mb-1 block">选择成员</Label>
+        <Label class="mb-1 block">{{ $t('选择成员') }}</Label>
         <Select v-model="selectedMemberId" @update:model-value="handleMemberChange">
           <SelectTrigger class="w-full max-w-xs">
-            <SelectValue placeholder="-- 选择成员 --" />
+            <SelectValue :placeholder="$t('-- 选择成员 --')" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem v-for="m in members" :key="m.id" :value="m.id">
@@ -232,20 +231,20 @@
         </Select>
       </div>
 
-      <div v-if="loading" class="text-center py-12 text-muted-foreground">加载中...</div>
+      <div v-if="loading" class="text-center py-12 text-muted-foreground">{{ $t('加载中․․․') }}</div>
 
       <template v-else-if="selectedMemberId">
         <Card class="mb-6">
           <CardHeader>
-            <CardTitle>添加分配</CardTitle>
+            <CardTitle>{{ $t('添加分配') }}</CardTitle>
           </CardHeader>
           <CardContent>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <Label class="mb-1 block">域名</Label>
+                <Label class="mb-1 block">{{ $t('域名') }}</Label>
                 <Select v-model="form.domainId">
                   <SelectTrigger>
-                    <SelectValue placeholder="选择域名" />
+                    <SelectValue :placeholder="$t('选择域名')" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem v-for="d in domainList" :key="d.id" :value="d.id">{{ d.name }}</SelectItem>
@@ -253,30 +252,30 @@
                 </Select>
               </div>
               <div>
-                <Label class="mb-1 block">子域名模式</Label>
+                <Label class="mb-1 block">{{ $t('子域名模式') }}</Label>
                 <Input v-model="form.subdomainPattern" type="text" placeholder="* / blog / *.dev / @" />
                 <p v-if="selectedDomainName" class="mt-1 text-xs text-muted-foreground">
-                  成员将看到：
+                  {{ $t('成员将看到：') }}
                   <span class="font-record text-foreground">{{ formatHostPreview(selectedDomainName, form.subdomainPattern) }}</span>
                   · {{ formatScopeLabel(form.subdomainPattern) }}
                 </p>
               </div>
               <div>
-                <Label class="mb-1 block">权限</Label>
+                <Label class="mb-1 block">{{ $t('权限') }}</Label>
                 <Select v-model="form.permission">
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="dns_edit">可编辑</SelectItem>
-                    <SelectItem value="dns_readonly">只读</SelectItem>
+                    <SelectItem value="dns_edit">{{ $t('可编辑') }}</SelectItem>
+                    <SelectItem value="dns_readonly">{{ $t('只读') }}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div class="mt-4 flex justify-end">
               <Button @click="handleAddAssignment" :disabled="!form.domainId || submitting">
-                {{ submitting ? '添加中...' : '添加分配' }}
+                {{ submitting ? $t('添加中․․․') : $t('添加分配') }}
               </Button>
             </div>
           </CardContent>
@@ -287,16 +286,16 @@
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>域名</TableHead>
-                  <TableHead>子域名模式</TableHead>
-                  <TableHead>权限</TableHead>
-                  <TableHead>分配时间</TableHead>
-                  <TableHead class="text-right">操作</TableHead>
+                  <TableHead>{{ $t('域名') }}</TableHead>
+                  <TableHead>{{ $t('子域名模式') }}</TableHead>
+                  <TableHead>{{ $t('权限') }}</TableHead>
+                  <TableHead>{{ $t('分配时间') }}</TableHead>
+                  <TableHead class="text-right">{{ $t('操作') }}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow v-if="assignments.length === 0">
-                  <TableCell colspan="5" class="py-8 text-center text-sm text-muted-foreground">暂无分配记录</TableCell>
+                  <TableCell colspan="5" class="py-8 text-center text-sm text-muted-foreground">{{ $t('暂无分配记录') }}</TableCell>
                 </TableRow>
                 <TableRow v-for="a in assignments" :key="a.id">
                   <TableCell class="font-medium">{{ a.domainName }}</TableCell>
@@ -305,13 +304,13 @@
                     <div class="text-xs text-muted-foreground">{{ a.subdomainPattern }} · {{ formatScopeLabel(a.subdomainPattern) }}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge v-if="a.permission === 'dns_edit'" variant="default">可编辑</Badge>
-                    <Badge v-else variant="secondary">只读</Badge>
+                    <Badge v-if="a.permission === 'dns_edit'" variant="default">{{ $t('可编辑') }}</Badge>
+                    <Badge v-else variant="secondary">{{ $t('只读') }}</Badge>
                   </TableCell>
                   <TableCell class="text-muted-foreground">{{ formatDate(a.createdAt) }}</TableCell>
                   <TableCell class="text-right">
                     <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" @click="pendingDelete = a">
-                      移除
+                      {{ $t('移除') }}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -320,15 +319,15 @@
           </div>
 
           <div class="md:hidden divide-y">
-            <div v-if="assignments.length === 0" class="py-8 text-center text-sm text-muted-foreground">暂无分配记录</div>
+            <div v-if="assignments.length === 0" class="py-8 text-center text-sm text-muted-foreground">{{ $t('暂无分配记录') }}</div>
             <div v-for="a in assignments" :key="a.id" class="p-4">
               <div class="flex items-center justify-between mb-2">
                 <span class="font-medium">{{ a.domainName }}</span>
-                <Badge v-if="a.permission === 'dns_edit'" variant="default">可编辑</Badge>
-                <Badge v-else variant="secondary">只读</Badge>
+                <Badge v-if="a.permission === 'dns_edit'" variant="default">{{ $t('可编辑') }}</Badge>
+                <Badge v-else variant="secondary">{{ $t('只读') }}</Badge>
               </div>
               <div class="font-record">{{ formatHostPreview(a.domainName || '', a.subdomainPattern) }}</div>
-              <Button variant="ghost" size="sm" class="text-destructive mt-2 -ml-2" @click="pendingDelete = a">移除</Button>
+              <Button variant="ghost" size="sm" class="text-destructive mt-2 -ml-2" @click="pendingDelete = a">{{ $t('移除') }}</Button>
             </div>
           </div>
         </Card>
@@ -338,14 +337,14 @@
     <AlertDialog :open="!!wildcardConfirm">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>确认通配符分配</AlertDialogTitle>
+          <AlertDialogTitle>{{ $t('确认通配符分配') }}</AlertDialogTitle>
           <AlertDialogDescription>
-            通配符子域名模式将匹配该域名下所有层级的子域名，确定继续吗？
+            {{ $t('通配符子域名模式将匹配该域名下所有层级的子域名，确定继续吗？') }}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel @click="wildcardConfirm = null">取消</AlertDialogCancel>
-          <AlertDialogAction @click="proceedWildcardAdd">确认分配</AlertDialogAction>
+          <AlertDialogCancel @click="wildcardConfirm = null">{{ $t('取消') }}</AlertDialogCancel>
+          <AlertDialogAction @click="proceedWildcardAdd">{{ $t('确认分配') }}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -353,12 +352,12 @@
     <AlertDialog :open="!!pendingDelete">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>确认移除分配</AlertDialogTitle>
-          <AlertDialogDescription>确定要移除 {{ pendingDelete?.domainName }} 的分配吗？</AlertDialogDescription>
+          <AlertDialogTitle>{{ $t('确认移除分配') }}</AlertDialogTitle>
+          <AlertDialogDescription>{{ $t('确定要移除 {p0} 的分配吗？', { p0: pendingDelete?.domainName }) }}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel @click="pendingDelete = null">取消</AlertDialogCancel>
-          <AlertDialogAction @click="proceedDelete">确认移除</AlertDialogAction>
+          <AlertDialogCancel @click="pendingDelete = null">{{ $t('取消') }}</AlertDialogCancel>
+          <AlertDialogAction @click="proceedDelete">{{ $t('确认移除') }}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -392,6 +391,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import { formatHostPreview, formatScopeLabel } from '@/lib/subdomain-scope'
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const teamStore = useTeamStore()
 const store = useAssignmentStore()
 const loading = ref(false)
@@ -416,12 +418,12 @@ const selectedDomainName = computed(
 const summaryCards = computed(() => {
   const s = store.overviewSummary
   return [
-    { label: '总指派', value: s?.total ?? 0, class: '' },
-    { label: '有记录', value: s?.active ?? 0, class: 'text-primary' },
-    { label: '无记录', value: s?.empty ?? 0, class: 'text-warning' },
-    { label: '成员停用', value: s?.memberDisabled ?? 0, class: 'text-destructive' },
-    { label: '域名异常', value: s?.domainIssue ?? 0, class: 'text-destructive' },
-    { label: '覆盖记录数', value: s?.totalRecords ?? 0, class: '' },
+    { label: t('总指派'), value: s?.total ?? 0, class: '' },
+    { label: t('有记录'), value: s?.active ?? 0, class: 'text-primary' },
+    { label: t('无记录'), value: s?.empty ?? 0, class: 'text-warning' },
+    { label: t('成员停用'), value: s?.memberDisabled ?? 0, class: 'text-destructive' },
+    { label: t('域名异常'), value: s?.domainIssue ?? 0, class: 'text-destructive' },
+    { label: t('覆盖记录数'), value: s?.totalRecords ?? 0, class: '' },
   ]
 })
 
@@ -470,10 +472,10 @@ function toggleExpand(id: string) {
 
 function scopeStatusLabel(s: string) {
   const map: Record<string, string> = {
-    active: '有记录',
-    empty: '无记录',
-    member_disabled: '成员停用',
-    domain_issue: '域名异常',
+    active: t('有记录'),
+    empty: t('无记录'),
+    member_disabled: t('成员停用'),
+    domain_issue: t('域名异常'),
   }
   return map[s] || s
 }
@@ -517,7 +519,7 @@ async function handleAddAssignment() {
     await store.fetchMemberAssignments(selectedMemberId.value)
     form.value = { domainId: '', subdomainPattern: '*', permission: 'dns_edit' }
   } catch (err: any) {
-    alert(err.response?.data?.error || '添加失败')
+    alert(err.response?.data?.error || t('添加失败'))
   } finally {
     submitting.value = false
   }
@@ -531,7 +533,7 @@ async function proceedWildcardAdd() {
     await store.fetchMemberAssignments(selectedMemberId.value)
     form.value = { domainId: '', subdomainPattern: '*', permission: 'dns_edit' }
   } catch (err: any) {
-    alert(err.response?.data?.error || '添加失败')
+    alert(err.response?.data?.error || t('添加失败'))
   } finally {
     submitting.value = false
     wildcardConfirm.value = null
@@ -544,7 +546,7 @@ async function proceedDelete() {
     await store.deleteAssignment(selectedMemberId.value, pendingDelete.value.id)
     await store.fetchMemberAssignments(selectedMemberId.value)
   } catch (err: any) {
-    alert(err.response?.data?.error || '移除失败')
+    alert(err.response?.data?.error || t('移除失败'))
   }
   pendingDelete.value = null
 }

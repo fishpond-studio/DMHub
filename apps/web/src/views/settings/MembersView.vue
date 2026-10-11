@@ -1,20 +1,20 @@
 ﻿<template>
   <div>
-    <h1 class="text-2xl font-bold text-foreground mb-6">成员管理</h1>
+    <h1 class="text-2xl font-bold text-foreground mb-6">{{ $t('成员管理') }}</h1>
 
-      <div v-if="loading" class="text-center py-12 text-muted-foreground">加载中...</div>
+      <div v-if="loading" class="text-center py-12 text-muted-foreground">{{ $t('加载中․․․') }}</div>
 
       <Card v-else>
         <div class="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>用户名</TableHead>
-                <TableHead>邮箱</TableHead>
-                <TableHead>角色</TableHead>
+                <TableHead>{{ $t('用户名') }}</TableHead>
+                <TableHead>{{ $t('邮箱') }}</TableHead>
+                <TableHead>{{ $t('角色') }}</TableHead>
                 <TableHead>2FA</TableHead>
-                <TableHead>加入时间</TableHead>
-                <TableHead class="text-right">操作</TableHead>
+                <TableHead>{{ $t('加入时间') }}</TableHead>
+                <TableHead class="text-right">{{ $t('操作') }}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -33,17 +33,17 @@
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
-                      <DropdownMenuItem @click="handleRoleChange(member, 'admin')">管理员</DropdownMenuItem>
-                      <DropdownMenuItem @click="handleRoleChange(member, 'member')">成员</DropdownMenuItem>
-                      <DropdownMenuItem @click="handleRoleChange(member, 'guest')">访客</DropdownMenuItem>
+                      <DropdownMenuItem @click="handleRoleChange(member, 'admin')">{{ $t('管理员') }}</DropdownMenuItem>
+                      <DropdownMenuItem @click="handleRoleChange(member, 'member')">{{ $t('成员') }}</DropdownMenuItem>
+                      <DropdownMenuItem @click="handleRoleChange(member, 'guest')">{{ $t('访客') }}</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <Badge v-else :variant="roleBadgeVariant(member.role)">{{ roleLabel(member.role) }}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge v-if="member.status === 'disabled'" variant="destructive" class="mr-1">已禁用</Badge>
+                  <Badge v-if="member.status === 'disabled'" variant="destructive" class="mr-1">{{ $t('已禁用') }}</Badge>
                   <Badge v-if="member.twoFactorEnabled" variant="default" class="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">2FA</Badge>
-                  <Badge v-else variant="secondary">无2FA</Badge>
+                  <Badge v-else variant="secondary">{{ $t('无2FA') }}</Badge>
                 </TableCell>
                 <TableCell class="text-sm text-muted-foreground tnum">{{ formatDate(member.createdAt) }}</TableCell>
                 <TableCell class="text-right">
@@ -55,7 +55,7 @@
                       :class="member.status === 'disabled' ? 'text-primary hover:text-primary' : 'text-warning hover:text-warning'"
                       @click="handleStatusToggle(member)"
                     >
-                      {{ member.status === 'disabled' ? '启用' : '禁用' }}
+                      {{ member.status === 'disabled' ? $t('启用') : $t('禁用') }}
                     </Button>
                     <Button
                       v-if="member.id !== currentUserId"
@@ -64,7 +64,7 @@
                       class="text-destructive hover:text-destructive"
                       @click="pendingRemove = member"
                     >
-                      移除
+                      {{ $t('移除') }}
                     </Button>
                   </div>
                 </TableCell>
@@ -83,25 +83,25 @@
               <Badge :variant="roleBadgeVariant(member.role)">{{ roleLabel(member.role) }}</Badge>
             </div>
             <div class="flex items-center gap-2 text-sm text-muted-foreground mb-2 tnum">
-              <span>{{ member.email || '无邮箱' }}</span>
+              <span>{{ member.email || $t('无邮箱') }}</span>
               <span>·</span>
               <span>{{ formatDate(member.createdAt) }}</span>
             </div>
             <div class="flex items-center justify-between">
               <div class="flex gap-1">
-                <Badge v-if="member.status === 'disabled'" variant="destructive">已禁用</Badge>
+                <Badge v-if="member.status === 'disabled'" variant="destructive">{{ $t('已禁用') }}</Badge>
                 <Badge v-if="member.twoFactorEnabled" variant="default" class="bg-primary/15 text-primary border-primary/30">2FA</Badge>
-                <Badge v-else variant="secondary">无2FA</Badge>
+                <Badge v-else variant="secondary">{{ $t('无2FA') }}</Badge>
               </div>
               <div v-if="member.id !== currentUserId" class="flex gap-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger as-child>
-                    <Button variant="outline" size="sm">角色</Button>
+                    <Button variant="outline" size="sm">{{ $t('角色') }}</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem @click="handleRoleChange(member, 'admin')">管理员</DropdownMenuItem>
-                    <DropdownMenuItem @click="handleRoleChange(member, 'member')">成员</DropdownMenuItem>
-                    <DropdownMenuItem @click="handleRoleChange(member, 'guest')">访客</DropdownMenuItem>
+                    <DropdownMenuItem @click="handleRoleChange(member, 'admin')">{{ $t('管理员') }}</DropdownMenuItem>
+                    <DropdownMenuItem @click="handleRoleChange(member, 'member')">{{ $t('成员') }}</DropdownMenuItem>
+                    <DropdownMenuItem @click="handleRoleChange(member, 'guest')">{{ $t('访客') }}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
@@ -110,7 +110,7 @@
                   :class="member.status === 'disabled' ? 'text-primary' : 'text-warning'"
                   @click="handleStatusToggle(member)"
                 >
-                  {{ member.status === 'disabled' ? '启用' : '禁用' }}
+                  {{ member.status === 'disabled' ? $t('启用') : $t('禁用') }}
                 </Button>
                 <Button
                   variant="outline"
@@ -118,7 +118,7 @@
                   class="text-destructive"
                   @click="pendingRemove = member"
                 >
-                  移除
+                  {{ $t('移除') }}
                 </Button>
               </div>
             </div>
@@ -129,12 +129,12 @@
       <AlertDialog :open="!!pendingRoleChange">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认修改角色</AlertDialogTitle>
-            <AlertDialogDescription>确定将 {{ pendingRoleChange?.username }} 的角色从 {{ roleLabel(pendingRoleChange?.oldRole ?? '') }} 变更为 {{ roleLabel(pendingRoleChange?.newRole ?? '') }} 吗？权限变更将立即生效。</AlertDialogDescription>
+            <AlertDialogTitle>{{ $t('确认修改角色') }}</AlertDialogTitle>
+            <AlertDialogDescription>{{ $t('确定将 {p0} 的角色从 {p1} 变更为 {p2} 吗？权限变更将立即生效。', { p0: pendingRoleChange?.username, p1: roleLabel(pendingRoleChange?.oldRole ?? ''), p2: roleLabel(pendingRoleChange?.newRole ?? '') }) }}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel @click="pendingRoleChange = null">取消</AlertDialogCancel>
-            <AlertDialogAction @click="proceedRoleChange">确认修改</AlertDialogAction>
+            <AlertDialogCancel @click="pendingRoleChange = null">{{ $t('取消') }}</AlertDialogCancel>
+            <AlertDialogAction @click="proceedRoleChange">{{ $t('确认修改') }}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -142,12 +142,12 @@
       <AlertDialog :open="!!pendingRemove">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认移除成员</AlertDialogTitle>
-            <AlertDialogDescription>确定要移除成员 {{ pendingRemove?.username }} 吗？此操作不可撤销，该用户的所有域名分配和令牌将被删除。</AlertDialogDescription>
+            <AlertDialogTitle>{{ $t('确认移除成员') }}</AlertDialogTitle>
+            <AlertDialogDescription>{{ $t('确定要移除成员 {p0} 吗？此操作不可撤销，该用户的所有域名分配和令牌将被删除。', { p0: pendingRemove?.username }) }}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel @click="pendingRemove = null">取消</AlertDialogCancel>
-            <AlertDialogAction @click="proceedRemove">确认移除</AlertDialogAction>
+            <AlertDialogCancel @click="pendingRemove = null">{{ $t('取消') }}</AlertDialogCancel>
+            <AlertDialogAction @click="proceedRemove">{{ $t('确认移除') }}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -155,17 +155,17 @@
       <AlertDialog :open="!!pendingStatusChange">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{{ pendingStatusChange?.newStatus === 'disabled' ? '确认禁用账号' : '确认启用账号' }}</AlertDialogTitle>
+            <AlertDialogTitle>{{ pendingStatusChange?.newStatus === 'disabled' ? $t('确认禁用账号') : $t('确认启用账号') }}</AlertDialogTitle>
             <AlertDialogDescription>
               {{ pendingStatusChange?.newStatus === 'disabled'
-                ? `确定要禁用 ${pendingStatusChange?.username} 的账号吗？该用户将被强制下线且无法登录。`
-                : `确定要启用 ${pendingStatusChange?.username} 的账号吗？该用户将可以正常登录。`
+                ? $t('确定要禁用 {p0} 的账号吗？该用户将被强制下线且无法登录。', { p0: pendingStatusChange?.username })
+                : $t('确定要启用 {p0} 的账号吗？该用户将可以正常登录。', { p0: pendingStatusChange?.username })
               }}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel @click="pendingStatusChange = null">取消</AlertDialogCancel>
-            <AlertDialogAction @click="proceedStatusChange">确认</AlertDialogAction>
+            <AlertDialogCancel @click="pendingStatusChange = null">{{ $t('取消') }}</AlertDialogCancel>
+            <AlertDialogAction @click="proceedStatusChange">{{ $t('确认') }}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -183,6 +183,9 @@ import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const store = useTeamStore();
 const authStore = useAuthStore();
@@ -207,7 +210,7 @@ function formatDate(dateStr: string) {
 }
 
 function roleLabel(role: string): string {
-  const labels: Record<string, string> = { admin: '管理员', member: '成员', guest: '访客' };
+  const labels: Record<string, string> = { admin: t('管理员'), member: t('成员'), guest: t('访客') };
   return labels[role] ?? role;
 }
 
@@ -226,7 +229,7 @@ async function proceedRoleChange() {
   try {
     await store.updateMemberRole(pendingRoleChange.value.id, pendingRoleChange.value.newRole);
   } catch (err: any) {
-    alert(err.response?.data?.error || '修改角色失败');
+    alert(err.response?.data?.error || t('修改角色失败'));
   }
   pendingRoleChange.value = null;
 }
@@ -236,7 +239,7 @@ async function proceedRemove() {
   try {
     await store.removeMember(pendingRemove.value.id);
   } catch (err: any) {
-    alert(err.response?.data?.error || '移除成员失败');
+    alert(err.response?.data?.error || t('移除成员失败'));
   }
   pendingRemove.value = null;
 }
@@ -251,7 +254,7 @@ async function proceedStatusChange() {
   try {
     await store.updateMemberStatus(pendingStatusChange.value.id, pendingStatusChange.value.newStatus);
   } catch (err: any) {
-    alert(err.response?.data?.error || '状态变更失败');
+    alert(err.response?.data?.error || t('状态变更失败'));
   }
   pendingStatusChange.value = null;
 }

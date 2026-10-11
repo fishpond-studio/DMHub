@@ -3,14 +3,17 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const open = ref(false)
 
 const shortcuts = [
-  { keys: ['Ctrl', 'K'], desc: '打开命令面板 / 全局搜索入口' },
-  { keys: ['?'], desc: '显示本快捷键帮助' },
-  { keys: ['Esc'], desc: '关闭对话框 / 命令面板' },
-  { keys: ['G', 'D'], desc: '前往域名列表（命令面板内亦可）' },
-  { keys: ['G', 'H'], desc: '前往仪表盘' },
+  { keys: ['Ctrl', 'K'], desc: t('打开命令面板 / 全局搜索入口') },
+  { keys: ['?'], desc: t('显示本快捷键帮助') },
+  { keys: ['Esc'], desc: t('关闭对话框 / 命令面板') },
+  { keys: ['G', 'D'], desc: t('前往域名列表（命令面板内亦可）') },
+  { keys: ['G', 'H'], desc: t('前往仪表盘') },
 ]
 
 function onKeydown(e: KeyboardEvent) {
@@ -34,8 +37,8 @@ defineExpose({ open: () => { open.value = true } })
   <Dialog :open="open" @update:open="(v) => (open = v)">
     <DialogContent class="max-w-md">
       <DialogHeader>
-        <DialogTitle>键盘快捷键</DialogTitle>
-        <DialogDescription>提高日常操作效率（输入框内不触发）</DialogDescription>
+        <DialogTitle>{{ $t('键盘快捷键') }}</DialogTitle>
+        <DialogDescription>{{ $t('提高日常操作效率（输入框内不触发）') }}</DialogDescription>
       </DialogHeader>
       <div class="space-y-2">
         <div
@@ -57,7 +60,7 @@ defineExpose({ open: () => { open.value = true } })
         </div>
       </div>
       <p class="text-[11px] text-muted-foreground pt-1">
-        提示：命令面板内可用 ↑↓ 选择、Enter 打开、Esc 关闭。
+        {{ $t('提示：命令面板内可用 ↑↓ 选择、Enter 打开、Esc 关闭。') }}
       </p>
     </DialogContent>
   </Dialog>

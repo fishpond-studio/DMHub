@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Bell, CheckCheck, Trash2, ExternalLink, Inbox } from 'lucide-vue-next'
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const store = useNotificationStore()
 const router = useRouter()
 const open = ref(false)
@@ -17,12 +20,12 @@ const list = computed(() => store.notifications)
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const minutes = Math.floor(diff / 60000)
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes} 分钟前`
+  if (minutes < 1) return t('刚刚')
+  if (minutes < 60) return t('{p0} 分钟前', { p0: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} 小时前`
+  if (hours < 24) return t('{p0} 小时前', { p0: hours })
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days} 天前`
+  if (days < 7) return t('{p0} 天前', { p0: days })
   return new Date(dateStr).toLocaleString('zh-CN')
 }
 
@@ -57,7 +60,7 @@ async function clearAll() {
 <template>
   <Popover v-model:open="open">
     <PopoverTrigger as-child>
-      <Button variant="ghost" size="icon" class="relative h-8 w-8" title="站内消息">
+      <Button variant="ghost" size="icon" class="relative h-8 w-8" :title="$t('站内消息')">
         <Bell class="h-4 w-4" />
         <span
           v-if="unread > 0"
@@ -70,10 +73,9 @@ async function clearAll() {
     <PopoverContent align="end" class="w-[360px] p-0 sm:w-[400px]">
       <div class="flex items-center justify-between border-b px-3 py-2.5">
         <div class="flex items-center gap-2">
-          <span class="text-sm font-semibold">站内消息</span>
+          <span class="text-sm font-semibold">{{ $t('站内消息') }}</span>
           <Badge v-if="unread > 0" variant="secondary" class="h-5 px-1.5 text-[10px]">
-            {{ unread }} 未读
-          </Badge>
+            {{ $t('{p0} 未读', { p0: unread }) }}</Badge>
         </div>
         <div class="flex items-center gap-1">
           <Button
@@ -84,7 +86,7 @@ async function clearAll() {
             @click="markAll"
           >
             <CheckCheck class="mr-1 h-3.5 w-3.5" />
-            全部已读
+            {{ $t('全部已读') }}
           </Button>
           <Button
             variant="ghost"
@@ -101,8 +103,8 @@ async function clearAll() {
       <div class="max-h-[380px] overflow-y-auto">
         <div v-if="list.length === 0" class="flex flex-col items-center justify-center px-4 py-12 text-center">
           <Inbox class="mb-2 h-8 w-8 text-muted-foreground/50" />
-          <p class="text-sm text-muted-foreground">暂无消息</p>
-          <p class="mt-1 text-xs text-muted-foreground">域名分配、审批结果会显示在这里</p>
+          <p class="text-sm text-muted-foreground">{{ $t('暂无消息') }}</p>
+          <p class="mt-1 text-xs text-muted-foreground">{{ $t('域名分配、审批结果会显示在这里') }}</p>
         </div>
 
         <button
@@ -132,7 +134,7 @@ async function clearAll() {
                 v-if="n.metadata?.domainId || n.metadata?.type === 'assignment_request'"
                 class="inline-flex items-center text-[11px] text-primary"
               >
-                查看
+                {{ $t('查看') }}
                 <ExternalLink class="ml-0.5 h-3 w-3" />
               </span>
             </div>

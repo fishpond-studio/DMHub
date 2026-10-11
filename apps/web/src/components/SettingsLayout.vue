@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Settings, Users, KeyRound, Globe, Shield, Bell, Link, FileKey, UserCheck, LayoutDashboard, User, Key, ChevronDown, ChevronRight } from 'lucide-vue-next'
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const route = useRoute()
 const authStore = useAuthStore()
 
@@ -13,23 +16,23 @@ const isAdmin = computed(() => authStore.user?.role === 'admin')
 const sidebarOpen = ref(false)
 
 const adminItems = [
-  { label: '团队设置', icon: Settings, to: '/settings/team' },
-  { label: '成员管理', icon: Users, to: '/settings/members' },
-  { label: '邀请码', icon: KeyRound, to: '/settings/invite-codes' },
-  { label: '域名分配', icon: Globe, to: '/settings/domain-assignments' },
-  { label: '分配审核', icon: UserCheck, to: '/settings/assignment-approval' },
-  { label: 'DNS 服务商', icon: LayoutDashboard, to: '/settings/providers' },
+  { label: t('团队设置'), icon: Settings, to: '/settings/team' },
+  { label: t('成员管理'), icon: Users, to: '/settings/members' },
+  { label: t('邀请码'), icon: KeyRound, to: '/settings/invite-codes' },
+  { label: t('域名分配'), icon: Globe, to: '/settings/domain-assignments' },
+  { label: t('分配审核'), icon: UserCheck, to: '/settings/assignment-approval' },
+  { label: t('DNS 服务商'), icon: LayoutDashboard, to: '/settings/providers' },
   { label: 'OAuth/OIDC', icon: Link, to: '/settings/oauth-providers' },
-  { label: '通知设置', icon: Bell, to: '/settings/notifications' },
-  { label: 'API 密钥', icon: FileKey, to: '/settings/api-keys' },
-  { label: '密码重置请求', icon: Shield, to: '/settings/admin-reset-requests' },
+  { label: t('通知设置'), icon: Bell, to: '/settings/notifications' },
+  { label: t('API 密钥'), icon: FileKey, to: '/settings/api-keys' },
+  { label: t('密码重置请求'), icon: Shield, to: '/settings/admin-reset-requests' },
 ]
 
 const userItems = [
-  { label: '个人资料', icon: User, to: '/settings/profile' },
-  { label: '我的令牌', icon: Key, to: '/settings/user-tokens' },
-  { label: '账号绑定', icon: Link, to: '/settings/account-binding' },
-  { label: '2FA 设置', icon: Shield, to: '/settings/2fa' },
+  { label: t('个人资料'), icon: User, to: '/settings/profile' },
+  { label: t('我的令牌'), icon: Key, to: '/settings/user-tokens' },
+  { label: t('账号绑定'), icon: Link, to: '/settings/account-binding' },
+  { label: t('2FA 设置'), icon: Shield, to: '/settings/2fa' },
 ]
 
 function isActive(path: string) {
@@ -38,7 +41,7 @@ function isActive(path: string) {
 
 const currentLabel = computed(() => {
   const allItems = [...adminItems, ...userItems]
-  return allItems.find(i => isActive(i.to))?.label || '系统设置'
+  return allItems.find(i => isActive(i.to))?.label || t('系统设置')
 })
 
 function navigateOnMobile() {
@@ -53,7 +56,7 @@ function navigateOnMobile() {
         <Button variant="ghost" size="icon" @click="$router.push('/dashboard')" class="mr-3">
           <ArrowLeft class="h-5 w-5" />
         </Button>
-        <h1 class="text-xl md:text-2xl font-bold text-foreground">系统设置</h1>
+        <h1 class="text-xl md:text-2xl font-bold text-foreground">{{ $t('系统设置') }}</h1>
         <Button
           variant="outline"
           size="sm"
@@ -70,7 +73,7 @@ function navigateOnMobile() {
         <div class="hidden md:block w-52 flex-shrink-0 space-y-2">
           <Card v-if="isAdmin">
             <CardContent class="p-3">
-              <p class="label-micro mb-2">管理员</p>
+              <p class="label-micro mb-2">{{ $t('管理员') }}</p>
               <nav class="space-y-0.5">
                 <router-link
                   v-for="item in adminItems"
@@ -92,7 +95,7 @@ function navigateOnMobile() {
 
           <Card>
             <CardContent class="p-3">
-              <p class="label-micro mb-2">个人</p>
+              <p class="label-micro mb-2">{{ $t('个人') }}</p>
               <nav class="space-y-0.5">
                 <router-link
                   v-for="item in userItems"
@@ -117,7 +120,7 @@ function navigateOnMobile() {
           <Card>
             <CardContent class="p-3">
               <nav v-if="isAdmin" class="space-y-0.5 mb-3">
-                <p class="label-micro mb-2">管理员</p>
+                <p class="label-micro mb-2">{{ $t('管理员') }}</p>
                 <router-link
                   v-for="item in adminItems"
                   :key="item.to"
@@ -135,7 +138,7 @@ function navigateOnMobile() {
                 </router-link>
               </nav>
               <nav class="space-y-0.5">
-                <p class="label-micro mb-2">个人</p>
+                <p class="label-micro mb-2">{{ $t('个人') }}</p>
                 <router-link
                   v-for="item in userItems"
                   :key="item.to"

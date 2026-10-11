@@ -2,8 +2,8 @@
   <div class="min-h-screen bg-background">
     <div class="app-container py-6 md:py-8">
       <PageHeader
-        title="域名管理"
-        description="管理团队域名、分组、标签与到期状态"
+        :title="$t('域名管理')"
+        :description="$t('管理团队域名、分组、标签与到期状态')"
         back-to="/dashboard"
         show-back
       >
@@ -14,23 +14,23 @@
             @click="onlyFavorites = !onlyFavorites"
           >
             <Star class="mr-1.5 h-4 w-4" :class="onlyFavorites ? 'fill-warning/40 text-warning' : ''" />
-            收藏
+            {{ $t('收藏') }}
           </Button>
           <Button v-if="isAdmin" variant="outline" size="sm" :disabled="batchChecking" @click="handleBatchExpiry">
             <RefreshCw class="mr-1.5 h-4 w-4" :class="batchChecking ? 'animate-spin' : ''" />
-            {{ batchChecking ? '检查中…' : '批量查到期' }}
+            {{ batchChecking ? $t('检查中…') : $t('批量查到期') }}
           </Button>
           <Button v-if="isAdmin" variant="outline" size="sm" @click="handleExport">
             <Download class="mr-1.5 h-4 w-4" />
-            导出
+            {{ $t('导出') }}
           </Button>
           <Button v-if="isAdmin" variant="outline" size="sm" @click="$router.push('/import')">
             <Upload class="mr-1.5 h-4 w-4" />
-            导入
+            {{ $t('导入') }}
           </Button>
           <Button v-if="isAdmin" size="sm" @click="showAddDialog = true">
             <Plus class="mr-1.5 h-4 w-4" />
-            添加域名
+            {{ $t('添加域名') }}
           </Button>
         </template>
       </PageHeader>
@@ -38,7 +38,7 @@
       <div class="mb-4 md:hidden">
         <Button variant="outline" size="sm" class="w-full" @click="showFilters = !showFilters">
           <Filter class="mr-1 h-4 w-4" />
-          {{ showFilters ? '收起筛选' : '展开筛选' }}
+          {{ showFilters ? $t('收起筛选') : $t('展开筛选') }}
           <span v-if="activeFilterCount" class="ml-1 text-xs text-primary">({{ activeFilterCount }})</span>
         </Button>
       </div>
@@ -46,7 +46,7 @@
       <div v-if="showFilters" class="mb-4 space-y-3 md:hidden">
         <Card>
           <CardHeader class="px-4 pb-2 pt-3">
-            <CardTitle class="text-xs font-semibold uppercase text-muted-foreground">分组</CardTitle>
+            <CardTitle class="text-xs font-semibold uppercase text-muted-foreground">{{ $t('分组') }}</CardTitle>
           </CardHeader>
           <CardContent class="px-2 pb-3">
             <div class="flex flex-wrap gap-1">
@@ -55,7 +55,7 @@
                 :variant="!groupFilter ? 'secondary' : 'ghost'"
                 @click="groupFilter = ''; fetchList()"
               >
-                全部
+                {{ $t('全部') }}
               </Button>
               <Button
                 v-for="g in store.groups"
@@ -72,7 +72,7 @@
         </Card>
         <Card>
           <CardHeader class="px-4 pb-2 pt-3">
-            <CardTitle class="text-xs font-semibold uppercase text-muted-foreground">标签</CardTitle>
+            <CardTitle class="text-xs font-semibold uppercase text-muted-foreground">{{ $t('标签') }}</CardTitle>
           </CardHeader>
           <CardContent class="px-3 pb-3">
             <div class="flex flex-wrap gap-1.5">
@@ -86,7 +86,7 @@
                 {{ t.name }}
                 <span class="ml-1 opacity-60">{{ t.count }}</span>
               </Badge>
-              <div v-if="store.tags.length === 0" class="text-xs text-muted-foreground">暂无标签</div>
+              <div v-if="store.tags.length === 0" class="text-xs text-muted-foreground">{{ $t('暂无标签') }}</div>
             </div>
           </CardContent>
         </Card>
@@ -96,7 +96,7 @@
         <aside class="hidden w-52 shrink-0 md:block">
           <div class="sticky top-20 space-y-6">
             <div>
-              <p class="label-micro mb-2">分组</p>
+              <p class="label-micro mb-2">{{ $t('分组') }}</p>
               <div class="space-y-0.5">
                 <Button
                   size="sm"
@@ -105,7 +105,7 @@
                   :class="!groupFilter ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary' : 'text-muted-foreground'"
                   @click="groupFilter = ''; fetchList()"
                 >
-                  全部
+                  {{ $t('全部') }}
                 </Button>
                 <Button
                   v-for="g in store.groups"
@@ -123,7 +123,7 @@
             </div>
 
             <div>
-              <p class="label-micro mb-2">标签</p>
+              <p class="label-micro mb-2">{{ $t('标签') }}</p>
               <div class="flex flex-wrap gap-1.5">
                 <Badge
                   v-for="t in store.tags"
@@ -135,7 +135,7 @@
                   {{ t.name }}
                   <span class="tnum ml-1 opacity-60">{{ t.count }}</span>
                 </Badge>
-                <div v-if="store.tags.length === 0" class="text-xs text-muted-foreground">暂无标签</div>
+                <div v-if="store.tags.length === 0" class="text-xs text-muted-foreground">{{ $t('暂无标签') }}</div>
               </div>
             </div>
           </div>
@@ -148,46 +148,44 @@
               <Input
                 v-model="searchQuery"
                 type="text"
-                placeholder="搜索域名..."
+                :placeholder="$t('搜索域名․․․')"
                 class="pl-9"
                 @input="debouncedFetch"
               />
             </div>
             <Select v-model="statusFilter" @update:model-value="fetchList">
               <SelectTrigger class="w-full sm:w-[140px]">
-                <SelectValue placeholder="全部状态" />
+                <SelectValue :placeholder="$t('全部状态')" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="active">正常</SelectItem>
-                <SelectItem value="expired">已过期</SelectItem>
-                <SelectItem value="transferred">已转移</SelectItem>
+                <SelectItem value="all">{{ $t('全部状态') }}</SelectItem>
+                <SelectItem value="active">{{ $t('正常') }}</SelectItem>
+                <SelectItem value="expired">{{ $t('已过期') }}</SelectItem>
+                <SelectItem value="transferred">{{ $t('已转移') }}</SelectItem>
               </SelectContent>
             </Select>
             <Select v-model="sortBy">
               <SelectTrigger class="w-full sm:w-[150px]">
-                <SelectValue placeholder="排序" />
+                <SelectValue :placeholder="$t('排序')" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="name">按名称</SelectItem>
-                <SelectItem value="expiry">按到期时间</SelectItem>
-                <SelectItem value="records">按记录数</SelectItem>
-                <SelectItem value="updated">按更新时间</SelectItem>
+                <SelectItem value="name">{{ $t('按名称') }}</SelectItem>
+                <SelectItem value="expiry">{{ $t('按到期时间') }}</SelectItem>
+                <SelectItem value="records">{{ $t('按记录数') }}</SelectItem>
+                <SelectItem value="updated">{{ $t('按更新时间') }}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div v-if="activeFilterCount" class="mb-3 flex flex-wrap items-center gap-2">
-            <span class="text-xs text-muted-foreground">已筛选</span>
-            <Badge v-if="groupFilter" variant="secondary" class="gap-1">
-              分组: {{ groupFilter }}
-              <button class="opacity-60 hover:opacity-100" @click="groupFilter = ''; fetchList()">×</button>
+            <span class="text-xs text-muted-foreground">{{ $t('已筛选') }}</span>
+            <Badge v-if="groupFilter" variant="secondary" class="gap-1">{{ $t('分组: {p0}', { p0: groupFilter }) }}<button class="opacity-60 hover:opacity-100" @click="groupFilter = ''; fetchList()">×</button>
             </Badge>
             <Badge v-for="t in selectedTags" :key="t" variant="secondary" class="gap-1">
               {{ t }}
               <button class="opacity-60 hover:opacity-100" @click="toggleTagFilter(t)">×</button>
             </Badge>
-            <Button variant="ghost" size="sm" class="h-6 text-xs" @click="clearFilters">清除</Button>
+            <Button variant="ghost" size="sm" class="h-6 text-xs" @click="clearFilters">{{ $t('清除') }}</Button>
           </div>
 
           <div v-if="store.loading" class="space-y-3">
@@ -197,30 +195,30 @@
           <EmptyState
             v-else-if="filteredDomains.length === 0"
             :icon="Globe"
-            :title="hasAnyFilter ? '没有匹配的域名' : '还没有域名'"
-            :description="hasAnyFilter ? '试试调整搜索或筛选条件' : '添加第一个域名，开始统一管理解析与到期提醒'"
-            :action-label="isAdmin && !hasAnyFilter ? '添加域名' : undefined"
-            :secondary-label="hasAnyFilter ? '清除筛选' : undefined"
+            :title="hasAnyFilter ? $t('没有匹配的域名') : $t('还没有域名')"
+            :description="hasAnyFilter ? $t('试试调整搜索或筛选条件') : $t('添加第一个域名，开始统一管理解析与到期提醒')"
+            :action-label="isAdmin && !hasAnyFilter ? $t('添加域名') : undefined"
+            :secondary-label="hasAnyFilter ? $t('清除筛选') : undefined"
             @action="showAddDialog = true"
             @secondary="clearFilters"
           />
 
           <div v-else>
             <div class="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>共 {{ filteredDomains.length }} 个域名</span>
+              <span>{{ $t('共') }} {{ filteredDomains.length }} {{ $t('个域名') }}</span>
             </div>
 
             <div class="hidden overflow-hidden rounded-xl border md:block">
               <Table>
                 <TableHeader>
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
-                    <TableHead>域名</TableHead>
-                    <TableHead>服务商</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>到期时间</TableHead>
-                    <TableHead>标签</TableHead>
-                    <TableHead>分组</TableHead>
-                    <TableHead class="text-right">记录</TableHead>
+                    <TableHead>{{ $t('域名') }}</TableHead>
+                    <TableHead>{{ $t('服务商') }}</TableHead>
+                    <TableHead>{{ $t('状态') }}</TableHead>
+                    <TableHead>{{ $t('到期时间') }}</TableHead>
+                    <TableHead>{{ $t('标签') }}</TableHead>
+                    <TableHead>{{ $t('分组') }}</TableHead>
+                    <TableHead class="text-right">{{ $t('记录') }}</TableHead>
                     <TableHead class="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -238,7 +236,7 @@
                           <button
                             type="button"
                             class="shrink-0 text-muted-foreground hover:text-yellow-500"
-                            title="收藏"
+                            :title="$t('收藏')"
                             @click.stop="toggleFav(d.id)"
                           >
                             <Star class="h-3.5 w-3.5" :class="favSet.has(d.id) ? 'fill-yellow-400 text-yellow-500' : ''" />
@@ -288,8 +286,8 @@
                         variant="ghost"
                         size="icon"
                         class="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
-                        title="复制域名"
-                        @click.stop="copyText(d.name, '域名已复制')"
+                        :title="$t('复制域名')"
+                        @click.stop="copyText(d.name, $t('域名已复制'))"
                       >
                         <Copy class="h-3.5 w-3.5" />
                       </Button>
@@ -315,7 +313,7 @@
                         variant="ghost"
                         size="icon"
                         class="h-7 w-7"
-                        @click.stop="copyText(d.name, '域名已复制')"
+                        @click.stop="copyText(d.name, $t('域名已复制'))"
                       >
                         <Copy class="h-3.5 w-3.5" />
                       </Button>
@@ -337,21 +335,21 @@
                   </div>
                   <div class="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span class="text-muted-foreground">服务商:</span>
+                      <span class="text-muted-foreground">{{ $t('服务商:') }}</span>
                       <span class="ml-1">{{ d.providerName || '-' }}</span>
                     </div>
                     <div>
-                      <span class="text-muted-foreground">记录数:</span>
+                      <span class="text-muted-foreground">{{ $t('记录数:') }}</span>
                       <span class="ml-1">{{ d.recordCount }}</span>
                     </div>
                     <div>
-                      <span class="text-muted-foreground">到期:</span>
+                      <span class="text-muted-foreground">{{ $t('到期:') }}</span>
                       <span class="ml-1" :class="d.expiresAt ? expiryClass(d.expiresAt) : ''">
                         {{ d.expiresAt ? formatExpiry(d.expiresAt) : '-' }}
                       </span>
                     </div>
                     <div>
-                      <span class="text-muted-foreground">分组:</span>
+                      <span class="text-muted-foreground">{{ $t('分组:') }}</span>
                       <span class="ml-1">{{ d.groupName || '-' }}</span>
                     </div>
                   </div>
@@ -395,6 +393,9 @@ import { formatHostPreview, formatScopeLabel } from '@/lib/subdomain-scope'
 import api from '@/lib/axios'
 import { Filter, Plus, Search, Copy, Download, Upload, Globe, Star, RefreshCw } from 'lucide-vue-next'
 import { getFavoriteDomainIds, toggleFavoriteDomain } from '@/lib/favorites'
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const store = useDomainStore()
 const authStore = useAuthStore()
@@ -470,12 +471,12 @@ async function handleBatchExpiry() {
   try {
     const data = await store.batchCheckExpiry()
     toastSuccess(
-      `批量检查完成`,
-      `成功 ${data.succeeded}，失败 ${data.failed}`,
+      t('批量检查完成'),
+      t('成功 {p0}，失败 {p1}', { p0: data.succeeded, p1: data.failed }),
     )
     await fetchList()
   } catch (err: any) {
-    toastError('批量检查失败', err.response?.data?.error || err.message)
+    toastError(t('批量检查失败'), err.response?.data?.error || err.message)
   } finally {
     batchChecking.value = false
   }
@@ -516,9 +517,9 @@ function statusVariant(status: string): 'default' | 'destructive' | 'secondary' 
 }
 
 function statusLabel(status: string) {
-  if (status === 'active') return '正常'
-  if (status === 'expired') return '已过期'
-  if (status === 'transferred') return '已转移'
+  if (status === 'active') return t('正常')
+  if (status === 'expired') return t('已过期')
+  if (status === 'transferred') return t('已转移')
   return status
 }
 
@@ -531,8 +532,8 @@ function daysUntil(dateStr: string) {
 function formatExpiry(dateStr: string) {
   const days = daysUntil(dateStr)
   const formatted = new Date(dateStr).toLocaleDateString('zh-CN')
-  if (days < 0) return `${formatted} (已过期)`
-  if (days <= 30) return `${formatted} (${days}天后)`
+  if (days < 0) return t('{p0} (已过期)', { p0: formatted })
+  if (days <= 30) return t('{p0} ({p1}天后)', { p0: formatted, p1: days })
   return formatted
 }
 
@@ -553,9 +554,9 @@ async function handleExport() {
     link.download = 'domains.csv'
     link.click()
     URL.revokeObjectURL(url)
-    toastSuccess('导出成功')
+    toastSuccess(t('导出成功'))
   } catch (err: any) {
-    toastError('导出失败', err.response?.data?.error || err.message)
+    toastError(t('导出失败'), err.response?.data?.error || err.message)
   }
 }
 

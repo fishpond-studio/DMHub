@@ -193,7 +193,7 @@ watch(route, () => {
             <DropdownMenuContent align="end" class="w-60">
               <DropdownMenuLabel class="font-normal">
                 <div class="flex flex-col gap-1">
-                  <p class="text-sm font-medium leading-none">{{ authStore.user?.username || '用户' }}</p>
+                  <p class="text-sm font-medium leading-none">{{ authStore.user?.username || $t('用户') }}</p>
                   <div class="flex items-center gap-2 pt-1">
                     <p class="truncate text-xs text-muted-foreground">{{ authStore.user?.email || '' }}</p>
                     <Badge v-if="roleLabel" variant="secondary" class="shrink-0">

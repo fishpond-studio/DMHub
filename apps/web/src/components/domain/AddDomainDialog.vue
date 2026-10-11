@@ -2,27 +2,27 @@
   <Dialog :open="true" @update:open="(v) => { if (!v) $emit('close') }">
     <DialogContent class="max-w-lg max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>添加域名</DialogTitle>
+        <DialogTitle>{{ $t('添加域名') }}</DialogTitle>
       </DialogHeader>
 
       <div class="space-y-4">
         <div>
-          <Label class="mb-1">域名 <span class="text-destructive">*</span></Label>
+          <Label class="mb-1">{{ $t('域名') }} <span class="text-destructive">*</span></Label>
           <Input
             v-model="form.name"
             type="text"
-            placeholder="例: example.com"
+            :placeholder="$t('例: example․com')"
           />
         </div>
 
         <div>
-          <Label class="mb-1">DNS 服务商</Label>
+          <Label class="mb-1">{{ $t('DNS 服务商') }}</Label>
           <Select v-model="form.providerConfigId">
             <SelectTrigger>
-              <SelectValue placeholder="不关联服务商" />
+              <SelectValue :placeholder="$t('不关联服务商')" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">不关联服务商</SelectItem>
+              <SelectItem value="none">{{ $t('不关联服务商') }}</SelectItem>
               <SelectItem v-for="p in providers" :key="p.id" :value="p.id">{{ p.name }} ({{ p.providerId }})</SelectItem>
             </SelectContent>
           </Select>
@@ -30,7 +30,7 @@
 
         <div>
           <Label class="mb-1 flex items-center gap-2">
-            到期时间
+            {{ $t('到期时间') }}
             <Button
               v-if="form.name.trim()"
               variant="link"
@@ -39,7 +39,7 @@
               :disabled="fetchingExpiry"
               @click="fetchExpiry"
             >
-              {{ fetchingExpiry ? '查询中...' : 'WHOIS 自动获取' }}
+              {{ fetchingExpiry ? $t('查询中․․․') : $t('WHOIS 自动获取') }}
             </Button>
           </Label>
           <Input
@@ -49,33 +49,33 @@
         </div>
 
         <div>
-          <Label class="mb-1">标签</Label>
+          <Label class="mb-1">{{ $t('标签') }}</Label>
           <Input
             v-model="tagsInput"
             type="text"
-            placeholder="多个标签用逗号分隔"
+            :placeholder="$t('多个标签用逗号分隔')"
           />
         </div>
 
         <div>
-          <Label class="mb-1">分组</Label>
+          <Label class="mb-1">{{ $t('分组') }}</Label>
           <Input
             v-model="form.groupName"
             type="text"
-            placeholder="例: 生产环境, 测试环境"
+            :placeholder="$t('例: 生产环境, 测试环境')"
           />
         </div>
 
         <div class="flex items-center gap-2">
           <Checkbox v-model:checked="form.autoSync" id="autoSync" />
-          <Label for="autoSync">关联服务商后自动同步记录</Label>
+          <Label for="autoSync">{{ $t('关联服务商后自动同步记录') }}</Label>
         </div>
       </div>
 
       <DialogFooter>
-        <Button @click="$emit('close')" variant="outline">取消</Button>
+        <Button @click="$emit('close')" variant="outline">{{ $t('取消') }}</Button>
         <Button @click="handleSave" :disabled="saving">
-          {{ saving ? '添加中...' : '添加域名' }}
+          {{ saving ? $t('添加中․․․') : $t('添加域名') }}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -93,6 +93,9 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import api from '@/lib/axios';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const emit = defineEmits<{
   close: [];
@@ -129,10 +132,10 @@ async function fetchExpiry() {
     if (data.expiresAt) {
       form.expiresAt = new Date(data.expiresAt).toISOString().split('T')[0];
     } else {
-      alert('无法查询到该域名的到期时间');
+      alert(t('无法查询到该域名的到期时间'));
     }
   } catch (err: any) {
-    alert(err.response?.data?.error || 'WHOIS 查询失败');
+    alert(err.response?.data?.error || t('WHOIS 查询失败'));
   } finally {
     fetchingExpiry.value = false;
   }
@@ -140,7 +143,7 @@ async function fetchExpiry() {
 
 async function handleSave() {
   if (!form.name.trim()) {
-    alert('请输入域名');
+    alert(t('请输入域名'));
     return;
   }
 
@@ -167,7 +170,7 @@ async function handleSave() {
 
     emit('created');
   } catch (err: any) {
-    alert(err.response?.data?.error || '添加失败');
+    alert(err.response?.data?.error || t('添加失败'));
   } finally {
     saving.value = false;
   }

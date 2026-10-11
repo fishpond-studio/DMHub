@@ -3,17 +3,17 @@
     <div class="app-container py-4">
       <PageHeader
         compact
-        title="仪表盘"
-        description="域名健康、到期风险与团队动态一览"
+        :title="$t('仪表盘')"
+        :description="$t('域名健康、到期风险与团队动态一览')"
       >
         <template #actions>
           <Button variant="outline" size="sm" @click="refresh" :disabled="store.loading">
             <RefreshCw class="mr-1.5 h-4 w-4" :class="store.loading ? 'animate-spin' : ''" />
-            刷新
+            {{ $t('刷新') }}
           </Button>
           <Button v-if="isAdmin" size="sm" @click="$router.push({ path: '/domains', query: { add: '1' } })">
             <Plus class="mr-1.5 h-4 w-4" />
-            添加域名
+            {{ $t('添加域名') }}
           </Button>
         </template>
       </PageHeader>
@@ -70,8 +70,8 @@
 
         <div v-if="recentDomains.length" class="mb-4">
           <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-medium text-muted-foreground">最近访问</h2>
-            <Button variant="ghost" size="sm" class="h-7 text-xs" @click="clearRecent">清空</Button>
+            <h2 class="text-sm font-medium text-muted-foreground">{{ $t('最近访问') }}</h2>
+            <Button variant="ghost" size="sm" class="h-7 text-xs" @click="clearRecent">{{ $t('清空') }}</Button>
           </div>
           <div class="flex flex-wrap gap-2">
             <Button
@@ -92,16 +92,16 @@
           <CardHeader class="pb-3">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle class="text-base">域名健康</CardTitle>
-                <CardDescription>综合到期、记录与服务商绑定评估</CardDescription>
+                <CardTitle class="text-base">{{ $t('域名健康') }}</CardTitle>
+                <CardDescription>{{ $t('综合到期、记录与服务商绑定评估') }}</CardDescription>
               </div>
               <div class="flex items-center gap-3 text-sm">
                 <span class="tabular-nums">
-                  均分 <strong class="text-lg">{{ store.healthSummary.avgScore }}</strong>
+                  {{ $t('均分') }} <strong class="text-lg">{{ store.healthSummary.avgScore }}</strong>
                 </span>
-                <Badge variant="default">健康 {{ store.healthSummary.healthy }}</Badge>
-                <Badge variant="secondary">关注 {{ store.healthSummary.warning }}</Badge>
-                <Badge variant="destructive">风险 {{ store.healthSummary.critical }}</Badge>
+                <Badge variant="default">{{ $t('健康 {p0}', { p0: store.healthSummary.healthy }) }}</Badge>
+                <Badge variant="secondary">{{ $t('关注 {p0}', { p0: store.healthSummary.warning }) }}</Badge>
+                <Badge variant="destructive">{{ $t('风险 {p0}', { p0: store.healthSummary.critical }) }}</Badge>
               </div>
             </div>
           </CardHeader>
@@ -109,8 +109,8 @@
             <EmptyState
               v-if="!store.healthDomains.length"
               class="!border-0 !bg-transparent !py-6"
-              title="暂无域名"
-              description="添加域名后即可查看健康评分"
+              :title="$t('暂无域名')"
+              :description="$t('添加域名后即可查看健康评分')"
             />
             <div v-else class="space-y-2">
               <button
@@ -129,10 +129,8 @@
                 <div class="min-w-0 flex-1">
                   <div class="truncate font-record font-medium">{{ d.name }}</div>
                   <div class="truncate tnum text-xs text-muted-foreground">
-                    {{ d.issues[0] || '状态良好' }}
-                    <span v-if="d.daysRemaining != null"> · {{ d.daysRemaining }} 天到期</span>
-                    · {{ d.recordCount }} 条记录
-                  </div>
+                    {{ d.issues[0] || $t('状态良好') }}
+                    <span v-if="d.daysRemaining != null"> · {{ d.daysRemaining }} {{ $t('天到期') }}</span>{{ $t('· {p0} 条记录', { p0: d.recordCount }) }}</div>
                 </div>
                 <Badge :variant="healthBadgeVariant(d.level)" class="shrink-0">
                   {{ healthLevelLabel(d.level) }}
@@ -145,8 +143,8 @@
         <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card class="animate-fade-in stagger-5">
             <CardHeader>
-              <CardTitle class="text-base">到期日历</CardTitle>
-              <CardDescription>域名到期日期分布</CardDescription>
+              <CardTitle class="text-base">{{ $t('到期日历') }}</CardTitle>
+              <CardDescription>{{ $t('域名到期日期分布') }}</CardDescription>
             </CardHeader>
             <CardContent>
               <div class="space-y-3">
@@ -158,7 +156,7 @@
                   >
                     ←
                   </Button>
-                  <span class="text-sm font-medium">{{ calendarYear }} 年 {{ calendarMonth + 1 }} 月</span>
+                  <span class="text-sm font-medium">{{ calendarYear }} {{ $t('年') }} {{ calendarMonth + 1 }} {{ $t('月') }}</span>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -169,7 +167,7 @@
                 </div>
                 <div class="grid grid-cols-7 gap-1 text-center">
                   <div
-                    v-for="day in ['日', '一', '二', '三', '四', '五', '六']"
+                    v-for="day in [$t('日'), $t('一'), $t('二'), $t('三'), $t('四'), $t('五'), $t('六')]"
                     :key="day"
                     class="py-1 text-xs text-muted-foreground"
                   >
@@ -184,7 +182,7 @@
                       cell.hasExpiry ? 'bg-primary/5 hover:bg-primary/10 cursor-default' : '',
                       cell.isToday ? 'ring-1 ring-primary/40' : '',
                     ]"
-                    :title="cell.hasExpiry ? `有域名 ${cell.daysUntil} 天后到期` : undefined"
+                    :title="cell.hasExpiry ? $t('有域名 {p0} 天后到期', { p0: cell.daysUntil }) : undefined"
                   >
                     <span :class="cell.hasExpiry ? 'font-bold' : ''" :style="expiryDayStyle(cell)">
                       {{ cell.day }}
@@ -199,11 +197,11 @@
                 <div class="flex items-center gap-4 pt-1 text-xs text-muted-foreground">
                   <span class="flex items-center gap-1">
                     <span class="h-2 w-2 rounded-full bg-destructive" />
-                    7天内到期
+                    {{ $t('7天内到期') }}
                   </span>
                   <span class="flex items-center gap-1">
                     <span class="h-2 w-2 rounded-full bg-primary" />
-                    30天内到期
+                    {{ $t('30天内到期') }}
                   </span>
                 </div>
               </div>
@@ -213,19 +211,19 @@
           <Card class="animate-fade-in stagger-6">
             <CardHeader class="flex flex-row items-center justify-between">
               <div>
-                <CardTitle class="text-base">即将过期的域名</CardTitle>
-                <CardDescription>30 天内到期，优先处理</CardDescription>
+                <CardTitle class="text-base">{{ $t('即将过期的域名') }}</CardTitle>
+                <CardDescription>{{ $t('30 天内到期，优先处理') }}</CardDescription>
               </div>
               <Button variant="ghost" size="sm" class="text-xs" @click="$router.push('/domains?status=active')">
-                查看全部
+                {{ $t('查看全部') }}
               </Button>
             </CardHeader>
             <CardContent>
               <EmptyState
                 v-if="store.expiring.length === 0"
                 class="!border-0 !bg-transparent !py-8"
-                title="暂无即将过期域名"
-                description="继续保持，记得定期检查 WHOIS 到期时间"
+                :title="$t('暂无即将过期域名')"
+                :description="$t('继续保持，记得定期检查 WHOIS 到期时间')"
               />
               <Table v-else>
                 <TableBody>
@@ -239,7 +237,7 @@
                     <TableCell class="font-record font-medium">{{ d.domain }}</TableCell>
                     <TableCell class="tnum text-xs text-muted-foreground">{{ formatDate(d.expiresAt) }}</TableCell>
                     <TableCell class="text-right">
-                      <Badge :variant="urgencyVariant(d.daysRemaining)">{{ d.daysRemaining }} 天</Badge>
+                      <Badge :variant="urgencyVariant(d.daysRemaining)">{{ $t('{p0} 天', { p0: d.daysRemaining }) }}</Badge>
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -250,19 +248,19 @@
           <Card class="animate-fade-in stagger-7 lg:col-span-2">
             <CardHeader class="flex flex-row items-center justify-between">
               <div>
-                <CardTitle class="text-base">最近活动</CardTitle>
-                <CardDescription>团队成员的最新操作</CardDescription>
+                <CardTitle class="text-base">{{ $t('最近活动') }}</CardTitle>
+                <CardDescription>{{ $t('团队成员的最新操作') }}</CardDescription>
               </div>
               <Button variant="ghost" size="sm" class="text-xs" @click="$router.push('/logs')">
-                全部日志
+                {{ $t('全部日志') }}
               </Button>
             </CardHeader>
             <CardContent>
               <EmptyState
                 v-if="store.activity.length === 0"
                 class="!border-0 !bg-transparent !py-8"
-                title="暂无活动记录"
-                description="添加域名或修改解析后，这里会显示动态"
+                :title="$t('暂无活动记录')"
+                :description="$t('添加域名或修改解析后，这里会显示动态')"
               />
               <ul v-else class="divide-y divide-border">
                 <li
@@ -290,15 +288,15 @@
 
         <Card class="animate-fade-in stagger-8">
           <CardHeader>
-            <CardTitle class="text-base">DNS 记录类型分布</CardTitle>
-            <CardDescription>当前团队解析记录构成</CardDescription>
+            <CardTitle class="text-base">{{ $t('DNS 记录类型分布') }}</CardTitle>
+            <CardDescription>{{ $t('当前团队解析记录构成') }}</CardDescription>
           </CardHeader>
           <CardContent>
             <EmptyState
               v-if="!store.distribution || store.distribution.labels.length === 0"
               class="!border-0 !bg-transparent !py-8"
-              title="暂无记录数据"
-              description="同步或添加 DNS 记录后即可看到分布"
+              :title="$t('暂无记录数据')"
+              :description="$t('同步或添加 DNS 记录后即可看到分布')"
             />
             <div v-else class="space-y-3">
               <div
@@ -353,6 +351,9 @@ import {
 } from 'lucide-vue-next'
 import { clearRecentDomains, getRecentDomains, type RecentDomain } from '@/lib/recent-domains'
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const store = useDashboardStore()
 const authStore = useAuthStore()
 const router = useRouter()
@@ -381,9 +382,9 @@ function healthBadgeVariant(level: string): 'default' | 'secondary' | 'destructi
 }
 
 function healthLevelLabel(level: string) {
-  if (level === 'healthy') return '健康'
-  if (level === 'warning') return '关注'
-  return '风险'
+  if (level === 'healthy') return t('健康')
+  if (level === 'warning') return t('关注')
+  return t('风险')
 }
 
 const calendarYear = ref(new Date().getFullYear())
@@ -393,35 +394,35 @@ const today = new Date()
 const quickActions = computed(() => {
   const actions = [
     {
-      label: '域名列表',
-      desc: '管理全部域名',
+      label: t('域名列表'),
+      desc: t('管理全部域名'),
       icon: Globe,
       run: () => router.push('/domains'),
     },
     {
-      label: '操作日志',
-      desc: '审计变更记录',
+      label: t('操作日志'),
+      desc: t('审计变更记录'),
       icon: ScrollText,
       run: () => router.push('/logs'),
     },
     {
-      label: '系统设置',
-      desc: '团队与通知',
+      label: t('系统设置'),
+      desc: t('团队与通知'),
       icon: Settings,
       run: () => router.push('/settings/team'),
     },
   ]
   if (isAdmin.value) {
     actions.splice(1, 0, {
-      label: '批量导入',
-      desc: 'CSV 导入域名',
+      label: t('批量导入'),
+      desc: t('CSV 导入域名'),
       icon: Upload,
       run: () => router.push('/import'),
     })
   } else {
     actions.splice(1, 0, {
-      label: '我的域名',
-      desc: '指派给我的',
+      label: t('我的域名'),
+      desc: t('指派给我的'),
       icon: Globe,
       run: () => router.push('/my-domains'),
     })
@@ -527,14 +528,14 @@ function formatDate(dateStr: string) {
 
 function actionLabel(action: string) {
   const map: Record<string, string> = {
-    'domain.add': '添加了域名',
-    'domain.delete': '删除了域名',
-    'record.create': '创建了记录',
-    'record.update': '更新了记录',
-    'record.delete': '删除了记录',
-    'record.sync': '同步了记录',
-    'import.domains': '批量导入了域名',
-    'import.records': '批量导入了记录',
+    'domain.add': t('添加了域名'),
+    'domain.delete': t('删除了域名'),
+    'record.create': t('创建了记录'),
+    'record.update': t('更新了记录'),
+    'record.delete': t('删除了记录'),
+    'record.sync': t('同步了记录'),
+    'import.domains': t('批量导入了域名'),
+    'import.records': t('批量导入了记录'),
   }
   return map[action] || action
 }
@@ -550,12 +551,12 @@ function actionColor(action: string) {
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const minutes = Math.floor(diff / 60000)
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes}分钟前`
+  if (minutes < 1) return t('刚刚')
+  if (minutes < 60) return t('{p0}分钟前', { p0: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}小时前`
+  if (hours < 24) return t('{p0}小时前', { p0: hours })
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}天前`
+  if (days < 7) return t('{p0}天前', { p0: days })
   return new Date(dateStr).toLocaleDateString('zh-CN')
 }
 
@@ -572,16 +573,16 @@ function escapeHtml(str: string): string {
 
 const statCards = computed(() => [
   {
-    label: '域名总数',
+    label: t('域名总数'),
     value: store.stats?.totalDomains ?? 0,
     icon: Globe,
     iconBg: 'bg-chart-1/15',
     iconColor: 'text-chart-1',
-    subHtml: `<span class="text-primary">${escapeHtml(String(store.stats?.activeDomains ?? 0))} 正常</span><span class="mx-1">/</span><span class="text-destructive">${escapeHtml(String(store.stats?.expiredDomains ?? 0))} 已过期</span>`,
+    subHtml: `<span class="text-primary">${escapeHtml(String(store.stats?.activeDomains ?? 0))} ${t('正常')}</span><span class="mx-1">/</span><span class="text-destructive">${escapeHtml(String(store.stats?.expiredDomains ?? 0))} ${t('已过期')}</span>`,
     hint: '',
   },
   {
-    label: 'DNS 记录',
+    label: t('DNS 记录'),
     value: store.stats?.totalRecords ?? 0,
     icon: FileText,
     iconBg: 'bg-chart-2/15',
@@ -596,22 +597,22 @@ const statCards = computed(() => [
     hint: '',
   },
   {
-    label: '团队成员',
+    label: t('团队成员'),
     value: store.stats?.totalMembers ?? 0,
     icon: Users,
     iconBg: 'bg-chart-4/15',
     iconColor: 'text-chart-4',
     subHtml: '',
-    hint: '当前团队规模',
+    hint: t('当前团队规模'),
   },
   {
-    label: '近7天变更',
+    label: t('近7天变更'),
     value: store.stats?.recentChanges ?? 0,
     icon: Activity,
     iconBg: 'bg-chart-3/15',
     iconColor: 'text-chart-3',
     subHtml: '',
-    hint: '解析与域名相关操作',
+    hint: t('解析与域名相关操作'),
   },
 ])
 

@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 /**
  * 将指派的 subdomainPattern 转成用户能看懂的范围说明。
  *
@@ -22,13 +23,13 @@ export function formatHostPreview(domainName: string, pattern: string | null | u
 /** 中文范围说明 */
 export function formatScopeLabel(pattern: string | null | undefined): string {
   const pat = normalizePattern(pattern)
-  if (pat === '*') return '全部主机（含裸域名与所有子域名）'
-  if (pat === '@' || pat === '') return '仅裸域名（@）'
+  if (pat === '*') return i18n.global.t('全部主机（含裸域名与所有子域名）')
+  if (pat === '@' || pat === '') return i18n.global.t('仅裸域名（@）')
   if (pat.startsWith('*.')) {
     const suffix = pat.slice(2)
-    return `仅 ${suffix} 下的多级子域名（不含 ${suffix} 本身）`
+    return i18n.global.t('仅 {p0} 下的多级子域名（不含 {p1} 本身）', { p0: suffix, p1: suffix })
   }
-  return `仅主机 ${pat}`
+  return i18n.global.t('仅主机 {p0}', { p0: pat })
 }
 
 /** 列表/卡片用的短标签 */
@@ -37,9 +38,9 @@ export function formatScopeShort(domainName: string, pattern: string | null | un
 }
 
 export function permissionLabel(permission: string | null | undefined): string {
-  if (permission === 'dns_edit') return '可编辑'
-  if (permission === 'dns_readonly') return '只读'
-  return permission || '未知'
+  if (permission === 'dns_edit') return i18n.global.t('可编辑')
+  if (permission === 'dns_readonly') return i18n.global.t('只读')
+  return permission || i18n.global.t('未知')
 }
 
 export function isEditablePermission(permission: string | null | undefined): boolean {

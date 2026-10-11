@@ -2,30 +2,30 @@
   <div>
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-foreground">我的令牌</h1>
-        <p class="text-sm text-muted-foreground mt-1">管理您的个人访问令牌，用于API调用和系统鉴权</p>
+        <h1 class="text-2xl font-bold text-foreground">{{ $t('我的令牌') }}</h1>
+        <p class="text-sm text-muted-foreground mt-1">{{ $t('管理您的个人访问令牌，用于API调用和系统鉴权') }}</p>
       </div>
       <Button @click="showCreateDialog = true">
         <Plus class="h-4 w-4 mr-1" />
-        生成新令牌
+        {{ $t('生成新令牌') }}
       </Button>
     </div>
 
-    <div v-if="loading" class="text-center py-12 text-muted-foreground">加载中...</div>
+    <div v-if="loading" class="text-center py-12 text-muted-foreground">{{ $t('加载中․․․') }}</div>
     <div v-else-if="tokens.length === 0" class="text-center py-12 text-muted-foreground">
-      暂无令牌，点击上方按钮生成
+      {{ $t('暂无令牌，点击上方按钮生成') }}
     </div>
     <Card v-else>
       <div class="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>名称</TableHead>
-              <TableHead>令牌前缀</TableHead>
-              <TableHead>权限</TableHead>
-              <TableHead>最后使用</TableHead>
-              <TableHead>创建时间</TableHead>
-              <TableHead class="text-right">操作</TableHead>
+              <TableHead>{{ $t('名称') }}</TableHead>
+              <TableHead>{{ $t('令牌前缀') }}</TableHead>
+              <TableHead>{{ $t('权限') }}</TableHead>
+              <TableHead>{{ $t('最后使用') }}</TableHead>
+              <TableHead>{{ $t('创建时间') }}</TableHead>
+              <TableHead class="text-right">{{ $t('操作') }}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -40,14 +40,14 @@
                 </div>
               </TableCell>
               <TableCell class="text-muted-foreground tnum">
-                {{ token.lastUsedAt ? new Date(token.lastUsedAt).toLocaleString('zh-CN') : '从未使用' }}
+                {{ token.lastUsedAt ? new Date(token.lastUsedAt).toLocaleString('zh-CN') : $t('从未使用') }}
               </TableCell>
               <TableCell class="text-muted-foreground tnum">
                 {{ new Date(token.createdAt).toLocaleString('zh-CN') }}
               </TableCell>
               <TableCell class="text-right">
                 <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" @click="handleRevoke(token.id, token.name)">
-                  吊销
+                  {{ $t('吊销') }}
                 </Button>
               </TableCell>
             </TableRow>
@@ -60,7 +60,7 @@
           <div class="flex items-center justify-between mb-2">
             <span class="font-medium">{{ token.name }}</span>
             <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" @click="handleRevoke(token.id, token.name)">
-              吊销
+              {{ $t('吊销') }}
             </Button>
           </div>
           <div class="font-record text-muted-foreground mb-2">{{ token.tokenPrefix }}...</div>
@@ -70,8 +70,8 @@
             </Badge>
           </div>
           <div class="text-xs text-muted-foreground tnum">
-            创建: {{ new Date(token.createdAt).toLocaleString('zh-CN') }} ·
-            {{ token.lastUsedAt ? '最后使用: ' + new Date(token.lastUsedAt).toLocaleString('zh-CN') : '从未使用' }}
+            {{ $t('创建:') }} {{ new Date(token.createdAt).toLocaleString('zh-CN') }} ·
+            {{ token.lastUsedAt ? $t('最后使用:') + new Date(token.lastUsedAt).toLocaleString('zh-CN') : $t('从未使用') }}
           </div>
         </div>
       </div>
@@ -80,15 +80,15 @@
     <Dialog :open="showCreateDialog" @update:open="showCreateDialog = $event">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>生成新个人令牌</DialogTitle>
+          <DialogTitle>{{ $t('生成新个人令牌') }}</DialogTitle>
         </DialogHeader>
         <div class="space-y-4">
           <div>
-            <Label class="mb-1 block">名称</Label>
-            <Input v-model="newTokenName" type="text" placeholder="令牌名称" />
+            <Label class="mb-1 block">{{ $t('名称') }}</Label>
+            <Input v-model="newTokenName" type="text" :placeholder="$t('令牌名称')" />
           </div>
           <div>
-            <Label class="mb-1 block">权限</Label>
+            <Label class="mb-1 block">{{ $t('权限') }}</Label>
             <div class="space-y-2">
               <div v-for="perm in availablePermissions" :key="perm.value" class="flex items-center space-x-2">
                 <Checkbox
@@ -101,8 +101,8 @@
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showCreateDialog = false">取消</Button>
-          <Button @click="handleGenerate" :disabled="!newTokenName || newTokenPermissions.length === 0">生成</Button>
+          <Button variant="outline" @click="showCreateDialog = false">{{ $t('取消') }}</Button>
+          <Button @click="handleGenerate" :disabled="!newTokenName || newTokenPermissions.length === 0">{{ $t('生成') }}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -110,24 +110,24 @@
     <Dialog :open="!!generatedToken" @update:open="!$event && (generatedToken = null)">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>个人令牌已生成</DialogTitle>
+          <DialogTitle>{{ $t('个人令牌已生成') }}</DialogTitle>
         </DialogHeader>
         <div class="rounded-md border border-warning/25 bg-warning/15 p-3 mb-4">
-          <p class="text-sm text-warning font-medium">请立即复制并妥善保存此令牌，关闭后将无法再次查看！</p>
+          <p class="text-sm text-warning font-medium">{{ $t('请立即复制并妥善保存此令牌，关闭后将无法再次查看！') }}</p>
         </div>
         <div class="rounded-md bg-muted p-3 mb-4 break-all font-record select-all">
           {{ generatedToken?.token }}
         </div>
         <div class="text-sm text-muted-foreground mb-4">
-          <p>名称: {{ generatedToken?.name }}</p>
-          <p>权限: {{ generatedToken?.permissions.map(permissionLabel).join(', ') }}</p>
+          <p>{{ $t('名称:') }} {{ generatedToken?.name }}</p>
+          <p>{{ $t('权限:') }} {{ generatedToken?.permissions.map(permissionLabel).join(', ') }}</p>
         </div>
         <DialogFooter>
           <Button variant="outline" @click="copyToken">
             <Copy class="h-4 w-4 mr-1" />
-            {{ copied ? '已复制' : '复制令牌' }}
+            {{ copied ? $t('已复制') : $t('复制令牌') }}
           </Button>
-          <Button @click="generatedToken = null">我已保存</Button>
+          <Button @click="generatedToken = null">{{ $t('我已保存') }}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -135,12 +135,12 @@
     <AlertDialog :open="!!revokeTokenId">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>确认吊销令牌</AlertDialogTitle>
-          <AlertDialogDescription>确定要吊销令牌「{{ revokeTokenName }}」吗？此操作不可撤销。</AlertDialogDescription>
+          <AlertDialogTitle>{{ $t('确认吊销令牌') }}</AlertDialogTitle>
+          <AlertDialogDescription>{{ $t('确定要吊销令牌「{p0}」吗？此操作不可撤销。', { p0: revokeTokenName }) }}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel @click="revokeTokenId = ''; revokeTokenName = ''">取消</AlertDialogCancel>
-          <AlertDialogAction @click="proceedRevoke">确认吊销</AlertDialogAction>
+          <AlertDialogCancel @click="revokeTokenId = ''; revokeTokenName = ''">{{ $t('取消') }}</AlertDialogCancel>
+          <AlertDialogAction @click="proceedRevoke">{{ $t('确认吊销') }}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -160,6 +160,9 @@ import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 interface UserToken {
   id: string;
@@ -181,18 +184,18 @@ const revokeTokenName = ref('');
 const generatedToken = ref<{ token: string; name: string; permissions: string[] } | null>(null);
 
 const availablePermissions = [
-  { value: 'domains:read', label: '读取域名' },
-  { value: 'records:read', label: '读取记录' },
-  { value: 'records:write', label: '写入记录' },
-  { value: '*', label: '全部权限' },
+  { value: 'domains:read', label: t('读取域名') },
+  { value: 'records:read', label: t('读取记录') },
+  { value: 'records:write', label: t('写入记录') },
+  { value: '*', label: t('全部权限') },
 ];
 
 function permissionLabel(perm: string) {
   const map: Record<string, string> = {
-    'domains:read': '读取域名',
-    'records:read': '读取记录',
-    'records:write': '写入记录',
-    '*': '全部权限',
+    'domains:read': t('读取域名'),
+    'records:read': t('读取记录'),
+    'records:write': t('写入记录'),
+    '*': t('全部权限'),
   };
   return map[perm] || perm;
 }
@@ -228,7 +231,7 @@ async function handleGenerate() {
     newTokenPermissions.value = ['domains:read', 'records:read'];
     await fetchTokens();
   } catch (err: any) {
-    alert(err.response?.data?.error || '生成失败');
+    alert(err.response?.data?.error || t('生成失败'));
   }
 }
 
@@ -243,7 +246,7 @@ async function proceedRevoke() {
     await api.delete(`/auth/me/tokens/${revokeTokenId.value}`);
     await fetchTokens();
   } catch (err: any) {
-    alert(err.response?.data?.error || '吊销失败');
+    alert(err.response?.data?.error || t('吊销失败'));
   }
   revokeTokenId.value = '';
   revokeTokenName.value = '';

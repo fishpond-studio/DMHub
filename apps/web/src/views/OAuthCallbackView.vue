@@ -4,10 +4,10 @@
       <CardHeader class="text-center">
         <CardTitle class="text-2xl font-bold">DMHub</CardTitle>
         <CardDescription>
-          <span v-if="bound">账号绑定成功</span>
-          <span v-else-if="needsInvite">完成 OAuth 注册</span>
-          <span v-else-if="error">登录失败</span>
-          <span v-else>正在完成登录…</span>
+          <span v-if="bound">{{ $t('账号绑定成功') }}</span>
+          <span v-else-if="needsInvite">{{ $t('完成 OAuth 注册') }}</span>
+          <span v-else-if="error">{{ $t('登录失败') }}</span>
+          <span v-else>{{ $t('正在完成登录…') }}</span>
         </CardDescription>
       </CardHeader>
 
@@ -15,25 +15,25 @@
         <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 p-4">
           <p class="text-sm text-destructive whitespace-pre-wrap">{{ error }}</p>
           <div class="mt-3 flex flex-col gap-2">
-            <Button variant="outline" class="w-full" @click="$router.push('/login')">返回登录</Button>
+            <Button variant="outline" class="w-full" @click="$router.push('/login')">{{ $t('返回登录') }}</Button>
             <Button
               v-if="boundOrBindError"
               variant="ghost"
               class="w-full"
               @click="$router.push('/settings/account-binding')"
             >
-              返回账号绑定
+              {{ $t('返回账号绑定') }}
             </Button>
           </div>
         </div>
 
         <div v-else-if="bound" class="space-y-4 text-center">
           <p class="text-sm text-muted-foreground">
-            已成功绑定
+            {{ $t('已成功绑定') }}
             <span class="font-medium text-foreground">{{ providerId || 'OAuth' }}</span>
           </p>
           <Button class="w-full" @click="$router.push('/settings/account-binding')">
-            查看账号绑定
+            {{ $t('查看账号绑定') }}
           </Button>
         </div>
 
@@ -45,19 +45,19 @@
                 <Globe class="h-6 w-6 text-muted-foreground" />
               </AvatarFallback>
             </Avatar>
-            <p class="mt-2 text-sm text-muted-foreground">{{ name || email || '新用户' }}</p>
+            <p class="mt-2 text-sm text-muted-foreground">{{ name || email || $t('新用户') }}</p>
           </div>
           <p class="text-center text-sm text-muted-foreground">
-            首次通过外部账号登录需要邀请码
+            {{ $t('首次通过外部账号登录需要邀请码') }}
           </p>
 
           <div class="space-y-2">
-            <Label for="inviteCode">邀请码</Label>
+            <Label for="inviteCode">{{ $t('邀请码') }}</Label>
             <Input
               id="inviteCode"
               v-model="inviteCode"
               type="text"
-              placeholder="请输入邀请码"
+              :placeholder="$t('请输入邀请码')"
               @keydown.enter="handleRegister"
             />
           </div>
@@ -66,13 +66,13 @@
 
           <Button class="w-full" :disabled="submitting" @click="handleRegister">
             <Loader2 v-if="submitting" class="mr-2 h-4 w-4 animate-spin" />
-            {{ submitting ? '注册中…' : '注册并登录' }}
+            {{ submitting ? $t('注册中…') : $t('注册并登录') }}
           </Button>
         </div>
 
         <div v-else class="py-6 text-center">
           <Loader2 class="mx-auto h-8 w-8 animate-spin text-primary" />
-          <p class="mt-4 text-sm text-muted-foreground">正在验证身份并登录…</p>
+          <p class="mt-4 text-sm text-muted-foreground">{{ $t('正在验证身份并登录…') }}</p>
         </div>
       </CardContent>
     </Card>
@@ -90,6 +90,9 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Loader2, Globe } from 'lucide-vue-next'
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const router = useRouter()
 const route = useRoute()
@@ -151,7 +154,7 @@ onMounted(async () => {
     try {
       await exchangeTicket(String(query.ticket))
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || '登录票据无效'
+      error.value = err.response?.data?.error || err.message || t('登录票据无效')
     }
     return
   }
@@ -172,13 +175,13 @@ onMounted(async () => {
     return
   }
 
-  error.value = '未知的回调参数，请从登录页重新发起 OAuth 登录'
+  error.value = t('未知的回调参数，请从登录页重新发起 OAuth 登录')
 })
 
 async function handleRegister() {
   formError.value = ''
   if (!inviteCode.value.trim()) {
-    formError.value = '请输入邀请码'
+    formError.value = t('请输入邀请码')
     return
   }
 
@@ -195,7 +198,7 @@ async function handleRegister() {
     }
     router.replace('/dashboard')
   } catch (err: any) {
-    formError.value = err.response?.data?.error || '注册失败'
+    formError.value = err.response?.data?.error || t('注册失败')
   } finally {
     submitting.value = false
   }

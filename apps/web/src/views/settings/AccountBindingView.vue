@@ -1,24 +1,24 @@
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-foreground mb-2">账号绑定</h1>
+    <h1 class="text-2xl font-bold text-foreground mb-2">{{ $t('账号绑定') }}</h1>
     <p class="mb-6 text-sm text-muted-foreground">
-      将外部 OIDC / OAuth2 账号绑定到当前用户，便于单点登录
+      {{ $t('将外部 OIDC / OAuth2 账号绑定到当前用户，便于单点登录') }}
     </p>
 
-    <div v-if="loading" class="py-12 text-center text-muted-foreground">加载中…</div>
+    <div v-if="loading" class="py-12 text-center text-muted-foreground">{{ $t('加载中…') }}</div>
 
     <div v-else class="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle class="text-base">已绑定</CardTitle>
-          <CardDescription>可通过以下方式登录本系统</CardDescription>
+          <CardTitle class="text-base">{{ $t('已绑定') }}</CardTitle>
+          <CardDescription>{{ $t('可通过以下方式登录本系统') }}</CardDescription>
         </CardHeader>
         <CardContent class="space-y-3">
           <div
             v-if="bindings.length === 0"
             class="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground"
           >
-            暂未绑定任何外部账号
+            {{ $t('暂未绑定任何外部账号') }}
           </div>
           <div
             v-for="binding in bindings"
@@ -36,7 +36,7 @@
                   <Badge variant="secondary" class="text-[10px]">{{ binding.providerId }}</Badge>
                 </div>
                 <p class="truncate text-xs text-muted-foreground">
-                  {{ binding.providerName || binding.providerEmail || '已绑定' }}
+                  {{ binding.providerName || binding.providerEmail || $t('已绑定') }}
                   <span v-if="binding.providerEmail && binding.providerName">
                     · {{ binding.providerEmail }}
                   </span>
@@ -50,7 +50,7 @@
               :disabled="unbindingId === binding.providerId"
               @click="handleUnbind(binding)"
             >
-              {{ unbindingId === binding.providerId ? '解绑中…' : '解绑' }}
+              {{ unbindingId === binding.providerId ? $t('解绑中…') : $t('解绑') }}
             </Button>
           </div>
         </CardContent>
@@ -58,8 +58,8 @@
 
       <Card v-if="availableProviders.length > 0">
         <CardHeader>
-          <CardTitle class="text-base">绑定新提供商</CardTitle>
-          <CardDescription>将跳转到对应身份提供商完成授权</CardDescription>
+          <CardTitle class="text-base">{{ $t('绑定新提供商') }}</CardTitle>
+          <CardDescription>{{ $t('将跳转到对应身份提供商完成授权') }}</CardDescription>
         </CardHeader>
         <CardContent class="space-y-2">
           <button
@@ -78,7 +78,7 @@
               <p class="text-xs text-muted-foreground">{{ prov.type.toUpperCase() }}</p>
             </div>
             <span class="text-sm text-primary">
-              {{ bindingProviderId === prov.providerId ? '跳转中…' : '绑定' }}
+              {{ bindingProviderId === prov.providerId ? $t('跳转中…') : $t('绑定') }}
             </span>
           </button>
         </CardContent>
@@ -90,12 +90,12 @@
     <AlertDialog :open="confirmUnbind.open">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>确认解绑</AlertDialogTitle>
+          <AlertDialogTitle>{{ $t('确认解绑') }}</AlertDialogTitle>
           <AlertDialogDescription>{{ confirmUnbind.message }}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel @click="confirmUnbind.open = false">取消</AlertDialogCancel>
-          <AlertDialogAction @click="proceedUnbind">确认解绑</AlertDialogAction>
+          <AlertDialogCancel @click="confirmUnbind.open = false">{{ $t('取消') }}</AlertDialogCancel>
+          <AlertDialogAction @click="proceedUnbind">{{ $t('确认解绑') }}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -119,6 +119,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 interface Binding {
   id: string
@@ -187,11 +190,11 @@ async function handleBind(providerId: string) {
   try {
     const { data } = await api.post(`/auth/oauth/${providerId}/bind/start`)
     if (!data.authorizeUrl) {
-      throw new Error('未返回授权地址')
+      throw new Error(t('未返回授权地址'))
     }
     window.location.href = data.authorizeUrl
   } catch (err: any) {
-    bindError.value = err.response?.data?.error || err.message || '发起绑定失败'
+    bindError.value = err.response?.data?.error || err.message || t('发起绑定失败')
     bindingProviderId.value = null
   }
 }
@@ -199,7 +202,7 @@ async function handleBind(providerId: string) {
 function handleUnbind(binding: Binding) {
   confirmUnbind.open = true
   confirmUnbind.providerId = binding.providerId
-  confirmUnbind.message = `确定解绑 ${binding.providerDisplayName} 吗？解绑后将无法通过该方式登录。`
+  confirmUnbind.message = t('确定解绑 {p0} 吗？解绑后将无法通过该方式登录。', { p0: binding.providerDisplayName })
 }
 
 async function proceedUnbind() {
@@ -208,7 +211,7 @@ async function proceedUnbind() {
     await api.delete(`/auth/oauth/unbind/${confirmUnbind.providerId}`)
     await refresh()
   } catch (err: any) {
-    alert(err.response?.data?.error || '解绑失败')
+    alert(err.response?.data?.error || t('解绑失败'))
   } finally {
     unbindingId.value = null
     confirmUnbind.open = false
