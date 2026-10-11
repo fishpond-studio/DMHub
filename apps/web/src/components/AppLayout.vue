@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useTheme } from '@/composables/use-theme'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import api from '@/lib/axios'
+import RequireEmailDialog from '@/components/RequireEmailDialog.vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +48,15 @@ const { t } = useI18n()
 initTheme()
 
 const mobileMenuOpen = ref(false)
+
+// 团队 Logo（公共接口），上传后顶栏展示同一图标
+const teamLogoUrl = ref<string | null>(null)
+onMounted(async () => {
+  try {
+    const { data } = await api.get('/public/landing')
+    teamLogoUrl.value = data.logoUrl || null
+  } catch {}
+})
 
 const publicPages = new Set(['landing', 'login', 'register', '2fa-verify', 'setup', 'oauth-callback'])
 const showNav = computed(() => !publicPages.has(route.name as string) && !!authStore.token)
@@ -119,7 +130,8 @@ watch(route, () => {
       <div class="app-container flex h-14 items-center justify-between gap-4">
         <div class="flex min-w-0 items-center">
           <router-link to="/dashboard" class="mr-3 flex items-center gap-2.5 md:mr-5">
-            <BrandMark class="h-8 w-8" />
+            <img v-if="teamLogoUrl" :src="teamLogoUrl" class="h-8 w-8 rounded-[10px] object-cover" alt="Logo" />
+            <BrandMark v-else class="h-8 w-8" />
             <span class="hidden font-semibold tracking-tight sm:inline-block">DMHub</span>
           </router-link>
           <nav class="hidden items-center gap-0.5 md:flex">
@@ -171,6 +183,7 @@ watch(route, () => {
             <DropdownMenuTrigger as-child>
               <Button variant="ghost" class="relative h-8 w-8 rounded-full">
                 <Avatar class="h-8 w-8">
+                  <AvatarImage v-if="authStore.user?.avatarUrl" :src="authStore.user?.avatarUrl" />
                   <AvatarFallback class="bg-primary/10 text-xs font-semibold text-primary">
                     {{ (authStore.user?.username || 'U').slice(0, 1).toUpperCase() }}
                   </AvatarFallback>
@@ -257,5 +270,7 @@ watch(route, () => {
         </transition>
       </router-view>
     </main>
+
+    <RequireEmailDialog />
   </div>
 </template>

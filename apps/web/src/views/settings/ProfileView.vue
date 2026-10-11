@@ -44,7 +44,19 @@
             <div class="flex items-center gap-2">
               <Input :model-value="user?.email || '未设置'" disabled class="bg-muted" />
               <Badge v-if="user?.emailVerified" variant="default" class="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">已验证</Badge>
-              <Badge v-else variant="secondary">未验证</Badge>
+              <Badge v-else variant="secondary">{{ t('emailVerify.notVerified') }}</Badge>
+            </div>
+            <p v-if="user?.email && !user?.emailVerified" class="mt-1 text-xs text-muted-foreground">{{ t('emailVerify.verifyCurrentHint') }}</p>
+            <div v-if="user?.email && !user?.emailVerified" class="mt-2 flex items-center gap-2">
+              <Input v-model="emailVerifyCode" type="text" inputmode="numeric" maxlength="6" class="max-w-[160px]" :placeholder="t('emailVerify.codePlaceholder')" />
+              <Button type="button" variant="outline" size="sm" :disabled="sendingEmailCode || emailVerifyCountdown > 0" @click="sendCurrentEmailCode">
+                <Loader2 v-if="sendingEmailCode" class="mr-1 h-3.5 w-3.5 animate-spin" />
+                {{ sendingEmailCode ? t('emailVerify.sending') : (emailVerifyCountdown > 0 ? t('emailVerify.resendIn', { seconds: emailVerifyCountdown }) : t('emailVerify.sendCode')) }}
+              </Button>
+              <Button type="button" size="sm" :disabled="verifyingEmailCode || !emailVerifyCode.trim()" @click="verifyCurrentEmail">
+                <Loader2 v-if="verifyingEmailCode" class="mr-1 h-3.5 w-3.5 animate-spin" />
+                {{ verifyingEmailCode ? t('emailVerify.verifying') : t('emailVerify.verify') }}
+              </Button>
             </div>
           </div>
           <div>
@@ -150,9 +162,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, computed, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '@/stores/auth';
 import api from '@/lib/axios';
+import { Loader2 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -190,6 +204,56 @@ const passwordForm = reactive({
   newPassword: '',
   confirmPassword: '',
 });
+
+const { t } = useI18n();
+const emailVerifyCode = ref('');
+const sendingEmailCode = ref(false);
+const verifyingEmailCode = ref(false);
+const emailVerifyCountdown = ref(0);
+let emailVerifyTimer: ReturnType<typeof setInterval> | null = null;
+
+function startEmailVerifyCountdown() {
+  emailVerifyCountdown.value = 60;
+  emailVerifyTimer = setInterval(() => {
+    emailVerifyCountdown.value--;
+    if (emailVerifyCountdown.value <= 0 && emailVerifyTimer) {
+      clearInterval(emailVerifyTimer);
+      emailVerifyTimer = null;
+    }
+  }, 1000);
+}
+
+onBeforeUnmount(() => {
+  if (emailVerifyTimer) clearInterval(emailVerifyTimer);
+});
+
+async function sendCurrentEmailCode() {
+  try {
+    await api.post('/me/email/verify/send', {});
+    toastSuccess(t('emailVerify.codeSentTo', { email: user.value?.email || '' }));
+    startEmailVerifyCountdown();
+  } catch (err: any) {
+    toastError(t('common.failed'), err.response?.data?.error || err.message);
+  }
+}
+
+async function verifyCurrentEmail() {
+  if (!emailVerifyCode.value.trim()) {
+    toastError(t('common.failed'), t('emailVerify.fillCode'));
+    return;
+  }
+  verifyingEmailCode.value = true;
+  try {
+    const { data } = await api.post('/me/email/verify', { code: emailVerifyCode.value.trim() });
+    authStore.user = data.user;
+    emailVerifyCode.value = '';
+    toastSuccess(t('emailVerify.verifySuccess'));
+  } catch (err: any) {
+    toastError(t('common.failed'), err.response?.data?.error || err.message);
+  } finally {
+    verifyingEmailCode.value = false;
+  }
+}
 
 onMounted(async () => {
   try {

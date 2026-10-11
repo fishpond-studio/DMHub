@@ -1,7 +1,8 @@
 <template>
   <div class="min-h-screen bg-background ">
-    <div class="app-container py-6 md:py-8">
+    <div class="app-container py-4">
       <PageHeader
+        compact
         title="仪表盘"
         description="域名健康、到期风险与团队动态一览"
       >
@@ -17,44 +18,44 @@
         </template>
       </PageHeader>
 
-      <div v-if="store.loading && !store.stats" class="space-y-6">
+      <div v-if="store.loading && !store.stats" class="space-y-4">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Skeleton v-for="i in 4" :key="i" class="h-28 rounded-xl" />
+          <Skeleton v-for="i in 4" :key="i" class="h-24 rounded-xl" />
         </div>
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Skeleton class="h-80 rounded-xl" />
-          <Skeleton class="h-80 rounded-xl" />
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Skeleton class="h-72 rounded-xl" />
+          <Skeleton class="h-72 rounded-xl" />
         </div>
       </div>
 
       <template v-else>
-        <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Card
             v-for="(card, i) in statCards"
             :key="card.label"
             class="card-hover animate-fade-in overflow-hidden"
             :class="'stagger-' + (i + 1)"
           >
-            <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardDescription class="text-[13px] font-medium">{{ card.label }}</CardDescription>
               <div class="flex h-8 w-8 items-center justify-center rounded-lg" :class="card.iconBg">
                 <component :is="card.icon" class="h-4 w-4" :class="card.iconColor" />
               </div>
             </CardHeader>
             <CardContent>
-              <div class="tnum text-[28px] font-semibold leading-none tracking-tight">{{ card.value }}</div>
+              <div class="tnum text-2xl font-semibold leading-none tracking-tight">{{ card.value }}</div>
               <div v-if="card.subHtml" class="mt-1.5 text-xs text-muted-foreground" v-html="card.subHtml" />
               <p v-else-if="card.hint" class="mt-1.5 text-xs text-muted-foreground">{{ card.hint }}</p>
             </CardContent>
           </Card>
         </div>
 
-        <div class="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Button
             v-for="action in quickActions"
             :key="action.label"
             variant="outline"
-            class="h-auto justify-start gap-3 px-3 py-3"
+            class="h-auto justify-start gap-2.5 px-3 py-2"
             @click="action.run()"
           >
             <div class="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -67,7 +68,7 @@
           </Button>
         </div>
 
-        <div v-if="recentDomains.length" class="mb-6">
+        <div v-if="recentDomains.length" class="mb-4">
           <div class="mb-2 flex items-center justify-between">
             <h2 class="text-sm font-medium text-muted-foreground">最近访问</h2>
             <Button variant="ghost" size="sm" class="h-7 text-xs" @click="clearRecent">清空</Button>
@@ -87,7 +88,7 @@
           </div>
         </div>
 
-        <Card v-if="store.healthSummary" class="mb-8 animate-fade-in">
+        <Card v-if="store.healthSummary" class="mb-4 animate-fade-in">
           <CardHeader class="pb-3">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -141,7 +142,7 @@
           </CardContent>
         </Card>
 
-        <div class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card class="animate-fade-in stagger-5">
             <CardHeader>
               <CardTitle class="text-base">到期日历</CardTitle>

@@ -7,6 +7,9 @@ import { insertReturningOne } from '../db/helpers.js';
 import { signAccessToken, signRefreshToken, sign2FAToken, verifyToken } from '../lib/jwt.js';
 import type { RegisterInput } from '@dmhub/shared';
 import { logOperation } from '../lib/log.js';
+import { decrypt } from '../lib/crypto.js';
+import { generateEmailCode, storeEmailCode, verifyEmailCodeEntry, getEmailCodePendingEmail, type EmailCodePurpose } from '../lib/email-code-store.js';
+import { sendMail } from '../lib/smtp.js';
 
 export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -56,7 +59,8 @@ export async function register(input: RegisterInput, deviceInfo?: string) {
     throw new Error('用户名或邮箱已被使用');
   }
 
-  const emailValue = input.email && input.email !== '' ? input.email : null;
+  // registerSchema 已要求邮箱必填，这里直接使用
+  const emailValue = input.email;
   if (emailValue) {
     const [existingEmail] = await db.select({ id: users.id }).from(users).where(eq(users.email, emailValue)).limit(1);
     if (existingEmail) {
@@ -332,12 +336,13 @@ export async function changeEmail(userId: string, newEmail: string, password: st
     throw new Error('密码不正确');
   }
 
-  const emailValue = newEmail && newEmail !== '' ? newEmail : null;
-  if (emailValue) {
-    const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, emailValue)).limit(1);
-    if (existing && existing.id !== userId) {
-      throw new Error('邮箱已被其他用户使用');
-    }
+  const emailValue = newEmail?.trim();
+  if (!emailValue) {
+    throw new Error('邮箱不能为空');
+  }
+  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, emailValue)).limit(1);
+  if (existing && existing.id !== userId) {
+    throw new Error('邮箱已被其他用户使用');
   }
 
   await db.update(users).set({ email: emailValue, emailVerified: false, updatedAt: new Date() }).where(eq(users.id, userId));
@@ -444,4 +449,127 @@ export async function verifyUserToken(rawToken: string) {
   }
 
   return { valid: false };
+}
+
+/**
+ * 发送邮箱验证码：
+ * - 传入 newEmail + password：向新邮箱发送验证码，用于换绑/首次绑定（需密码确认身份）
+ * - 不传 newEmail：向当前邮箱发送验证码，用于验证尚未验证的邮箱
+ */
+export async function sendEmailChangeCode(
+  userId: string,
+  newEmail: string | undefined,
+  password: string | undefined,
+): Promise<{ sentTo: string }> {
+  const db = getDb();
+
+  const [user] = await db.select({
+    id: users.id,
+    email: users.email,
+    emailVerified: users.emailVerified,
+    passwordHash: users.passwordHash,
+  }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) throw new Error('用户不存在');
+
+  let targetEmail: string;
+  let purpose: EmailCodePurpose;
+  if (newEmail && newEmail.trim() !== '') {
+    if (!password) throw new Error('请输入密码以确认身份');
+    const valid = await bcrypt.compare(password, user.passwordHash || '');
+    if (!valid) throw new Error('密码不正确');
+
+    targetEmail = newEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+      throw new Error('邮箱格式不正确');
+    }
+    const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, targetEmail)).limit(1);
+    if (existing && existing.id !== userId) {
+      throw new Error('邮箱已被其他用户使用');
+    }
+    purpose = 'email-change';
+  } else {
+    if (!user.email) throw new Error('请先填写邮箱');
+    if (user.emailVerified) throw new Error('邮箱已验证，无需重复验证');
+    targetEmail = user.email;
+    purpose = 'email-verify';
+  }
+
+  const [smtpRow] = await db.select({
+    smtpHost: teamSettings.smtpHost,
+    smtpPort: teamSettings.smtpPort,
+    smtpUser: teamSettings.smtpUser,
+    smtpPassword: teamSettings.smtpPassword,
+    smtpFrom: teamSettings.smtpFrom,
+    smtpSecure: teamSettings.smtpSecure,
+  }).from(teamSettings).where(eq(teamSettings.id, 1));
+  if (!smtpRow?.smtpHost) throw new Error('邮件服务未配置，请联系管理员');
+
+  const code = generateEmailCode();
+  const result = await storeEmailCode(userId, code, purpose, purpose === 'email-change' ? targetEmail : undefined);
+  if (!result.success) throw new Error(result.error!);
+
+  const html = `<div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px">
+<h2 style="text-align:center;color:#1f2937">DMHub 邮箱验证</h2>
+<p style="text-align:center;color:#6b7280">您的验证码为：</p>
+<div style="text-align:center;font-size:32px;font-weight:bold;letter-spacing:8px;padding:16px;background:#f3f4f6;border-radius:8px;margin:16px 0">${code}</div>
+<p style="text-align:center;color:#9ca3af;font-size:14px">验证码在5 分钟内有效，请勿泄露给他人</p>
+</div>`;
+
+  const smtpResult = await sendMail({
+    host: smtpRow.smtpHost,
+    port: smtpRow.smtpPort!,
+    user: smtpRow.smtpUser || '',
+    password: (() => { try { return decrypt(smtpRow.smtpPassword || ''); } catch { return smtpRow.smtpPassword || ''; } })(),
+    from: smtpRow.smtpFrom || '',
+    secure: smtpRow.smtpSecure ?? false,
+  }, targetEmail, 'DMHub 邮箱验证码', html);
+  if (!smtpResult.success) throw new Error('验证码发送失败：' + (smtpResult.error || ''));
+
+  return { sentTo: targetEmail };
+}
+
+/** 校验邮箱验证码：优先处理换绑（email-change），否则验证当前邮箱（email-verify） */
+export async function confirmEmailChange(userId: string, code: string) {
+  const db = getDb();
+
+  const pendingEmail = await getEmailCodePendingEmail(userId, 'email-change');
+  const purpose: EmailCodePurpose = pendingEmail ? 'email-change' : 'email-verify';
+
+  const valid = await verifyEmailCodeEntry(userId, code, purpose);
+  if (!valid) {
+    throw new Error('验证码错误或已过期');
+  }
+
+  if (purpose === 'email-change' && pendingEmail) {
+    // 等待验证期间邮箱可能被他人占用，提交前再查一次
+    const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, pendingEmail)).limit(1);
+    if (existing && existing.id !== userId) {
+      throw new Error('邮箱已被其他用户使用');
+    }
+    await db.update(users).set({ email: pendingEmail, emailVerified: true, updatedAt: new Date() }).where(eq(users.id, userId));
+  } else {
+    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!user?.email) throw new Error('请先填写邮箱');
+    await db.update(users).set({ emailVerified: true, updatedAt: new Date() }).where(eq(users.id, userId));
+  }
+
+  const [updated] = await db.select({
+    id: users.id,
+    username: users.username,
+    email: users.email,
+    displayName: users.displayName,
+    nickname: users.nickname,
+    avatarUrl: users.avatarUrl,
+    role: users.role,
+    twoFactorEnabled: users.twoFactorEnabled,
+    twoFactorMethods: users.twoFactorMethods,
+    emailVerified: users.emailVerified,
+    status: users.status,
+    notificationsEnabled: users.notificationsEnabled,
+    emailNotificationsEnabled: users.emailNotificationsEnabled,
+    createdAt: users.createdAt,
+    updatedAt: users.updatedAt,
+  }).from(users).where(eq(users.id, userId)).limit(1);
+
+  return updated;
 }

@@ -54,6 +54,8 @@ api.interceptors.response.use(
               withCredentials: true,
             });
             setAccessToken(data.accessToken);
+            // 刷新成功，清除整页重试标记
+            sessionStorage.removeItem('dmhub_refresh_retried');
             return data.accessToken;
           } finally {
             refreshPromise = null;
@@ -66,6 +68,16 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch {
+        // 刷新失败可能源于多标签页下的刷新令牌轮换竞态（先到先得，后到的失败）。
+        // 此时浏览器 cookie 往往已被其他标签页更新为最新令牌，整页重载后再试一次；
+        // 仅当重载后仍失败时才真正登出。
+        if (!sessionStorage.getItem('dmhub_refresh_retried')) {
+          sessionStorage.setItem('dmhub_refresh_retried', '1');
+          window.location.reload();
+          // 挂起当前请求，页面即将重载
+          return new Promise(() => {});
+        }
+        sessionStorage.removeItem('dmhub_refresh_retried');
         setAccessToken(null);
         const { useAuthStore } = await import('@/stores/auth');
         useAuthStore().clearAuth();

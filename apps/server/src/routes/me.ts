@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate } from '../middleware/auth.js';
-import { getUserById, changePassword, updateProfile, changeEmail, generateUserToken, listUserTokens, revokeUserToken } from '../services/auth.js';
+import { getUserById, changePassword, updateProfile, changeEmail, sendEmailChangeCode, confirmEmailChange, generateUserToken, listUserTokens, revokeUserToken } from '../services/auth.js';
 
 export async function meRoutes(app: FastifyInstance) {
   app.get('/me', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -66,6 +66,36 @@ export async function meRoutes(app: FastifyInstance) {
     }
   });
 
+  // 发送邮箱验证码：带 email + password 表示换绑/首次绑定；不带表示验证当前未验证邮箱
+  app.post('/me/email/verify/send', {
+    preHandler: [authenticate],
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as { email?: string; password?: string } | undefined;
+    try {
+      const result = await sendEmailChangeCode(request.user!.userId, body?.email, body?.password);
+      return { success: true, sentTo: result.sentTo };
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
+  });
+
+  // 校验邮箱验证码，成功后更新（或验证）邮箱
+  app.post('/me/email/verify', {
+    preHandler: [authenticate],
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as { code?: string } | undefined;
+    if (!body?.code || typeof body.code !== 'string') {
+      return reply.status(400).send({ error: '请输入验证码' });
+    }
+    try {
+      const user = await confirmEmailChange(request.user!.userId, body.code.trim());
+      return { user };
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
+  });
   app.post('/me/tokens', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as any;
     if (!body?.name || typeof body.name !== 'string') {

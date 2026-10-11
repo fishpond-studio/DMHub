@@ -152,11 +152,23 @@ router.beforeEach(async (to) => {
         try {
           const { data } = await axios.post('/api/auth/refresh', null, { withCredentials: true });
           setAccessToken(data.accessToken);
+          // 刷新成功，清除整页重试标记
+          sessionStorage.removeItem('dmhub_refresh_retried');
           const { useAuthStore } = await import('@/stores/auth');
           const authStore = useAuthStore();
           authStore.token = data.accessToken;
           await authStore.fetchUser();
         } catch {
+          // 刷新失败可能源于多标签页下的刷新令牌轮换竞态（先到先得，后到的失败）。
+          // 此时浏览器 cookie 往往已被其他标签页更新为最新令牌，整页重载后再试一次；
+          // 仅当重载后仍失败时才真正登出。
+          if (!sessionStorage.getItem('dmhub_refresh_retried')) {
+            sessionStorage.setItem('dmhub_refresh_retried', '1');
+            window.location.reload();
+            // 返回永不 resolve 的 Promise，挂起导航等待页面重载
+            return new Promise<void>(() => {});
+          }
+          sessionStorage.removeItem('dmhub_refresh_retried');
           const { useAuthStore } = await import('@/stores/auth');
           useAuthStore().clearAuth();
         } finally {

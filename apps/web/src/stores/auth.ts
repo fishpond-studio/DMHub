@@ -42,7 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function register(input: {
     username: string;
-    email?: string;
+    email: string;
     password: string;
     confirmPassword: string;
     inviteCode: string;

@@ -7,47 +7,47 @@
     <Card class="w-full max-w-sm animate-scale-in">
       <CardHeader class="text-center">
         <CardTitle class="text-2xl font-bold">DMHub</CardTitle>
-        <CardDescription>创建新账户</CardDescription>
+        <CardDescription>{{ t('auth.createAccount') }}</CardDescription>
       </CardHeader>
 
       <CardContent>
         <div v-if="!registrationEnabled" class="py-8 text-center">
-          <p class="text-lg font-medium text-foreground mb-2">注册已关闭</p>
-          <p class="text-sm text-muted-foreground">管理员已关闭新用户注册</p>
-          <router-link to="/login" class="mt-4 inline-block text-sm text-primary hover:underline">返回登录</router-link>
+          <p class="text-lg font-medium text-foreground mb-2">{{ t('auth.registrationClosed') }}</p>
+          <p class="text-sm text-muted-foreground">{{ t('auth.registrationClosedHint') }}</p>
+          <router-link to="/login" class="mt-4 inline-block text-sm text-primary hover:underline">{{ t('auth.backToLogin') }}</router-link>
         </div>
         <form v-else class="space-y-4" @submit.prevent="handleRegister">
           <div class="space-y-2">
-            <Label for="username">用户名</Label>
+            <Label for="username">{{ t('auth.username') }} <span class="text-destructive">*</span></Label>
             <Input
               id="username"
               v-model="form.username"
               type="text"
               autocomplete="username"
-              placeholder="字母、数字、下划线和连字符"
+              :placeholder="t('auth.usernamePlaceholder')"
             />
           </div>
 
           <div class="space-y-2">
-            <Label for="email">邮箱</Label>
+            <Label for="email">{{ t('auth.email') }} <span class="text-destructive">*</span></Label>
             <Input
               id="email"
               v-model="form.email"
               type="email"
               autocomplete="email"
-              placeholder="可选"
+              :placeholder="t('auth.emailPlaceholder')"
             />
           </div>
 
           <div class="space-y-2">
-            <Label for="password">密码</Label>
+            <Label for="password">{{ t('auth.password') }}</Label>
             <div class="relative">
               <Input
                 id="password"
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="new-password"
-                placeholder="至少8个字符"
+                :placeholder="t('auth.passwordPlaceholder')"
                 class="pr-10"
               />
               <Button
@@ -64,14 +64,14 @@
           </div>
 
           <div class="space-y-2">
-            <Label for="confirmPassword">确认密码</Label>
+            <Label for="confirmPassword">{{ t('auth.confirmPassword') }}</Label>
             <div class="relative">
               <Input
                 id="confirmPassword"
                 v-model="form.confirmPassword"
                 :type="showConfirmPassword ? 'text' : 'password'"
                 autocomplete="new-password"
-                placeholder="再次输入密码"
+                :placeholder="t('auth.confirmPlaceholder')"
                 class="pr-10"
               />
               <Button
@@ -88,12 +88,12 @@
           </div>
 
           <div v-if="inviteCodeEnabled" class="space-y-2">
-            <Label for="inviteCode">邀请码</Label>
+            <Label for="inviteCode">{{ t('auth.inviteCode') }}</Label>
             <Input
               id="inviteCode"
               v-model="form.inviteCode"
               type="text"
-              placeholder="请输入邀请码"
+              :placeholder="t('auth.inviteCodePlaceholder')"
             />
           </div>
 
@@ -101,13 +101,13 @@
 
           <Button type="submit" :disabled="loading" class="w-full">
             <Loader2 v-if="loading" class="mr-2 h-4 w-4 animate-spin" />
-            {{ loading ? '注册中...' : '注册' }}
+            {{ loading ? t('auth.registering') : t('auth.register') }}
           </Button>
         </form>
       </CardContent>      <CardFooter class="flex flex-col gap-4">
         <p class="text-center text-sm text-muted-foreground">
-          已有账户？
-          <router-link to="/login" class="font-medium text-primary hover:underline">登录</router-link>
+          {{ t('auth.hasAccount') }}
+          <router-link to="/login" class="font-medium text-primary hover:underline">{{ t('auth.login') }}</router-link>
         </p>
 
         <template v-if="oauthProviders.length > 0">
@@ -128,7 +128,7 @@
         </template>
         <div v-else-if="!oauthLoading" class="opacity-50">
           <Separator />
-          <p class="pt-2 text-center text-sm text-muted-foreground">OIDC/OAuth2 未配置</p>
+          <p class="pt-2 text-center text-sm text-muted-foreground">{{ t('auth.oauthNotConfigured') }}</p>
         </div>
         <div v-else class="flex justify-center">
           <Loader2 class="h-4 w-4 animate-spin text-muted-foreground" />
@@ -141,6 +141,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '@/stores/auth';
 import { useOAuthStore } from '@/stores/oauth';
 import api from '@/lib/axios';
@@ -153,6 +154,7 @@ import BrandMark from '@/components/BrandMark.vue';
 import { Loader2, Eye, EyeOff } from 'lucide-vue-next';
 
 const router = useRouter();
+const { t } = useI18n();
 const authStore = useAuthStore();
 const oauthStore = useOAuthStore();
 
@@ -172,6 +174,8 @@ const oauthProviders = ref<{ providerId: string; name: string; type: string }[]>
 const inviteCodeEnabled = ref(true);
 const registrationEnabled = ref(true);
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 onMounted(async () => {
   try {
     await oauthStore.fetchProviders();
@@ -188,25 +192,29 @@ onMounted(async () => {
 
 async function handleRegister() {
   error.value = '';
-  if (!form.username || !form.password || !form.confirmPassword || (inviteCodeEnabled.value && !form.inviteCode)) {
-    error.value = '请填写所有必填项';
+  if (!form.username || !form.email || !form.password || !form.confirmPassword || (inviteCodeEnabled.value && !form.inviteCode)) {
+    error.value = t('auth.fillRequired');
+    return;
+  }
+  if (!EMAIL_RE.test(form.email.trim())) {
+    error.value = t('auth.emailInvalid');
     return;
   }
   if (form.password !== form.confirmPassword) {
-    error.value = '两次输入的密码不一致';
+    error.value = t('auth.passwordMismatch');
     return;
   }
   loading.value = true;
   try {
-    await authStore.register(form);
+    await authStore.register({ ...form, email: form.email.trim() });
     router.push({ path: '/login', query: { registered: '1' } });
   } catch (err: any) {
     const respError = err.response?.data?.error;
     if (typeof respError === 'object') {
       const messages = Object.values(respError).flat().join('; ');
-      error.value = messages || '注册失败';
+      error.value = messages || t('auth.registerFailed');
     } else {
-      error.value = respError || '注册失败';
+      error.value = respError || t('auth.registerFailed');
     }
   } finally {
     loading.value = false;
