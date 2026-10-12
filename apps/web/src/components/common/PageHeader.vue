@@ -8,8 +8,10 @@ const props = withDefaults(defineProps<{
   description?: string
   backTo?: string
   showBack?: boolean
+  compact?: boolean
 }>(), {
   showBack: false,
+  compact: false,
 })
 
 const router = useRouter()
@@ -24,7 +26,7 @@ function goBack() {
 </script>
 
 <template>
-  <div class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+  <div :class="props.compact ? 'mb-4' : 'mb-8'" class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
     <div class="flex min-w-0 items-start gap-1.5">
       <Button
         v-if="showBack || backTo"

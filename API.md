@@ -294,7 +294,7 @@
 
 ### PUT /auth/me/email 🔒
 
-修改邮箱，需密码验证。
+修改邮箱，需密码验证。修改后新邮箱标记为未验证，需调用下方验证接口完成验证。
 
 **Body:**
 ```json
@@ -305,6 +305,40 @@
 ```
 
 **Response:** `{ user }`
+
+### POST /auth/me/email/verify/send 🔒
+
+发送邮箱验证码（频率限制：每分钟 5 次）。
+
+- 带 `email` + `password`：向新邮箱发送验证码，用于换绑 / 首次绑定邮箱（密码确认身份）。
+- 不带 `email`：向当前邮箱发送验证码，用于验证尚未验证的邮箱。
+
+**Body（可选）:**
+```json
+{
+  "email": "new@example.com",
+  "password": "current_password"
+}
+```
+
+**Response:** `{ "success": true, "sentTo": "new@example.com" }`
+
+### POST /auth/me/email/verify 🔒
+
+校验邮箱验证码并完成绑定 / 验证。
+
+**Body:**
+```json
+{
+  "code": "123456",
+  "scope": "email-change"
+}
+```
+
+- `scope`（可选）：`email-change`（换绑，强制绑定弹窗使用）或 `email-verify`（验证当前邮箱，资料页使用）。
+  指定后严格按该用途校验，避免两边验证码并存时互相消耗错误次数；不传时沿用旧行为：优先按换绑校验，否则按验证当前邮箱校验。
+
+**Response:** `{ user }`（`emailVerified: true`）
 
 ---
 

@@ -15,7 +15,7 @@ export const registerSchema = z
       .min(3, '用户名至少3个字符')
       .max(64, '用户名最多64个字符')
       .regex(/^[a-zA-Z0-9_-]+$/, '用户名仅允许字母、数字、下划线和连字符'),
-    email: z.string().email('邮箱格式不正确').optional().or(z.literal('')),
+    email: z.string().email('邮箱格式不正确'),
     password: z
       .string()
       .min(8, '密码至少8个字符')
