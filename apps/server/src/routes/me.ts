@@ -85,12 +85,15 @@ export async function meRoutes(app: FastifyInstance) {
     preHandler: [authenticate],
     config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = request.body as { code?: string } | undefined;
+    const body = request.body as { code?: string; scope?: string } | undefined;
     if (!body?.code || typeof body.code !== 'string') {
       return reply.status(400).send({ error: '请输入验证码' });
     }
+    if (body.scope !== undefined && body.scope !== 'email-change' && body.scope !== 'email-verify') {
+      return reply.status(400).send({ error: '无效的验证范围' });
+    }
     try {
-      const user = await confirmEmailChange(request.user!.userId, body.code.trim());
+      const user = await confirmEmailChange(request.user!.userId, body.code.trim(), body.scope as 'email-change' | 'email-verify' | undefined);
       return { user };
     } catch (err: any) {
       return reply.status(400).send({ error: err.message });

@@ -528,12 +528,20 @@ export async function sendEmailChangeCode(
   return { sentTo: targetEmail };
 }
 
-/** 校验邮箱验证码：优先处理换绑（email-change），否则验证当前邮箱（email-verify） */
-export async function confirmEmailChange(userId: string, code: string) {
+/**
+ * 校验邮箱验证码。
+ * - 指定 scope 时严格按指定用途校验：资料页「验证当前邮箱」用 email-verify，
+ *   强制绑定弹窗用 email-change，避免两边验证码并存时互相消耗错误次数。
+ * - 未指定 scope 时沿用旧行为：优先换绑（email-change），否则验证当前邮箱（email-verify）。
+ */
+export async function confirmEmailChange(userId: string, code: string, scope?: 'email-change' | 'email-verify') {
   const db = getDb();
 
   const pendingEmail = await getEmailCodePendingEmail(userId, 'email-change');
-  const purpose: EmailCodePurpose = pendingEmail ? 'email-change' : 'email-verify';
+  const purpose: EmailCodePurpose = scope ?? (pendingEmail ? 'email-change' : 'email-verify');
+  if (purpose === 'email-change' && !pendingEmail) {
+    throw new Error('验证码错误或已过期');
+  }
 
   const valid = await verifyEmailCodeEntry(userId, code, purpose);
   if (!valid) {

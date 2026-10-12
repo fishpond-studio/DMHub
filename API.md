@@ -330,9 +330,13 @@
 **Body:**
 ```json
 {
-  "code": "123456"
+  "code": "123456",
+  "scope": "email-change"
 }
 ```
+
+- `scope`（可选）：`email-change`（换绑，强制绑定弹窗使用）或 `email-verify`（验证当前邮箱，资料页使用）。
+  指定后严格按该用途校验，避免两边验证码并存时互相消耗错误次数；不传时沿用旧行为：优先按换绑校验，否则按验证当前邮箱校验。
 
 **Response:** `{ user }`（`emailVerified: true`）
 

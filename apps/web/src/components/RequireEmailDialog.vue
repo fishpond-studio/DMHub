@@ -78,7 +78,7 @@ async function verify() {
   }
   verifying.value = true;
   try {
-    const { data } = await api.post('/me/email/verify', { code: code.value.trim() });
+    const { data } = await api.post('/me/email/verify', { code: code.value.trim(), scope: 'email-change' });
     authStore.user = data.user;
     toastSuccess(t('emailVerify.verifySuccess'));
     code.value = '';

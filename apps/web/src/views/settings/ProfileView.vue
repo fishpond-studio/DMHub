@@ -228,12 +228,15 @@ onBeforeUnmount(() => {
 });
 
 async function sendCurrentEmailCode() {
+  sendingEmailCode.value = true;
   try {
     await api.post('/me/email/verify/send', {});
     toastSuccess(t('emailVerify.codeSentTo', { email: user.value?.email || '' }));
     startEmailVerifyCountdown();
   } catch (err: any) {
     toastError(t('common.failed'), err.response?.data?.error || err.message);
+  } finally {
+    sendingEmailCode.value = false;
   }
 }
 
@@ -244,7 +247,7 @@ async function verifyCurrentEmail() {
   }
   verifyingEmailCode.value = true;
   try {
-    const { data } = await api.post('/me/email/verify', { code: emailVerifyCode.value.trim() });
+    const { data } = await api.post('/me/email/verify', { code: emailVerifyCode.value.trim(), scope: 'email-verify' });
     authStore.user = data.user;
     emailVerifyCode.value = '';
     toastSuccess(t('emailVerify.verifySuccess'));
