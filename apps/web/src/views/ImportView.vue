@@ -5,19 +5,19 @@
         <Button variant="ghost" size="icon" @click="$router.push('/dashboard')">
           <ArrowLeft class="h-5 w-5" />
         </Button>
-        <h1 class="text-2xl font-bold text-foreground">批量导入</h1>
+        <h1 class="text-2xl font-bold text-foreground">{{ $t('批量导入') }}</h1>
       </div>
 
       <Tabs v-model="activeTab" class="mb-6">
         <TabsList>
-          <TabsTrigger value="domains">导入域名</TabsTrigger>
-          <TabsTrigger value="records">导入记录</TabsTrigger>
-          <TabsTrigger value="backup">数据备份</TabsTrigger>
+          <TabsTrigger value="domains">{{ $t('导入域名') }}</TabsTrigger>
+          <TabsTrigger value="records">{{ $t('导入记录') }}</TabsTrigger>
+          <TabsTrigger value="backup">{{ $t('数据备份') }}</TabsTrigger>
         </TabsList>
 
       <TabsContent value="domains" class="space-y-4">
         <div class="flex items-center gap-3 mb-2">
-          <a href="javascript:void(0)" @click="downloadDomainTemplate" class="text-sm text-primary hover:underline">下载域名导入模板</a>
+          <a href="javascript:void(0)" @click="downloadDomainTemplate" class="text-sm text-primary hover:underline">{{ $t('下载域名导入模板') }}</a>
         </div>
 
         <Card
@@ -30,7 +30,7 @@
         >
           <CardContent class="p-8 text-center">
             <Upload class="mx-auto h-12 w-12 text-muted-foreground" />
-            <p class="mt-2 text-sm text-muted-foreground">拖拽 CSV / Excel 文件到此处，或点击选择文件</p>
+            <p class="mt-2 text-sm text-muted-foreground">{{ $t('拖拽 CSV / Excel 文件到此处，或点击选择文件') }}</p>
             <p v-if="domainFile" class="mt-1 text-sm font-medium">{{ domainFile.name }}</p>
           </CardContent>
         </Card>
@@ -41,9 +41,9 @@
             @click="importDomains"
             :disabled="importStore.loading"
           >
-            {{ importStore.loading ? '导入中...' : '开始导入' }}
+            {{ importStore.loading ? $t('导入中․․․') : $t('开始导入') }}
           </Button>
-          <Button @click="domainFile = null" variant="outline">取消</Button>
+          <Button @click="domainFile = null" variant="outline">{{ $t('取消') }}</Button>
         </div>
 
         <ImportResult v-if="domainResult" :result="domainResult" />
@@ -51,17 +51,17 @@
 
       <TabsContent value="records" class="space-y-4">
         <div class="flex items-center gap-3 mb-2">
-          <a href="javascript:void(0)" @click="downloadRecordTemplate" class="text-sm text-primary hover:underline">下载记录导入模板</a>
+          <a href="javascript:void(0)" @click="downloadRecordTemplate" class="text-sm text-primary hover:underline">{{ $t('下载记录导入模板') }}</a>
         </div>
 
         <div>
-          <Label class="mb-1">选择域名</Label>
+          <Label class="mb-1">{{ $t('选择域名') }}</Label>
           <Select v-model="selectedDomainId">
             <SelectTrigger class="max-w-md">
-              <SelectValue placeholder="请选择域名" />
+              <SelectValue :placeholder="$t('请选择域名')" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">请选择域名</SelectItem>
+              <SelectItem value="none">{{ $t('请选择域名') }}</SelectItem>
               <SelectItem v-for="d in domains" :key="d.id" :value="d.id">{{ d.name }}</SelectItem>
             </SelectContent>
           </Select>
@@ -77,7 +77,7 @@
         >
           <CardContent class="p-8 text-center">
             <Upload class="mx-auto h-12 w-12 text-muted-foreground" />
-            <p class="mt-2 text-sm text-muted-foreground">拖拽 CSV / Excel 文件到此处，或点击选择文件</p>
+            <p class="mt-2 text-sm text-muted-foreground">{{ $t('拖拽 CSV / Excel 文件到此处，或点击选择文件') }}</p>
             <p v-if="recordFile" class="mt-1 text-sm font-medium">{{ recordFile.name }}</p>
           </CardContent>
         </Card>
@@ -88,12 +88,12 @@
             @click="importRecords"
             :disabled="importStore.loading || selectedDomainId === 'none'"
           >
-            {{ importStore.loading ? '导入中...' : '开始导入' }}
+            {{ importStore.loading ? $t('导入中․․․') : $t('开始导入') }}
           </Button>
-          <Button @click="recordFile = null" variant="outline">取消</Button>
+          <Button @click="recordFile = null" variant="outline">{{ $t('取消') }}</Button>
         </div>
 
-        <p v-if="selectedDomainId === 'none' && recordFile" class="text-sm text-warning">请先选择要导入记录的域名</p>
+        <p v-if="selectedDomainId === 'none' && recordFile" class="text-sm text-warning">{{ $t('请先选择要导入记录的域名') }}</p>
 
         <ImportResult v-if="recordResult" :result="recordResult" />
       </TabsContent>
@@ -102,24 +102,24 @@
         <Card>
           <CardContent class="p-6 space-y-4">
             <div>
-              <h3 class="text-sm font-medium">导出完整备份</h3>
-              <p class="text-xs text-muted-foreground mt-1">将所有域名与解析记录导出为 JSON 文件（不含服务商凭据）</p>
+              <h3 class="text-sm font-medium">{{ $t('导出完整备份') }}</h3>
+              <p class="text-xs text-muted-foreground mt-1">{{ $t('将所有域名与解析记录导出为 JSON 文件（不含服务商凭据）') }}</p>
               <Button class="mt-3" @click="exportBackup" :disabled="backupLoading">
-                {{ backupLoading ? '导出中...' : '导出备份' }}
+                {{ backupLoading ? $t('导出中․․․') : $t('导出备份') }}
               </Button>
             </div>
             <div class="border-t pt-4">
-              <h3 class="text-sm font-medium">恢复备份</h3>
-              <p class="text-xs text-muted-foreground mt-1">从 JSON 备份文件恢复域名与记录（已存在的同名域名/记录将跳过）</p>
+              <h3 class="text-sm font-medium">{{ $t('恢复备份') }}</h3>
+              <p class="text-xs text-muted-foreground mt-1">{{ $t('从 JSON 备份文件恢复域名与记录（已存在的同名域名/记录将跳过）') }}</p>
               <div class="mt-3 flex items-center gap-3">
                 <input ref="backupFileInput" type="file" accept=".json" class="text-sm" @change="handleBackupFileSelect" />
                 <Button @click="importBackup" :disabled="!backupFile || backupLoading">
-                  {{ backupLoading ? '恢复中...' : '恢复备份' }}
+                  {{ backupLoading ? $t('恢复中․․․') : $t('恢复备份') }}
                 </Button>
               </div>
               <div v-if="backupResult" class="mt-3 rounded-md border p-3 text-sm">
-                <p class="tnum">导入域名：{{ backupResult.domainsImported }}（跳过 {{ backupResult.domainsSkipped }}）</p>
-                <p class="tnum">导入记录：{{ backupResult.recordsImported }}（跳过 {{ backupResult.recordsSkipped }}）</p>
+                <p class="tnum">{{ $t('导入域名：') }}{{ backupResult.domainsImported }}{{ $t('（跳过') }} {{ backupResult.domainsSkipped }}）</p>
+                <p class="tnum">{{ $t('导入记录：') }}{{ backupResult.recordsImported }}{{ $t('（跳过') }} {{ backupResult.recordsSkipped }}）</p>
               </div>
             </div>
           </CardContent>
@@ -143,6 +143,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Upload } from 'lucide-vue-next';
 import { toastSuccess, toastError } from '@/lib/toast-helpers';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const importStore = useImportStore();
 
@@ -256,9 +259,9 @@ async function exportBackup() {
     link.download = `dmhub-backup-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     window.URL.revokeObjectURL(url);
-    toastSuccess('备份已导出');
+    toastSuccess(t('备份已导出'));
   } catch (err: any) {
-    toastError('导出失败', err.response?.data?.error || err.message);
+    toastError(t('导出失败'), err.response?.data?.error || err.message);
   } finally {
     backupLoading.value = false;
   }
@@ -272,9 +275,9 @@ async function importBackup() {
     formData.append('file', backupFile.value);
     const { data } = await api.post('/backup/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
     backupResult.value = data;
-    toastSuccess('备份已恢复');
+    toastSuccess(t('备份已恢复'));
   } catch (err: any) {
-    toastError('恢复失败', err.response?.data?.error || err.message);
+    toastError(t('恢复失败'), err.response?.data?.error || err.message);
   } finally {
     backupLoading.value = false;
   }

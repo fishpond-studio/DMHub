@@ -1,17 +1,17 @@
 ﻿<template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-foreground">通知配置</h1>
+      <h1 class="text-2xl font-bold text-foreground">{{ $t('通知配置') }}</h1>
       <Button @click="openAddForm">
         <Plus class="h-4 w-4 mr-1" />
-        添加通知
+        {{ $t('添加通知') }}
       </Button>
     </div>
 
       <div v-if="store.configs.length === 0 && !showForm" class="text-center py-16">
         <Bell class="mx-auto h-12 w-12 text-muted-foreground" />
-        <p class="mt-4 text-muted-foreground">尚未配置任何通知渠道</p>
-        <Button class="mt-4" @click="openAddForm">添加第一个通知配置</Button>
+        <p class="mt-4 text-muted-foreground">{{ $t('尚未配置任何通知渠道') }}</p>
+        <Button class="mt-4" @click="openAddForm">{{ $t('添加第一个通知配置') }}</Button>
       </div>
 
       <div v-else class="space-y-4">
@@ -22,7 +22,7 @@
                 <div class="flex items-center gap-2">
                   <Badge :class="channelBadgeClass(cfg.channel)">{{ channelLabel(cfg.channel) }}</Badge>
                   <h3 class="text-base font-semibold text-foreground">{{ cfg.name }}</h3>
-                  <Badge v-if="!cfg.enabled" variant="secondary">已禁用</Badge>
+                  <Badge v-if="!cfg.enabled" variant="secondary">{{ $t('已禁用') }}</Badge>
                 </div>
                 <div class="mt-1 flex flex-wrap gap-1">
                   <Badge v-for="evt in cfg.events" :key="evt" variant="outline">{{ eventLabel(evt) }}</Badge>
@@ -30,8 +30,8 @@
               </div>
               <div class="flex items-center gap-2">
                 <Switch :checked="cfg.enabled" @update:checked="toggleEnabled(cfg)" />
-                <Button variant="outline" size="sm" @click="openEditForm(cfg)">编辑</Button>
-                <Button variant="outline" size="sm" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="handleDelete(cfg)">删除</Button>
+                <Button variant="outline" size="sm" @click="openEditForm(cfg)">{{ $t('编辑') }}</Button>
+                <Button variant="outline" size="sm" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="handleDelete(cfg)">{{ $t('删除') }}</Button>
               </div>
             </div>
           </CardContent>
@@ -41,33 +41,33 @@
       <Dialog :open="showForm" @update:open="showForm = $event">
         <DialogContent class="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{{ editingId ? '编辑通知配置' : '添加通知配置' }}</DialogTitle>
+            <DialogTitle>{{ editingId ? $t('编辑通知配置') : $t('添加通知配置') }}</DialogTitle>
           </DialogHeader>
           <div class="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
             <div>
-              <Label class="mb-1 block">通知渠道</Label>
+              <Label class="mb-1 block">{{ $t('通知渠道') }}</Label>
               <Select v-model="form.channel">
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="web">站内通知</SelectItem>
-                  <SelectItem value="email">邮件</SelectItem>
-                  <SelectItem value="dingtalk">钉钉</SelectItem>
-                  <SelectItem value="feishu">飞书</SelectItem>
+                  <SelectItem value="web">{{ $t('站内通知') }}</SelectItem>
+                  <SelectItem value="email">{{ $t('邮件') }}</SelectItem>
+                  <SelectItem value="dingtalk">{{ $t('钉钉') }}</SelectItem>
+                  <SelectItem value="feishu">{{ $t('飞书') }}</SelectItem>
                   <SelectItem value="webhook">Webhook</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label class="mb-1 block">配置名称</Label>
-              <Input v-model="form.name" type="text" placeholder="例: 运维通知群" />
+              <Label class="mb-1 block">{{ $t('配置名称') }}</Label>
+              <Input v-model="form.name" type="text" :placeholder="$t('例: 运维通知群')" />
             </div>
 
             <div v-if="form.channel === 'email'">
-              <Label class="mb-1 block">收件人列表</Label>
-              <Textarea v-model="emailRecipients" rows="3" placeholder="每行一个邮箱地址" />
+              <Label class="mb-1 block">{{ $t('收件人列表') }}</Label>
+              <Textarea v-model="emailRecipients" rows="3" :placeholder="$t('每行一个邮箱地址')" />
             </div>
 
             <div v-if="form.channel === 'dingtalk' || form.channel === 'feishu' || form.channel === 'webhook'">
@@ -76,17 +76,17 @@
             </div>
 
             <div v-if="form.channel === 'dingtalk' || form.channel === 'feishu'">
-              <Label class="mb-1 block">签名密钥（可选）</Label>
-              <Input v-model="dingtalkFeishuSecret" type="text" placeholder="用于生成签名验证请求来源" />
+              <Label class="mb-1 block">{{ $t('签名密钥（可选）') }}</Label>
+              <Input v-model="dingtalkFeishuSecret" type="text" :placeholder="$t('用于生成签名验证请求来源')" />
             </div>
 
             <div v-if="form.channel === 'webhook'">
-              <Label class="mb-1 block">Secret（可选）</Label>
-              <Input v-model="webhookSecret" type="text" placeholder="用于签名 Webhook 请求" />
+              <Label class="mb-1 block">{{ $t('Secret（可选）') }}</Label>
+              <Input v-model="webhookSecret" type="text" :placeholder="$t('用于签名 Webhook 请求')" />
             </div>
 
             <div>
-              <Label class="mb-2 block">监听事件</Label>
+              <Label class="mb-2 block">{{ $t('监听事件') }}</Label>
               <div class="space-y-2 max-h-48 overflow-y-auto">
                 <div
                   v-for="evt in allEvents"
@@ -103,9 +103,9 @@
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" @click="showForm = false">取消</Button>
+            <Button variant="outline" @click="showForm = false">{{ $t('取消') }}</Button>
             <Button @click="handleSave" :disabled="saving">
-              {{ saving ? '保存中...' : '保存' }}
+              {{ saving ? $t('保存中․․․') : $t('保存') }}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -114,12 +114,12 @@
       <AlertDialog :open="confirmDelete.open">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{{ confirmDelete.action === 'delete' ? '确认删除通知配置' : '确认禁用通知配置' }}</AlertDialogTitle>
+            <AlertDialogTitle>{{ confirmDelete.action === 'delete' ? $t('确认删除通知配置') : $t('确认禁用通知配置') }}</AlertDialogTitle>
             <AlertDialogDescription>{{ confirmDelete.message }}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel @click="confirmDelete.open = false">取消</AlertDialogCancel>
-            <AlertDialogAction @click="proceedDelete">确认</AlertDialogAction>
+            <AlertDialogCancel @click="confirmDelete.open = false">{{ $t('取消') }}</AlertDialogCancel>
+            <AlertDialogAction @click="proceedDelete">{{ $t('确认') }}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -127,12 +127,12 @@
       <AlertDialog :open="confirmSave.open">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认修改通知配置</AlertDialogTitle>
-            <AlertDialogDescription>修改后相关事件的推送渠道将变更，确认修改？</AlertDialogDescription>
+            <AlertDialogTitle>{{ $t('确认修改通知配置') }}</AlertDialogTitle>
+            <AlertDialogDescription>{{ $t('修改后相关事件的推送渠道将变更，确认修改？') }}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel @click="confirmSave.open = false">取消</AlertDialogCancel>
-            <AlertDialogAction @click="confirmSave.open = false; doSave()">确认</AlertDialogAction>
+            <AlertDialogCancel @click="confirmSave.open = false">{{ $t('取消') }}</AlertDialogCancel>
+            <AlertDialogAction @click="confirmSave.open = false; doSave()">{{ $t('确认') }}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -155,6 +155,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const store = useNotificationStore();
 const showForm = ref(false);
@@ -187,10 +190,10 @@ const allEvents = NOTIFICATION_EVENTS.map((e) => ({ value: e.event, label: e.lab
 
 function channelLabel(channel: string) {
   const map: Record<string, string> = {
-    web: '站内通知',
-    email: '邮件',
-    dingtalk: '钉钉',
-    feishu: '飞书',
+    web: t('站内通知'),
+    email: t('邮件'),
+    dingtalk: t('钉钉'),
+    feishu: t('飞书'),
     webhook: 'Webhook',
   };
   return map[channel] ?? channel;
@@ -262,11 +265,11 @@ function buildChannelConfig(): Record<string, unknown> {
 
 async function handleSave() {
   if (!form.name.trim()) {
-    alert('请输入配置名称');
+    alert(t('请输入配置名称'));
     return;
   }
   if (form.events.length === 0) {
-    alert('请选择至少一个事件');
+    alert(t('请选择至少一个事件'));
     return;
   }
 
@@ -296,7 +299,7 @@ async function doSave() {
     }
     showForm.value = false;
   } catch (err: any) {
-    alert(err.response?.data?.error || '保存失败');
+    alert(err.response?.data?.error || t('保存失败'));
   } finally {
     saving.value = false;
   }
@@ -306,7 +309,7 @@ async function toggleEnabled(cfg: NotificationConfig) {
   const newState = !cfg.enabled;
   if (!newState) {
     confirmDelete.open = true;
-    confirmDelete.message = `确定要禁用通知配置「${cfg.name}」吗？禁用后将不再收到对应事件的通知`;
+    confirmDelete.message = t('确定要禁用通知配置「{p0}」吗？禁用后将不再收到对应事件的通知', { p0: cfg.name });
     confirmDelete.id = cfg.id;
     confirmDelete.action = 'disable';
     return;
@@ -320,13 +323,13 @@ async function toggleEnabled(cfg: NotificationConfig) {
       enabled: true,
     });
   } catch (err: any) {
-    alert(err.response?.data?.error || '操作失败');
+    alert(err.response?.data?.error || t('操作失败'));
   }
 }
 
 function handleDelete(cfg: NotificationConfig) {
   confirmDelete.open = true;
-  confirmDelete.message = `确定要删除通知配置「${cfg.name}」吗？删除后相关事件的推送渠道将变更`;
+  confirmDelete.message = t('确定要删除通知配置「{p0}」吗？删除后相关事件的推送渠道将变更', { p0: cfg.name });
   confirmDelete.id = cfg.id;
   confirmDelete.action = 'delete';
 }
@@ -348,7 +351,7 @@ async function proceedDelete() {
       await store.deleteConfig(confirmDelete.id);
     }
   } catch (err: any) {
-    alert(err.response?.data?.error || '操作失败');
+    alert(err.response?.data?.error || t('操作失败'));
   } finally {
     confirmDelete.open = false;
   }

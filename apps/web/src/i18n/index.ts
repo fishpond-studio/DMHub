@@ -1,6 +1,8 @@
 import { createI18n } from 'vue-i18n';
 import zhCN from './locales/zh-CN';
 import en from './locales/en';
+import autoZhCN from './locales/auto.zh-CN';
+import autoEn from './locales/auto.en';
 
 const STORAGE_KEY = 'dmhub-locale';
 
@@ -17,8 +19,8 @@ const i18n = createI18n({
   locale: detectLocale(),
   fallbackLocale: 'zh-CN',
   messages: {
-    'zh-CN': zhCN,
-    en,
+    'zh-CN': { ...zhCN, ...autoZhCN },
+    en: { ...en, ...autoEn },
   },
 });
 

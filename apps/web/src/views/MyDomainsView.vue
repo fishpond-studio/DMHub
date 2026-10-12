@@ -2,14 +2,14 @@
   <div class="min-h-screen bg-background">
     <div class="app-container py-6 md:py-8">
       <PageHeader
-        title="我的域名"
-        description="管理员指派给你的域名与可管理的子域名范围"
+        :title="$t('我的域名')"
+        :description="$t('管理员指派给你的域名与可管理的子域名范围')"
         back-to="/dashboard"
         show-back
       >
         <template #actions>
           <Button variant="outline" size="sm" @click="$router.push('/assignment-request')">
-            申请域名权限
+            {{ $t('申请域名权限') }}
           </Button>
         </template>
       </PageHeader>
@@ -20,10 +20,10 @@
 
       <EmptyState
         v-else-if="myDomains.length === 0"
-        title="暂未分配任何域名"
-        description="可以向管理员申请子域名管理权限，或联系管理员进行指派"
-        action-label="申请权限"
-        secondary-label="返回仪表盘"
+        :title="$t('暂未分配任何域名')"
+        :description="$t('可以向管理员申请子域名管理权限，或联系管理员进行指派')"
+        :action-label="$t('申请权限')"
+        :secondary-label="$t('返回仪表盘')"
         @action="$router.push('/assignment-request')"
         @secondary="$router.push('/dashboard')"
       />
@@ -40,7 +40,7 @@
               <div class="min-w-0">
                 <CardTitle class="truncate text-base">{{ d.name }}</CardTitle>
                 <p class="mt-0.5 text-xs text-muted-foreground">
-                  所属域名 · {{ d.groupName || '未分组' }}
+                  {{ $t('所属域名 ·') }} {{ d.groupName || $t('未分组') }}
                 </p>
               </div>
               <Badge
@@ -52,7 +52,7 @@
             </div>
           </CardHeader>
           <CardContent>
-            <div class="mb-2 text-xs font-medium text-muted-foreground">可管理范围</div>
+            <div class="mb-2 text-xs font-medium text-muted-foreground">{{ $t('可管理范围') }}</div>
             <div class="space-y-2">
               <div
                 v-for="(scope, idx) in scopesOf(d)"
@@ -81,16 +81,16 @@
 
             <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
               <span>
-                状态
+                {{ $t('状态') }}
                 <Badge
                   :variant="d.status === 'active' ? 'default' : 'destructive'"
                   class="ml-1 text-[10px]"
                 >
-                  {{ d.status === 'active' ? '正常' : d.status === 'expired' ? '已过期' : d.status }}
+                  {{ d.status === 'active' ? $t('正常') : d.status === 'expired' ? $t('已过期') : d.status }}
                 </Badge>
               </span>
               <span class="flex items-center text-primary">
-                管理解析
+                {{ $t('管理解析') }}
                 <ChevronRight class="ml-0.5 h-3.5 w-3.5" />
               </span>
             </div>

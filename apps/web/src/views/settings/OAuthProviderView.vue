@@ -2,58 +2,58 @@
   <div>
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-foreground">OIDC / OAuth2 配置</h1>
+        <h1 class="text-2xl font-bold text-foreground">{{ $t('OIDC / OAuth2 配置') }}</h1>
         <p class="mt-1 text-sm text-muted-foreground">
-          配置外部身份登录。OIDC 请填写 Client ID、Secret 与 Well-Known URL；端点可自动发现。
+          {{ $t('配置外部身份登录。OIDC 请填写 Client ID、Secret 与 Well-Known URL；端点可自动发现。') }}
         </p>
       </div>
       <Button @click="openAddForm">
         <Plus class="mr-1 h-4 w-4" />
-        添加提供商
+        {{ $t('添加提供商') }}
       </Button>
     </div>
 
     <!-- 全局主页 / 重定向提示 -->
     <Card v-if="homepageUrl || oidcRedirectUrl" class="mb-6 border-primary/20 bg-primary/5">
       <CardContent class="space-y-3 p-4">
-        <p class="text-sm font-medium text-foreground">登记到身份提供商（IdP）的地址</p>
+        <p class="text-sm font-medium text-foreground">{{ $t('登记到身份提供商（IdP）的地址') }}</p>
         <div v-if="homepageUrl" class="space-y-1">
-          <Label class="text-xs text-muted-foreground">主页 URL</Label>
+          <Label class="text-xs text-muted-foreground">{{ $t('主页 URL') }}</Label>
           <div class="flex items-center gap-2">
             <code class="flex-1 break-all rounded bg-background px-2 py-1.5 font-mono text-xs">
               {{ homepageUrl }}
             </code>
-            <Button variant="outline" size="sm" @click="copyText(homepageUrl, '主页 URL 已复制')">
-              复制
+            <Button variant="outline" size="sm" @click="copyText(homepageUrl, $t('主页 URL 已复制'))">
+              {{ $t('复制') }}
             </Button>
           </div>
         </div>
         <div v-if="oidcRedirectUrl" class="space-y-1">
-          <Label class="text-xs text-muted-foreground">OIDC 重定向 URL</Label>
+          <Label class="text-xs text-muted-foreground">{{ $t('OIDC 重定向 URL') }}</Label>
           <div class="flex items-center gap-2">
             <code class="flex-1 break-all rounded bg-background px-2 py-1.5 font-mono text-xs">
               {{ oidcRedirectUrl }}
             </code>
-            <Button variant="outline" size="sm" @click="copyText(oidcRedirectUrl, '重定向 URL 已复制')">
-              复制
+            <Button variant="outline" size="sm" @click="copyText(oidcRedirectUrl, $t('重定向 URL 已复制'))">
+              {{ $t('复制') }}
             </Button>
           </div>
           <p class="text-[11px] text-muted-foreground">
-            格式示例：https://your-domain.com/oauth/oidc
+            {{ $t('格式示例：https://your-domain․com/oauth/oidc') }}
           </p>
         </div>
         <p v-if="!homepageUrl" class="text-xs text-destructive">
-          尚未配置站点 URL。请先到「团队设置」填写站点地址，否则 OIDC 无法正确回调。
+          {{ $t('尚未配置站点 URL。请先到「团队设置」填写站点地址，否则 OIDC 无法正确回调。') }}
         </p>
       </CardContent>
     </Card>
 
-    <div v-if="loading" class="py-12 text-center text-muted-foreground">加载中…</div>
+    <div v-if="loading" class="py-12 text-center text-muted-foreground">{{ $t('加载中…') }}</div>
 
     <div v-else-if="providers.length === 0 && !showForm" class="py-16 text-center">
       <Lock class="mx-auto h-12 w-12 text-muted-foreground" />
-      <p class="mt-4 text-muted-foreground">尚未配置任何提供商</p>
-      <Button class="mt-4" @click="openAddForm">添加 OIDC</Button>
+      <p class="mt-4 text-muted-foreground">{{ $t('尚未配置任何提供商') }}</p>
+      <Button class="mt-4" @click="openAddForm">{{ $t('添加 OIDC') }}</Button>
     </div>
 
     <div v-else class="space-y-4">
@@ -63,7 +63,7 @@
             <div class="min-w-0 space-y-1">
               <div class="flex flex-wrap items-center gap-2">
                 <Badge>{{ providerDisplayName(provider.providerId) }}</Badge>
-                <Badge v-if="!provider.enabled" variant="destructive">已禁用</Badge>
+                <Badge v-if="!provider.enabled" variant="destructive">{{ $t('已禁用') }}</Badge>
                 <Badge variant="outline" class="text-[10px]">
                   {{ isOidc(provider.providerId) ? 'OIDC' : 'OAuth2' }}
                 </Badge>
@@ -77,14 +77,14 @@
               </p>
             </div>
             <div class="flex shrink-0 gap-2">
-              <Button variant="outline" size="sm" @click="openEditForm(provider)">编辑</Button>
+              <Button variant="outline" size="sm" @click="openEditForm(provider)">{{ $t('编辑') }}</Button>
               <Button
                 variant="outline"
                 size="sm"
                 class="text-destructive hover:text-destructive"
                 @click="handleDelete(provider)"
               >
-                删除
+                {{ $t('删除') }}
               </Button>
             </div>
           </div>
@@ -92,7 +92,7 @@
           <!-- 每个提供商的主页 / 重定向 -->
           <div class="grid gap-2 rounded-lg border bg-muted/30 p-3 sm:grid-cols-2">
             <div>
-              <p class="text-[11px] text-muted-foreground">主页 URL</p>
+              <p class="text-[11px] text-muted-foreground">{{ $t('主页 URL') }}</p>
               <div class="mt-0.5 flex items-center gap-1">
                 <code class="truncate font-mono text-xs">{{ provider.homepageUrl || homepageUrl || '—' }}</code>
                 <Button
@@ -100,14 +100,14 @@
                   variant="ghost"
                   size="sm"
                   class="h-6 px-1.5 text-[10px]"
-                  @click="copyText(provider.homepageUrl || homepageUrl, '已复制')"
+                  @click="copyText(provider.homepageUrl || homepageUrl, $t('已复制'))"
                 >
-                  复制
+                  {{ $t('复制') }}
                 </Button>
               </div>
             </div>
             <div>
-              <p class="text-[11px] text-muted-foreground">重定向 URL</p>
+              <p class="text-[11px] text-muted-foreground">{{ $t('重定向 URL') }}</p>
               <div class="mt-0.5 flex items-center gap-1">
                 <code class="truncate font-mono text-xs">{{ provider.redirectUrl || '—' }}</code>
                 <Button
@@ -115,9 +115,9 @@
                   variant="ghost"
                   size="sm"
                   class="h-6 px-1.5 text-[10px]"
-                  @click="copyText(provider.redirectUrl!, '已复制')"
+                  @click="copyText(provider.redirectUrl!, $t('已复制'))"
                 >
-                  复制
+                  {{ $t('复制') }}
                 </Button>
               </div>
             </div>
@@ -129,15 +129,15 @@
     <Dialog :open="showForm" @update:open="(v) => (showForm = v)">
       <DialogContent class="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{{ editingId ? '编辑提供商' : '添加 OIDC / OAuth2' }}</DialogTitle>
+          <DialogTitle>{{ editingId ? $t('编辑提供商') : $t('添加 OIDC / OAuth2') }}</DialogTitle>
           <DialogDescription>
-            OIDC：Client ID、Client Secret、Well-Known URL 必填；端点可选（自动发现）。
+            {{ $t('OIDC：Client ID、Client Secret、Well-Known URL 必填；端点可选（自动发现）。') }}
           </DialogDescription>
         </DialogHeader>
 
         <div class="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
           <div>
-            <Label class="mb-1 block">提供商类型</Label>
+            <Label class="mb-1 block">{{ $t('提供商类型') }}</Label>
             <Select v-model="form.providerId" :disabled="!!editingId">
               <SelectTrigger :disabled="!!editingId">
                 <SelectValue />
@@ -154,7 +154,7 @@
             <Label>Client ID <span class="text-destructive">*</span></Label>
             <Input
               v-model="form.clientId"
-              :placeholder="editingId ? '留空则不修改' : 'Client ID / Application ID'"
+              :placeholder="editingId ? $t('留空则不修改') : 'Client ID / Application ID'"
             />
           </div>
 
@@ -163,7 +163,7 @@
             <Input
               v-model="form.clientSecret"
               type="password"
-              :placeholder="editingId ? '留空则不修改' : 'Client Secret'"
+              :placeholder="editingId ? $t('留空则不修改') : 'Client Secret'"
             />
           </div>
 
@@ -179,17 +179,17 @@
                 placeholder="https://idp.example.com/.well-known/openid-configuration"
               />
               <p class="text-[11px] text-muted-foreground">
-                也可只填 Issuer（如 https://idp.example.com/realms/demo），系统会自动补全
+                {{ $t('也可只填 Issuer（如 https://idp․example․com/realms/demo），系统会自动补全') }}
                 <code>/.well-known/openid-configuration</code>
               </p>
             </div>
 
             <div class="rounded-md border border-dashed p-3 space-y-3">
               <p class="text-xs font-medium text-muted-foreground">
-                以下端点可选 — 留空则从 Well-Known 自动识别
+                {{ $t('以下端点可选 — 留空则从 Well-Known 自动识别') }}
               </p>
               <div class="space-y-1.5">
-                <Label class="text-xs">授权端点（可选）</Label>
+                <Label class="text-xs">{{ $t('授权端点（可选）') }}</Label>
                 <Input
                   v-model="form.authorizeUrl"
                   type="url"
@@ -197,7 +197,7 @@
                 />
               </div>
               <div class="space-y-1.5">
-                <Label class="text-xs">Token 端点（可选）</Label>
+                <Label class="text-xs">{{ $t('Token 端点（可选）') }}</Label>
                 <Input
                   v-model="form.tokenUrl"
                   type="url"
@@ -205,7 +205,7 @@
                 />
               </div>
               <div class="space-y-1.5">
-                <Label class="text-xs">用户信息端点（可选）</Label>
+                <Label class="text-xs">{{ $t('用户信息端点（可选）') }}</Label>
                 <Input
                   v-model="form.userInfoUrl"
                   type="url"
@@ -215,22 +215,22 @@
             </div>
 
             <div class="space-y-1.5">
-              <Label>Scope（可选）</Label>
-              <Input v-model="form.scope" placeholder="默认: openid email profile" />
+              <Label>{{ $t('Scope（可选）') }}</Label>
+              <Input v-model="form.scope" :placeholder="$t('默认: openid email profile')" />
             </div>
           </template>
 
           <!-- 非 OIDC：GitHub 等 -->
           <template v-else>
             <div class="space-y-1.5">
-              <Label>Scope（可选）</Label>
+              <Label>{{ $t('Scope（可选）') }}</Label>
               <Input
                 v-model="form.scope"
-                :placeholder="'默认: ' + defaultScope(form.providerId)"
+                :placeholder="$t('默认:') + defaultScope(form.providerId)"
               />
             </div>
             <div v-if="form.providerId === 'gitlab'" class="space-y-3 rounded-md border border-dashed p-3">
-              <p class="text-xs text-muted-foreground">自建 GitLab 实例可覆盖端点</p>
+              <p class="text-xs text-muted-foreground">{{ $t('自建 GitLab 实例可覆盖端点') }}</p>
               <Input v-model="form.authorizeUrl" placeholder="Authorize URL" />
               <Input v-model="form.tokenUrl" placeholder="Token URL" />
               <Input v-model="form.userInfoUrl" placeholder="User Info URL" />
@@ -242,9 +242,9 @@
             v-if="previewHomepage || previewRedirect"
             class="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3"
           >
-            <p class="text-xs font-semibold text-foreground">请将以下地址登记到 IdP 控制台</p>
+            <p class="text-xs font-semibold text-foreground">{{ $t('请将以下地址登记到 IdP 控制台') }}</p>
             <div v-if="previewHomepage">
-              <p class="text-[11px] text-muted-foreground">主页 URL</p>
+              <p class="text-[11px] text-muted-foreground">{{ $t('主页 URL') }}</p>
               <div class="flex items-center gap-1">
                 <code class="flex-1 break-all font-mono text-xs">{{ previewHomepage }}</code>
                 <Button
@@ -252,14 +252,14 @@
                   variant="ghost"
                   size="sm"
                   class="h-7"
-                  @click="copyText(previewHomepage, '已复制')"
+                  @click="copyText(previewHomepage, $t('已复制'))"
                 >
-                  复制
+                  {{ $t('复制') }}
                 </Button>
               </div>
             </div>
             <div v-if="previewRedirect">
-              <p class="text-[11px] text-muted-foreground">重定向 URL</p>
+              <p class="text-[11px] text-muted-foreground">{{ $t('重定向 URL') }}</p>
               <div class="flex items-center gap-1">
                 <code class="flex-1 break-all font-mono text-xs">{{ previewRedirect }}</code>
                 <Button
@@ -267,9 +267,9 @@
                   variant="ghost"
                   size="sm"
                   class="h-7"
-                  @click="copyText(previewRedirect, '已复制')"
+                  @click="copyText(previewRedirect, $t('已复制'))"
                 >
-                  复制
+                  {{ $t('复制') }}
                 </Button>
               </div>
             </div>
@@ -281,14 +281,14 @@
               :checked="form.enabled"
               @update:checked="(v: boolean) => (form.enabled = v)"
             />
-            <Label for="oauth-enabled">启用</Label>
+            <Label for="oauth-enabled">{{ $t('启用') }}</Label>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" @click="showForm = false">取消</Button>
+          <Button variant="outline" @click="showForm = false">{{ $t('取消') }}</Button>
           <Button :disabled="saving" @click="handleSave">
-            {{ saving ? '保存中…' : '保存' }}
+            {{ saving ? $t('保存中…') : $t('保存') }}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -297,12 +297,12 @@
     <AlertDialog :open="confirmDelete.open">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>确认删除</AlertDialogTitle>
+          <AlertDialogTitle>{{ $t('确认删除') }}</AlertDialogTitle>
           <AlertDialogDescription>{{ confirmDelete.message }}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel @click="confirmDelete.open = false">取消</AlertDialogCancel>
-          <AlertDialogAction @click="proceedDelete">确认删除</AlertDialogAction>
+          <AlertDialogCancel @click="confirmDelete.open = false">{{ $t('取消') }}</AlertDialogCancel>
+          <AlertDialogAction @click="proceedDelete">{{ $t('确认删除') }}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -339,6 +339,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 interface OAuthProviderConfig {
   id: string
@@ -404,12 +407,12 @@ function isOidc(id: string) {
 function providerDisplayName(id: string) {
   const map: Record<string, string> = {
     oidc: 'OIDC',
-    custom: '自定义 OIDC',
+    custom: t('自定义 OIDC'),
     github: 'GitHub',
     gitlab: 'GitLab',
     google: 'Google',
-    dingtalk: '钉钉',
-    feishu: '飞书',
+    dingtalk: t('钉钉'),
+    feishu: t('飞书'),
   }
   return map[id] || id
 }
@@ -501,16 +504,16 @@ function openEditForm(provider: OAuthProviderConfig) {
 
 async function handleSave() {
   if (!editingId.value && !form.clientId) {
-    alert('请填写 Client ID')
+    alert(t('请填写 Client ID'))
     return
   }
   if (!editingId.value && !form.clientSecret) {
-    alert('请填写 Client Secret')
+    alert(t('请填写 Client Secret'))
     return
   }
   if (isOidc(form.providerId) && !editingId.value) {
     if (!form.wellKnownUrl && !(form.authorizeUrl && form.tokenUrl)) {
-      alert('OIDC 请填写 Well-Known URL，或同时填写授权端点与 Token 端点')
+      alert(t('OIDC 请填写 Well-Known URL，或同时填写授权端点与 Token 端点'))
       return
     }
   }
@@ -551,7 +554,7 @@ async function handleSave() {
     showForm.value = false
     await fetchProviders()
   } catch (err: any) {
-    alert(err.response?.data?.error || '保存失败')
+    alert(err.response?.data?.error || t('保存失败'))
   } finally {
     saving.value = false
   }
@@ -562,13 +565,13 @@ async function handleDelete(provider: OAuthProviderConfig) {
     const { data } = await api.delete(`/oauth/providers/${provider.id}`)
     if (data.requiresConfirmation) {
       confirmDelete.open = true
-      confirmDelete.message = data.warning || '确定删除？'
+      confirmDelete.message = data.warning || t('确定删除？')
       confirmDelete.id = provider.id
       return
     }
     await fetchProviders()
   } catch (err: any) {
-    alert(err.response?.data?.error || '删除失败')
+    alert(err.response?.data?.error || t('删除失败'))
   }
 }
 
@@ -579,7 +582,7 @@ async function proceedDelete() {
     })
     await fetchProviders()
   } catch (err: any) {
-    alert(err.response?.data?.error || '删除失败')
+    alert(err.response?.data?.error || t('删除失败'))
   } finally {
     confirmDelete.open = false
   }

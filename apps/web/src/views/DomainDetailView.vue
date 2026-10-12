@@ -1,7 +1,7 @@
 ﻿<template>
   <div class="min-h-screen bg-background">
     <div class="app-container py-6 md:py-8">
-      <div v-if="!domain" class="text-center py-12 text-muted-foreground">加载中...</div>
+      <div v-if="!domain" class="text-center py-12 text-muted-foreground">{{ $t('加载中․․․') }}</div>
 
       <template v-else>
         <div class="flex flex-col sm:flex-row items-start sm:items-center mb-6 gap-3">
@@ -15,7 +15,7 @@
                 variant="ghost"
                 size="icon"
                 class="h-8 w-8 shrink-0"
-                :title="favorited ? '取消收藏' : '收藏域名'"
+                :title="favorited ? $t('取消收藏') : $t('收藏域名')"
                 @click="toggleFavorite"
               >
                 <Star class="h-4 w-4" :class="favorited ? 'fill-yellow-400 text-yellow-500' : ''" />
@@ -24,17 +24,17 @@
                 variant="ghost"
                 size="icon"
                 class="h-8 w-8 shrink-0"
-                title="复制域名"
-                @click="copyText(domain.name, '域名已复制')"
+                :title="$t('复制域名')"
+                @click="copyText(domain.name, $t('域名已复制'))"
               >
                 <Copy class="h-4 w-4" />
               </Button>
             </div>
             <p class="text-xs text-muted-foreground mt-0.5">
-              {{ domain.providerName || '未关联服务商' }}
+              {{ domain.providerName || $t('未关联服务商') }}
               <span v-if="domain.groupName"> · {{ domain.groupName }}</span>
-              <span> · {{ domain.recordCount }} 条记录</span>
-              <span v-if="cdnSupported" class="text-orange-500"> · 支持 CDN 保护</span>
+              <span> · {{ domain.recordCount }} {{ $t('条记录') }}</span>
+              <span v-if="cdnSupported" class="text-orange-500"> {{ $t('· 支持 CDN 保护') }}</span>
             </p>
           </div>
           <div class="flex items-center gap-2 sm:ml-auto flex-wrap">
@@ -42,13 +42,13 @@
               <DropdownMenuTrigger as-child>
                 <Button variant="outline" size="sm">
                   <Download class="mr-1.5 h-4 w-4" />
-                  导出
+                  {{ $t('导出') }}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem @click="handleExportRecords('csv')">导出 CSV</DropdownMenuItem>
-                <DropdownMenuItem @click="handleExportRecords('json')">导出 JSON</DropdownMenuItem>
-                <DropdownMenuItem @click="handleExportRecords('zone')">导出 BIND Zone</DropdownMenuItem>
+                <DropdownMenuItem @click="handleExportRecords('csv')">{{ $t('导出 CSV') }}</DropdownMenuItem>
+                <DropdownMenuItem @click="handleExportRecords('json')">{{ $t('导出 JSON') }}</DropdownMenuItem>
+                <DropdownMenuItem @click="handleExportRecords('zone')">{{ $t('导出 BIND Zone') }}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button
@@ -58,7 +58,7 @@
               size="sm"
             >
               <RefreshCw class="mr-1.5 h-4 w-4" :class="syncing ? 'animate-spin' : ''" />
-              {{ syncing ? '同步中...' : '同步记录' }}
+              {{ syncing ? $t('同步中․․․') : $t('同步记录') }}
             </Button>
             <Button
               v-if="isAdmin"
@@ -66,7 +66,7 @@
               variant="destructive"
               size="sm"
             >
-              删除域名
+              {{ $t('删除域名') }}
             </Button>
           </div>
         </div>
@@ -76,27 +76,27 @@
           <CardContent class="p-4">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0 flex-1">
-                <dt class="text-xs font-medium text-muted-foreground mb-1">备注</dt>
+                <dt class="text-xs font-medium text-muted-foreground mb-1">{{ $t('备注') }}</dt>
                 <div v-if="!editingNotes">
                   <p v-if="domain.notes" class="text-sm whitespace-pre-wrap">{{ domain.notes }}</p>
-                  <p v-else class="text-sm text-muted-foreground">暂无备注</p>
+                  <p v-else class="text-sm text-muted-foreground">{{ $t('暂无备注') }}</p>
                 </div>
                 <Textarea
                   v-else
                   v-model="notesInput"
                   rows="3"
                   class="text-sm"
-                  placeholder="记录续费账号、联系人、用途等…"
+                  :placeholder="$t('记录续费账号、联系人、用途等…')"
                   maxlength="4000"
                 />
               </div>
               <div v-if="isAdmin" class="shrink-0 flex gap-1">
                 <template v-if="!editingNotes">
-                  <Button variant="ghost" size="sm" class="h-8" @click="startEditNotes">编辑</Button>
+                  <Button variant="ghost" size="sm" class="h-8" @click="startEditNotes">{{ $t('编辑') }}</Button>
                 </template>
                 <template v-else>
-                  <Button variant="ghost" size="sm" class="h-8" @click="editingNotes = false">取消</Button>
-                  <Button size="sm" class="h-8" :disabled="savingNotes" @click="saveNotes">保存</Button>
+                  <Button variant="ghost" size="sm" class="h-8" @click="editingNotes = false">{{ $t('取消') }}</Button>
+                  <Button size="sm" class="h-8" :disabled="savingNotes" @click="saveNotes">{{ $t('保存') }}</Button>
                 </template>
               </div>
             </div>
@@ -110,14 +110,14 @@
               <div class="min-w-0">
                 <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
                   <Shield class="h-4 w-4 text-primary" />
-                  你的可管理范围
+                  {{ $t('你的可管理范围') }}
                 </div>
                 <p class="mt-1 text-xs text-muted-foreground">
-                  列表仅显示权限范围内的解析记录；主机名需落在下列模式内才可{{ canEdit ? '编辑' : '查看' }}。
+                  {{ $t('列表仅显示权限范围内的解析记录；主机名需落在下列模式内才可') }}{{ canEdit ? $t('编辑') : $t('查看') }}。
                 </p>
               </div>
               <Badge :variant="canEdit ? 'default' : 'secondary'" class="shrink-0 self-start">
-                {{ canEdit ? '可编辑' : '只读' }}
+                {{ canEdit ? $t('可编辑') : $t('只读') }}
               </Badge>
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
@@ -142,24 +142,24 @@
           <CardContent class="p-5">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <dt class="text-xs font-medium text-muted-foreground">状态</dt>
+                <dt class="text-xs font-medium text-muted-foreground">{{ $t('状态') }}</dt>
                 <dd class="mt-1">
                   <Badge :variant="statusVariant(domain.status)">{{ statusLabel(domain.status) }}</Badge>
                 </dd>
               </div>
               <div>
-                <dt class="text-xs font-medium text-muted-foreground">服务商</dt>
-                <dd class="mt-1 text-sm">{{ domain.providerName || '未关联' }}</dd>
+                <dt class="text-xs font-medium text-muted-foreground">{{ $t('服务商') }}</dt>
+                <dd class="mt-1 text-sm">{{ domain.providerName || $t('未关联') }}</dd>
               </div>
               <div>
-                <dt class="text-xs font-medium text-muted-foreground">到期时间</dt>
+                <dt class="text-xs font-medium text-muted-foreground">{{ $t('到期时间') }}</dt>
                 <dd class="mt-1">
                   <div v-if="!editingExpiry" class="flex items-center gap-1">
-                    <span class="text-sm">{{ domain.expiresAt ? new Date(domain.expiresAt).toLocaleDateString('zh-CN') : '未设置' }}</span>
-                    <Button v-if="isAdmin" @click="handleCheckExpiry" variant="ghost" size="icon" class="h-6 w-6" :disabled="checkingExpiry" title="WHOIS 查询">
+                    <span class="text-sm">{{ domain.expiresAt ? new Date(domain.expiresAt).toLocaleDateString('zh-CN') : $t('未设置') }}</span>
+                    <Button v-if="isAdmin" @click="handleCheckExpiry" variant="ghost" size="icon" class="h-6 w-6" :disabled="checkingExpiry" :title="$t('WHOIS 查询')">
                       <Search class="h-3.5 w-3.5" />
                     </Button>
-                    <Button v-if="isAdmin" @click="startEditExpiry" variant="ghost" size="icon" class="h-6 w-6" title="手动设置">
+                    <Button v-if="isAdmin" @click="startEditExpiry" variant="ghost" size="icon" class="h-6 w-6" :title="$t('手动设置')">
                       <Pencil class="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -171,21 +171,21 @@
                       @keydown.enter="saveExpiry"
                       @keydown.escape="editingExpiry = false"
                     />
-                    <Button @click="saveExpiry" variant="link" size="sm" class="text-xs h-6 px-1">保存</Button>
-                    <Button @click="editingExpiry = false" variant="link" size="sm" class="text-xs h-6 px-1 text-muted-foreground">取消</Button>
+                    <Button @click="saveExpiry" variant="link" size="sm" class="text-xs h-6 px-1">{{ $t('保存') }}</Button>
+                    <Button @click="editingExpiry = false" variant="link" size="sm" class="text-xs h-6 px-1 text-muted-foreground">{{ $t('取消') }}</Button>
                   </div>
-                  <div v-if="checkingExpiry" class="text-xs text-muted-foreground mt-0.5">正在查询 WHOIS...</div>
+                  <div v-if="checkingExpiry" class="text-xs text-muted-foreground mt-0.5">{{ $t('正在查询 WHOIS․․․') }}</div>
                   <div v-if="domain.lastCheckedAt" class="text-xs text-muted-foreground mt-0.5">
-                    上次查询: {{ new Date(domain.lastCheckedAt).toLocaleString('zh-CN') }}
+                    {{ $t('上次查询:') }} {{ new Date(domain.lastCheckedAt).toLocaleString('zh-CN') }}
                   </div>
                 </dd>
               </div>
               <div>
-                <dt class="text-xs font-medium text-muted-foreground">记录数</dt>
+                <dt class="text-xs font-medium text-muted-foreground">{{ $t('记录数') }}</dt>
                 <dd class="mt-1 text-sm">{{ domain.recordCount }}</dd>
               </div>
               <div>
-                <dt class="text-xs font-medium text-muted-foreground">HTTPS 证书</dt>
+                <dt class="text-xs font-medium text-muted-foreground">{{ $t('HTTPS 证书') }}</dt>
                 <dd class="mt-1">
                   <div class="flex items-center gap-1 flex-wrap">
                     <span class="text-sm" :class="sslExpiryClass">
@@ -195,7 +195,7 @@
                       variant="ghost"
                       size="icon"
                       class="h-6 w-6"
-                      title="检测证书"
+                      :title="$t('检测证书')"
                       :disabled="checkingSsl"
                       @click="handleSslCheck"
                     >
@@ -208,7 +208,7 @@
                 </dd>
               </div>
               <div>
-                <dt class="text-xs font-medium text-muted-foreground">分组</dt>
+                <dt class="text-xs font-medium text-muted-foreground">{{ $t('分组') }}</dt>
                 <dd class="mt-1">
                   <div v-if="!editingGroup" class="flex items-center gap-1">
                     <span class="text-sm">{{ domain.groupName || '-' }}</span>
@@ -221,20 +221,20 @@
                       v-model="groupInput"
                       list="group-options"
                       class="w-32 h-7 text-sm"
-                      placeholder="输入分组名称"
+                      :placeholder="$t('输入分组名称')"
                       @keydown.enter="saveGroup"
                       @keydown.escape="editingGroup = false"
                     />
                     <datalist id="group-options">
                       <option v-for="g in store.groups" :key="g.name" :value="g.name" />
                     </datalist>
-                    <Button @click="saveGroup" variant="link" size="sm" class="text-xs h-6 px-1">保存</Button>
-                    <Button @click="editingGroup = false" variant="link" size="sm" class="text-xs h-6 px-1 text-muted-foreground">取消</Button>
+                    <Button @click="saveGroup" variant="link" size="sm" class="text-xs h-6 px-1">{{ $t('保存') }}</Button>
+                    <Button @click="editingGroup = false" variant="link" size="sm" class="text-xs h-6 px-1 text-muted-foreground">{{ $t('取消') }}</Button>
                   </div>
                 </dd>
               </div>
               <div>
-                <dt class="text-xs font-medium text-muted-foreground">标签</dt>
+                <dt class="text-xs font-medium text-muted-foreground">{{ $t('标签') }}</dt>
                 <dd class="mt-1">
                   <div class="flex gap-1 flex-wrap items-center">
                     <Badge v-for="tag in (domain.tags || [])" :key="tag" variant="secondary" class="gap-1">
@@ -245,7 +245,7 @@
                     <Input
                       v-if="isAdmin"
                       v-model="newTag"
-                      placeholder="添加标签"
+                      :placeholder="$t('添加标签')"
                       class="w-20 h-6 text-xs px-1.5"
                       @keydown.enter="addTag"
                     />
@@ -253,15 +253,15 @@
                 </dd>
               </div>
               <div>
-                <dt class="text-xs font-medium text-muted-foreground">权限</dt>
+                <dt class="text-xs font-medium text-muted-foreground">{{ $t('权限') }}</dt>
                 <dd class="mt-1 text-sm">
-                  <span v-if="isAdmin">管理员（全部）</span>
-                  <span v-else-if="canEdit">可编辑（限定子域）</span>
-                  <span v-else>只读（限定子域）</span>
+                  <span v-if="isAdmin">{{ $t('管理员（全部）') }}</span>
+                  <span v-else-if="canEdit">{{ $t('可编辑（限定子域）') }}</span>
+                  <span v-else>{{ $t('只读（限定子域）') }}</span>
                 </dd>
               </div>
               <div>
-                <dt class="text-xs font-medium text-muted-foreground">创建时间</dt>
+                <dt class="text-xs font-medium text-muted-foreground">{{ $t('创建时间') }}</dt>
                 <dd class="mt-1 text-sm">{{ new Date(domain.createdAt).toLocaleDateString('zh-CN') }}</dd>
               </div>
             </div>
@@ -269,7 +269,7 @@
             <div v-if="isAdmin" class="mt-4 pt-4 border-t">
               <div class="flex items-center justify-between">
                 <div>
-                  <dt class="text-xs font-medium text-muted-foreground">到期提醒天数</dt>
+                  <dt class="text-xs font-medium text-muted-foreground">{{ $t('到期提醒天数') }}</dt>
                   <dd class="mt-1 flex items-center gap-2 flex-wrap">
                     <label
                       v-for="day in remindDayOptions"
@@ -281,12 +281,12 @@
                         :disabled="day === 0 || !isAdmin"
                         @update:checked="toggleRemindDay(day)"
                       />
-                      <span class="text-xs">{{ day === 0 ? '当天' : `${day}天前` }}</span>
+                      <span class="text-xs">{{ day === 0 ? $t('当天') : $t('{p0}天前', { p0: day }) }}</span>
                     </label>
                   </dd>
                 </div>
                 <div class="flex items-center gap-2">
-                  <Label class="text-xs text-muted-foreground">自动检查</Label>
+                  <Label class="text-xs text-muted-foreground">{{ $t('自动检查') }}</Label>
                   <Switch
                     :checked="domain.autoCheckExpiry"
                     @update:checked="toggleAutoCheck"
@@ -298,15 +298,15 @@
         </Card>
 
         <div v-if="syncResult" class="rounded-md bg-primary/10 p-3 text-sm text-primary mb-4">
-          同步完成: {{ syncResult.synced }} 条记录已处理 (新增 {{ syncResult.created }}, 更新 {{ syncResult.updated }})
+          {{ $t('同步完成:') }} {{ syncResult.synced }} {{ $t('条记录已处理 (新增') }} {{ syncResult.created }}{{ $t(', 更新') }} {{ syncResult.updated }})
         </div>
 
         <Tabs v-model="activeTab" class="mb-4">
           <TabsList>
-            <TabsTrigger value="records">DNS 记录</TabsTrigger>
-            <TabsTrigger value="snapshots">快照 ({{ store.snapshots.length }})</TabsTrigger>
-            <TabsTrigger value="monitor">监控</TabsTrigger>
-            <TabsTrigger value="speedtest">测速</TabsTrigger>
+            <TabsTrigger value="records">{{ $t('DNS 记录') }}</TabsTrigger>
+            <TabsTrigger value="snapshots">{{ $t('快照 ({p0})', { p0: store.snapshots.length }) }}</TabsTrigger>
+            <TabsTrigger value="monitor">{{ $t('监控') }}</TabsTrigger>
+            <TabsTrigger value="speedtest">{{ $t('测速') }}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="records">
@@ -332,7 +332,7 @@
                   @click="showPasteDialog = true"
                 >
                   <ClipboardPaste class="mr-1.5 h-4 w-4" />
-                  粘贴导入
+                  {{ $t('粘贴导入') }}
                 </Button>
                 <Button
                   v-if="canEdit"
@@ -341,7 +341,7 @@
                   @click="showTemplateDialog = true"
                 >
                   <LayoutTemplate class="mr-1.5 h-4 w-4" />
-                  应用模板
+                  {{ $t('应用模板') }}
                 </Button>
                 <Button
                   v-if="canEdit"
@@ -349,17 +349,17 @@
                   size="sm"
                 >
                   <Plus class="mr-1.5 h-4 w-4" />
-                  添加记录
+                  {{ $t('添加记录') }}
                 </Button>
               </div>
             </div>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Select v-model="typeFilter" @update:model-value="loadRecords">
                 <SelectTrigger class="w-full sm:w-[130px]">
-                  <SelectValue placeholder="全部类型" />
+                  <SelectValue :placeholder="$t('全部类型')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">全部类型</SelectItem>
+                  <SelectItem value="all">{{ $t('全部类型') }}</SelectItem>
                   <SelectItem v-for="t in recordTypes" :key="t.type" :value="t.type">{{ t.type }}</SelectItem>
                 </SelectContent>
               </Select>
@@ -368,37 +368,37 @@
                 <Input
                   v-model="recordSearch"
                   type="text"
-                  placeholder="搜索记录名或值..."
+                  :placeholder="$t('搜索记录名或值․․․')"
                   class="pl-9"
                   @input="debouncedLoadRecords"
                 />
               </div>
               <div v-if="canEdit && selectedRecordIds.length" class="flex items-center gap-2 ml-auto flex-wrap">
-                <span class="text-xs text-muted-foreground">已选 {{ selectedRecordIds.length }}</span>
+                <span class="text-xs text-muted-foreground">{{ $t('已选') }} {{ selectedRecordIds.length }}</span>
                 <Select v-model="bulkTtl" @update:model-value="handleBulkTtl">
                   <SelectTrigger class="w-[120px] h-8">
-                    <SelectValue placeholder="改 TTL" />
+                    <SelectValue :placeholder="$t('改 TTL')" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="60">TTL 1 分钟</SelectItem>
-                    <SelectItem value="300">TTL 5 分钟</SelectItem>
-                    <SelectItem value="600">TTL 10 分钟</SelectItem>
-                    <SelectItem value="1800">TTL 30 分钟</SelectItem>
-                    <SelectItem value="3600">TTL 1 小时</SelectItem>
-                    <SelectItem value="21600">TTL 6 小时</SelectItem>
-                    <SelectItem value="86400">TTL 1 天</SelectItem>
+                    <SelectItem value="60">{{ $t('TTL 1 分钟') }}</SelectItem>
+                    <SelectItem value="300">{{ $t('TTL 5 分钟') }}</SelectItem>
+                    <SelectItem value="600">{{ $t('TTL 10 分钟') }}</SelectItem>
+                    <SelectItem value="1800">{{ $t('TTL 30 分钟') }}</SelectItem>
+                    <SelectItem value="3600">{{ $t('TTL 1 小时') }}</SelectItem>
+                    <SelectItem value="21600">{{ $t('TTL 6 小时') }}</SelectItem>
+                    <SelectItem value="86400">{{ $t('TTL 1 天') }}</SelectItem>
                   </SelectContent>
                 </Select>
                 <template v-if="cdnSupported">
                   <Button variant="outline" size="sm" :disabled="bulkCdnLoading" @click="handleBulkCdn(true)">
-                    开 CDN
+                    {{ $t('开 CDN') }}
                   </Button>
                   <Button variant="outline" size="sm" :disabled="bulkCdnLoading" @click="handleBulkCdn(false)">
-                    关 CDN
+                    {{ $t('关 CDN') }}
                   </Button>
                 </template>
                 <Button variant="destructive" size="sm" @click="handleBulkDeleteRecords">
-                  批量删除
+                  {{ $t('批量删除') }}
                 </Button>
               </div>
             </div>
@@ -409,10 +409,10 @@
           </div>
           <EmptyState
             v-else-if="store.records.length === 0"
-            title="暂无 DNS 记录"
-            description="手动添加，或使用模板一键配置常见场景（邮箱、建站、CDN 等）"
-            :action-label="canEdit ? '添加记录' : undefined"
-            :secondary-label="canEdit ? '应用模板' : undefined"
+            :title="$t('暂无 DNS 记录')"
+            :description="$t('手动添加，或使用模板一键配置常见场景（邮箱、建站、CDN 等）')"
+            :action-label="canEdit ? $t('添加记录') : undefined"
+            :secondary-label="canEdit ? $t('应用模板') : undefined"
             @action="openCreateRecord"
             @secondary="showTemplateDialog = true"
           />
@@ -427,17 +427,17 @@
                         @update:checked="toggleSelectAllRecords"
                       />
                     </TableHead>
-                    <TableHead>类型</TableHead>
-                    <TableHead>主机记录</TableHead>
-                    <TableHead>记录值</TableHead>
+                    <TableHead>{{ $t('类型') }}</TableHead>
+                    <TableHead>{{ $t('主机记录') }}</TableHead>
+                    <TableHead>{{ $t('记录值') }}</TableHead>
                     <TableHead>TTL</TableHead>
-                    <TableHead>优先级</TableHead>
+                    <TableHead>{{ $t('优先级') }}</TableHead>
                     <TableHead>
                       <span v-if="cdnSupported">CDN</span>
-                      <span v-else>代理</span>
+                      <span v-else>{{ $t('代理') }}</span>
                     </TableHead>
-                    <TableHead>备注</TableHead>
-                    <TableHead class="text-right">操作</TableHead>
+                    <TableHead>{{ $t('备注') }}</TableHead>
+                    <TableHead class="text-right">{{ $t('操作') }}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -459,7 +459,7 @@
                           variant="ghost"
                           size="icon"
                           class="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
-                          @click="copyText(r.value, '记录值已复制')"
+                          @click="copyText(r.value, $t('记录值已复制'))"
                         >
                           <Copy class="h-3 w-3" />
                         </Button>
@@ -479,12 +479,12 @@
                             class="text-xs"
                             :class="r.proxied ? 'text-orange-500 font-medium' : 'text-muted-foreground'"
                           >
-                            {{ r.proxied ? '开' : '关' }}
+                            {{ r.proxied ? $t('开') : $t('关') }}
                           </span>
                         </div>
                       </template>
                       <template v-else-if="r.proxied">
-                        <span class="text-orange-500 dark:text-orange-400 text-xs font-medium">已代理</span>
+                        <span class="text-orange-500 dark:text-orange-400 text-xs font-medium">{{ $t('已代理') }}</span>
                       </template>
                       <span v-else class="text-muted-foreground">-</span>
                     </TableCell>
@@ -496,25 +496,25 @@
                         variant="ghost"
                         size="sm"
                         class="h-8"
-                        title="检测解析传播"
+                        :title="$t('检测解析传播')"
                         :disabled="propagatingId === r.id"
                         @click="handlePropagate(r)"
                       >
-                        {{ propagatingId === r.id ? '检测…' : '传播' }}
+                        {{ propagatingId === r.id ? $t('检测…') : $t('传播') }}
                       </Button>
                       <template v-if="canEdit">
-                        <Button @click="openEditRecord(r)" variant="ghost" size="sm" class="h-8">编辑</Button>
-                        <Button @click="openCloneRecord(r)" variant="ghost" size="sm" class="h-8">克隆</Button>
+                        <Button @click="openEditRecord(r)" variant="ghost" size="sm" class="h-8">{{ $t('编辑') }}</Button>
+                        <Button @click="openCloneRecord(r)" variant="ghost" size="sm" class="h-8">{{ $t('克隆') }}</Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           class="h-8"
-                          title="复制 dig 命令"
+                          :title="$t('复制 dig 命令')"
                           @click="copyDigCommand(r)"
                         >
                           dig
                         </Button>
-                        <Button @click="handleDeleteRecord(r.id)" variant="ghost" size="sm" class="h-8 text-destructive hover:text-destructive">删除</Button>
+                        <Button @click="handleDeleteRecord(r.id)" variant="ghost" size="sm" class="h-8 text-destructive hover:text-destructive">{{ $t('删除') }}</Button>
                       </template>
                     </TableCell>
                   </TableRow>
@@ -536,23 +536,23 @@
                       <span class="font-medium text-sm font-record">{{ r.name }}</span>
                     </div>
                     <div v-if="canEdit" class="flex gap-1 shrink-0 flex-wrap justify-end">
-                      <Button @click="openEditRecord(r)" variant="ghost" size="sm" class="text-primary h-7 px-2">编辑</Button>
-                      <Button @click="openCloneRecord(r)" variant="ghost" size="sm" class="h-7 px-2">克隆</Button>
+                      <Button @click="openEditRecord(r)" variant="ghost" size="sm" class="text-primary h-7 px-2">{{ $t('编辑') }}</Button>
+                      <Button @click="openCloneRecord(r)" variant="ghost" size="sm" class="h-7 px-2">{{ $t('克隆') }}</Button>
                       <Button @click="copyDigCommand(r)" variant="ghost" size="sm" class="h-7 px-2">dig</Button>
-                      <Button @click="handleDeleteRecord(r.id)" variant="ghost" size="sm" class="text-destructive h-7 px-2">删除</Button>
+                      <Button @click="handleDeleteRecord(r.id)" variant="ghost" size="sm" class="text-destructive h-7 px-2">{{ $t('删除') }}</Button>
                     </div>
                   </div>
                   <div class="text-xs text-muted-foreground break-all font-record flex items-start gap-1">
                     <span class="flex-1">{{ r.value }}</span>
-                    <Button variant="ghost" size="icon" class="h-6 w-6 shrink-0" @click="copyText(r.value, '记录值已复制')">
+                    <Button variant="ghost" size="icon" class="h-6 w-6 shrink-0" @click="copyText(r.value, $t('记录值已复制'))">
                       <Copy class="h-3 w-3" />
                     </Button>
                   </div>
                   <div class="flex gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                     <span>TTL: {{ r.ttl }}</span>
-                    <span v-if="r.priority">优先级: {{ r.priority }}</span>
-                    <span v-if="r.proxied" class="text-orange-500">已代理</span>
-                    <span v-if="r.notes" class="truncate">备注: {{ r.notes }}</span>
+                    <span v-if="r.priority">{{ $t('优先级:') }} {{ r.priority }}</span>
+                    <span v-if="r.proxied" class="text-orange-500">{{ $t('已代理') }}</span>
+                    <span v-if="r.notes" class="truncate">{{ $t('备注:') }} {{ r.notes }}</span>
                   </div>
                   <Button
                     variant="outline"
@@ -561,7 +561,7 @@
                     :disabled="propagatingId === r.id"
                     @click="handlePropagate(r)"
                   >
-                    {{ propagatingId === r.id ? '检测传播中…' : '检测解析传播' }}
+                    {{ propagatingId === r.id ? $t('检测传播中…') : $t('检测解析传播') }}
                   </Button>
                 </CardContent>
               </Card>
@@ -607,12 +607,12 @@
               :disabled="creatingSnapshot"
               size="sm"
             >
-              {{ creatingSnapshot ? '创建中...' : '创建快照' }}
+              {{ creatingSnapshot ? $t('创建中․․․') : $t('创建快照') }}
             </Button>
             <div class="flex items-center gap-2 sm:ml-auto flex-wrap">
               <Select v-model="diffFromVersion">
                 <SelectTrigger class="w-[120px]">
-                  <SelectValue placeholder="源版本" />
+                  <SelectValue :placeholder="$t('源版本')" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="s in store.snapshots" :key="'f-' + s.version" :value="String(s.version)">v{{ s.version }}</SelectItem>
@@ -621,7 +621,7 @@
               <span class="text-muted-foreground">→</span>
               <Select v-model="diffToVersion">
                 <SelectTrigger class="w-[120px]">
-                  <SelectValue placeholder="目标版本" />
+                  <SelectValue :placeholder="$t('目标版本')" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="s in store.snapshots" :key="'t-' + s.version" :value="String(s.version)">v{{ s.version }}</SelectItem>
@@ -633,7 +633,7 @@
                 variant="secondary"
                 size="sm"
               >
-                比较
+                {{ $t('比较') }}
               </Button>
             </div>
           </div>
@@ -642,15 +642,15 @@
             <SnapshotDiff :diff="store.snapshotDiff" />
           </div>
 
-          <div v-if="store.snapshots.length === 0" class="text-center py-8 text-muted-foreground">暂无快照</div>
+          <div v-if="store.snapshots.length === 0" class="text-center py-8 text-muted-foreground">{{ $t('暂无快照') }}</div>
           <div v-else>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>版本</TableHead>
-                  <TableHead>触发方式</TableHead>
-                  <TableHead>创建时间</TableHead>
-                  <TableHead class="text-right">操作</TableHead>
+                  <TableHead>{{ $t('版本') }}</TableHead>
+                  <TableHead>{{ $t('触发方式') }}</TableHead>
+                  <TableHead>{{ $t('创建时间') }}</TableHead>
+                  <TableHead class="text-right">{{ $t('操作') }}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -661,7 +661,7 @@
                   </TableCell>
                   <TableCell class="text-muted-foreground">{{ new Date(s.createdAt).toLocaleString('zh-CN') }}</TableCell>
                   <TableCell class="text-right">
-                    <Button @click="viewSnapshotDetail(s.id)" variant="link" size="sm" class="text-primary">查看</Button>
+                    <Button @click="viewSnapshotDetail(s.id)" variant="link" size="sm" class="text-primary">{{ $t('查看') }}</Button>
                     <Button
                       v-if="isAdmin"
                       @click="handleRollback(s.id, s.version)"
@@ -669,7 +669,7 @@
                       size="sm"
                       class="text-orange-500 dark:text-orange-400"
                     >
-                      回滚
+                      {{ $t('回滚') }}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -680,12 +680,12 @@
         <TabsContent value="monitor">
           <Card class="mb-4">
             <CardHeader>
-              <CardTitle class="text-sm">UptimeKuma 集成</CardTitle>
+              <CardTitle class="text-sm">{{ $t('UptimeKuma 集成') }}</CardTitle>
             </CardHeader>
             <CardContent>
               <div v-if="isAdmin">
                 <div v-if="!uptimeStore.config?.configured" class="space-y-3">
-                  <p class="text-sm text-muted-foreground">配置 UptimeKuma Push URL 以启用监控推送</p>
+                  <p class="text-sm text-muted-foreground">{{ $t('配置 UptimeKuma Push URL 以启用监控推送') }}</p>
                   <div class="flex gap-2">
                     <Input
                       v-model="uptimePushUrl"
@@ -698,13 +698,13 @@
                       :disabled="uptimeStore.configuring || !uptimePushUrl"
                       size="sm"
                     >
-                      {{ uptimeStore.configuring ? '配置中...' : '配置' }}
+                      {{ uptimeStore.configuring ? $t('配置中․․․') : $t('配置') }}
                     </Button>
                   </div>
                 </div>
                 <div v-else class="flex items-center justify-between">
                   <div class="text-sm">
-                    <Badge variant="default">已配置</Badge>
+                    <Badge variant="default">{{ $t('已配置') }}</Badge>
                     <span class="text-muted-foreground ml-2">{{ uptimeStore.config.pushUrl }}</span>
                   </div>
                   <Button
@@ -712,12 +712,12 @@
                     variant="destructive"
                     size="sm"
                   >
-                    移除配置
+                    {{ $t('移除配置') }}
                   </Button>
                 </div>
               </div>
               <div v-else class="text-sm text-muted-foreground">
-                联系管理员配置 UptimeKuma 集成
+                {{ $t('联系管理员配置 UptimeKuma 集成') }}
               </div>
             </CardContent>
           </Card>
@@ -725,7 +725,7 @@
           <Card>
             <CardHeader>
               <div class="flex items-center justify-between">
-                <CardTitle class="text-sm">可用性监控</CardTitle>
+                <CardTitle class="text-sm">{{ $t('可用性监控') }}</CardTitle>
                 <div class="flex items-center gap-2">
                   <Switch
                     v-if="isAdmin"
@@ -737,29 +737,28 @@
                     :disabled="monitorStore.checking || !monitorEnabled"
                     size="sm"
                   >
-                    {{ monitorStore.checking ? '探测中...' : '立即探测' }}
+                    {{ monitorStore.checking ? $t('探测中․․․') : $t('立即探测') }}
                   </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div v-if="!monitorEnabled" class="text-center py-6 text-sm text-muted-foreground">
-                监控未启用{{ isAdmin ? '，请开启开关以定时探测域名可用性' : '' }}
+                {{ $t('监控未启用') }}{{ isAdmin ? $t('，请开启开关以定时探测域名可用性') : '' }}
               </div>
               <div v-else-if="monitorStore.history.length === 0" class="text-center py-6 text-sm text-muted-foreground">
-                暂无探测记录，点击"立即探测"开始
+                {{ $t('暂无探测记录，点击"立即探测"开始') }}
               </div>
               <div v-else class="space-y-3">
                 <div class="flex flex-wrap items-center gap-3">
                   <Badge :variant="monitorStore.history[0]?.status === 'up' ? 'default' : 'destructive'">
-                    {{ monitorStore.history[0]?.status === 'up' ? '正常' : '不可用' }}
+                    {{ monitorStore.history[0]?.status === 'up' ? $t('正常') : $t('不可用') }}
                   </Badge>
                   <span class="text-sm text-muted-foreground">
-                    响应时间: <span class="font-medium">{{ monitorStore.history[0]?.responseMs ?? '-' }}ms</span>
+                    {{ $t('响应时间:') }} <span class="font-medium">{{ monitorStore.history[0]?.responseMs ?? '-' }}ms</span>
                   </span>
                   <span class="text-xs text-muted-foreground">
-                    可用率: <span class="font-medium">{{ monitorAvailability }}%</span>（近 {{ monitorStore.history.length }} 次）
-                  </span>
+                    {{ $t('可用率:') }} <span class="font-medium">{{ monitorAvailability }}%</span>{{ $t('（近 {p0} 次）', { p0: monitorStore.history.length }) }}</span>
                 </div>
                 <div class="flex gap-1 items-end h-20">
                   <div
@@ -768,7 +767,7 @@
                     :class="h.status === 'up' ? 'bg-primary' : 'bg-destructive'"
                     class="flex-1 rounded-t min-w-[4px]"
                     :style="{ height: Math.max(15, Math.min(100, (h.responseMs ?? 500) / 10)) + '%' }"
-                    :title="`${h.status === 'up' ? '正常' : '异常'} ${h.responseMs ?? '-'}ms ${new Date(h.checkedAt).toLocaleString('zh-CN')}`"
+                    :title="`${h.status === 'up' ? $t('正常') : $t('异常')} ${h.responseMs ?? '-'}ms ${new Date(h.checkedAt).toLocaleString('zh-CN')}`"
                   ></div>
                 </div>
               </div>
@@ -778,13 +777,13 @@
           <Card>
             <CardHeader>
               <div class="flex items-center justify-between">
-                <CardTitle class="text-sm">健康检查</CardTitle>
+                <CardTitle class="text-sm">{{ $t('健康检查') }}</CardTitle>
                 <Button
                   @click="handleHealthCheck"
                   :disabled="uptimeStore.checking"
                   size="sm"
                 >
-                  {{ uptimeStore.checking ? '检查中...' : '立即检查' }}
+                  {{ uptimeStore.checking ? $t('检查中․․․') : $t('立即检查') }}
                 </Button>
               </div>
             </CardHeader>
@@ -792,18 +791,18 @@
               <div v-if="uptimeStore.status" class="space-y-3">
                 <div class="flex items-center gap-3">
                   <Badge :variant="uptimeStore.status.up ? 'default' : 'destructive'">
-                    {{ uptimeStore.status.up ? '正常运行' : '无法访问' }}
+                    {{ uptimeStore.status.up ? $t('正常运行') : $t('无法访问') }}
                   </Badge>
                   <span class="text-sm text-muted-foreground">
-                    响应时间: <span class="font-medium">{{ uptimeStore.status.responseTime }}ms</span>
+                    {{ $t('响应时间:') }} <span class="font-medium">{{ uptimeStore.status.responseTime }}ms</span>
                   </span>
                   <span class="text-xs text-muted-foreground">
-                    最后检查: {{ new Date(uptimeStore.status.lastChecked).toLocaleString('zh-CN') }}
+                    {{ $t('最后检查:') }} {{ new Date(uptimeStore.status.lastChecked).toLocaleString('zh-CN') }}
                   </span>
                 </div>
 
                 <div v-if="uptimeStore.status.history && uptimeStore.status.history.length > 1" class="mt-4">
-                  <h4 class="text-xs font-medium text-muted-foreground mb-2">最近检查记录</h4>
+                  <h4 class="text-xs font-medium text-muted-foreground mb-2">{{ $t('最近检查记录') }}</h4>
                   <div class="flex gap-1 items-end h-16">
                     <div
                       v-for="(h, i) in uptimeStore.status.history.slice(0, 20)"
@@ -811,12 +810,12 @@
                       :class="h.up ? 'bg-primary' : 'bg-destructive'"
                       class="flex-1 rounded-t min-w-[8px]"
                       :style="{ height: Math.max(20, Math.min(100, h.responseTime / 10)) + '%' }"
-                      :title="`${h.up ? '正常' : '异常'} ${h.responseTime}ms ${new Date(h.timestamp).toLocaleString('zh-CN')}`"
+                      :title="`${h.up ? $t('正常') : $t('异常')} ${h.responseTime}ms ${new Date(h.timestamp).toLocaleString('zh-CN')}`"
                     ></div>
                   </div>
                 </div>
               </div>
-              <div v-else class="text-center py-6 text-sm text-muted-foreground">点击"立即检查"查看域名状态</div>
+              <div v-else class="text-center py-6 text-sm text-muted-foreground">{{ $t('点击"立即检查"查看域名状态') }}</div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -826,13 +825,13 @@
             <Card>
               <CardHeader>
                 <div class="flex items-center justify-between">
-                  <CardTitle class="text-sm">DNS 解析测速</CardTitle>
+                  <CardTitle class="text-sm">{{ $t('DNS 解析测速') }}</CardTitle>
                   <Button
                     @click="handleDnsTest"
                     :disabled="speedtestStore.dnsLoading"
                     size="sm"
                   >
-                    {{ speedtestStore.dnsLoading ? '测试中...' : '开始测试' }}
+                    {{ speedtestStore.dnsLoading ? $t('测试中․․․') : $t('开始测试') }}
                   </Button>
                 </div>
               </CardHeader>
@@ -841,9 +840,9 @@
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>DNS 服务器</TableHead>
-                        <TableHead>耗时</TableHead>
-                        <TableHead>解析结果</TableHead>
+                        <TableHead>{{ $t('DNS 服务器') }}</TableHead>
+                        <TableHead>{{ $t('耗时') }}</TableHead>
+                        <TableHead>{{ $t('解析结果') }}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -863,20 +862,20 @@
                     </TableBody>
                   </Table>
                 </div>
-                <div v-else class="text-center py-6 text-sm text-muted-foreground">点击"开始测试"进行 DNS 解析测速</div>
+                <div v-else class="text-center py-6 text-sm text-muted-foreground">{{ $t('点击"开始测试"进行 DNS 解析测速') }}</div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
                 <div class="flex items-center justify-between">
-                  <CardTitle class="text-sm">HTTP 可用性测试</CardTitle>
+                  <CardTitle class="text-sm">{{ $t('HTTP 可用性测试') }}</CardTitle>
                   <Button
                     @click="handleHttpTest"
                     :disabled="speedtestStore.httpLoading"
                     size="sm"
                   >
-                    {{ speedtestStore.httpLoading ? '测试中...' : '开始测试' }}
+                    {{ speedtestStore.httpLoading ? $t('测试中․․․') : $t('开始测试') }}
                   </Button>
                 </div>
               </CardHeader>
@@ -890,13 +889,13 @@
                       </div>
                     </div>
                     <div class="rounded-md bg-muted p-3 text-center">
-                      <div class="text-xs text-muted-foreground">总耗时</div>
+                      <div class="text-xs text-muted-foreground">{{ $t('总耗时') }}</div>
                       <div class="mt-1 text-lg font-bold" :class="speedtestStore.httpResult.totalTime < 500 ? 'text-primary' : speedtestStore.httpResult.totalTime < 2000 ? 'text-yellow-500 dark:text-yellow-400' : 'text-destructive'">
                         {{ speedtestStore.httpResult.totalTime }}ms
                       </div>
                     </div>
                     <div class="rounded-md bg-muted p-3 text-center">
-                      <div class="text-xs text-muted-foreground">状态码</div>
+                      <div class="text-xs text-muted-foreground">{{ $t('状态码') }}</div>
                       <div class="mt-1 text-lg font-bold" :class="speedtestStore.httpResult.statusCode >= 200 && speedtestStore.httpResult.statusCode < 400 ? 'text-primary' : 'text-destructive'">
                         {{ speedtestStore.httpResult.statusCode || 'N/A' }}
                       </div>
@@ -906,7 +905,7 @@
                     {{ speedtestStore.httpResult.error }}
                   </div>
                   <div v-if="speedtestStore.httpResult.headers && Object.keys(speedtestStore.httpResult.headers).length > 0">
-                    <h4 class="text-xs font-medium text-muted-foreground mb-1">响应头</h4>
+                    <h4 class="text-xs font-medium text-muted-foreground mb-1">{{ $t('响应头') }}</h4>
                     <div class="rounded-md bg-muted p-2 text-xs font-record text-muted-foreground max-h-40 overflow-y-auto">
                       <div v-for="(value, key) in speedtestStore.httpResult.headers" :key="key">
                         {{ key }}: {{ value }}
@@ -914,7 +913,7 @@
                     </div>
                   </div>
                 </div>
-                <div v-else class="text-center py-6 text-sm text-muted-foreground">点击"开始测试"进行 HTTP 可用性测试</div>
+                <div v-else class="text-center py-6 text-sm text-muted-foreground">{{ $t('点击"开始测试"进行 HTTP 可用性测试') }}</div>
               </CardContent>
             </Card>
           </div>
@@ -927,19 +926,19 @@
     <Dialog v-if="showSnapshotDetail && store.currentSnapshot" v-model:open="showSnapshotDetail">
       <DialogContent class="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>快照 v{{ (store.currentSnapshot as any).version }}</DialogTitle>
+          <DialogTitle>{{ $t('快照 v{p0}', { p0: (store.currentSnapshot as any).version }) }}</DialogTitle>
           <DialogDescription>
-            触发方式: {{ triggerLabel((store.currentSnapshot as any).trigger) }} · 创建时间: {{ new Date((store.currentSnapshot as any).createdAt).toLocaleString('zh-CN') }}
+            {{ $t('触发方式: {p0} · 创建时间: {p1}', { p0: triggerLabel((store.currentSnapshot as any).trigger), p1: new Date((store.currentSnapshot as any).createdAt).toLocaleString('zh-CN') }) }}
           </DialogDescription>
         </DialogHeader>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>类型</TableHead>
-              <TableHead>主机记录</TableHead>
-              <TableHead>记录值</TableHead>
+              <TableHead>{{ $t('类型') }}</TableHead>
+              <TableHead>{{ $t('主机记录') }}</TableHead>
+              <TableHead>{{ $t('记录值') }}</TableHead>
               <TableHead>TTL</TableHead>
-              <TableHead>优先级</TableHead>
+              <TableHead>{{ $t('优先级') }}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -958,18 +957,18 @@
     <Dialog v-model:open="showPropagateDialog">
       <DialogContent class="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>解析传播检测</DialogTitle>
+          <DialogTitle>{{ $t('解析传播检测') }}</DialogTitle>
           <DialogDescription v-if="propagateResult">
             {{ propagateResult.recordType }} · {{ propagateResult.fqdn }}
             <span v-if="propagateResult.expectedValue" class="block font-record text-xs mt-1 truncate">
-              期望: {{ propagateResult.expectedValue }}
+              {{ $t('期望:') }} {{ propagateResult.expectedValue }}
             </span>
           </DialogDescription>
         </DialogHeader>
         <div v-if="propagateResult" class="space-y-3">
           <div class="flex flex-wrap gap-2 text-sm">
-            <Badge variant="default">匹配 {{ propagateResult.matched }}/{{ propagateResult.total }}</Badge>
-            <Badge variant="secondary">可解析 {{ propagateResult.resolved }}/{{ propagateResult.total }}</Badge>
+            <Badge variant="default">{{ $t('匹配 {p0}/{p1}', { p0: propagateResult.matched, p1: propagateResult.total }) }}</Badge>
+            <Badge variant="secondary">{{ $t('可解析 {p0}/{p1}', { p0: propagateResult.resolved, p1: propagateResult.total }) }}</Badge>
           </div>
           <div class="space-y-2">
             <div
@@ -983,17 +982,17 @@
                   <span class="text-xs font-normal text-muted-foreground font-record ml-1">{{ hit.ip }}</span>
                 </div>
                 <Badge :variant="hit.matched ? 'default' : hit.ok ? 'secondary' : 'destructive'">
-                  {{ hit.matched ? '已匹配' : hit.ok ? '不一致' : '失败' }}
+                  {{ hit.matched ? $t('已匹配') : hit.ok ? $t('不一致') : $t('失败') }}
                 </Badge>
               </div>
               <div class="mt-1 text-xs text-muted-foreground font-record break-all">
-                <template v-if="hit.ok">{{ hit.values.join(' · ') || '（空）' }} · {{ hit.latencyMs }}ms</template>
+                <template v-if="hit.ok">{{ hit.values.join(' · ') || $t('（空）') }} · {{ hit.latencyMs }}ms</template>
                 <template v-else>{{ hit.error }}</template>
               </div>
             </div>
           </div>
           <p class="text-[11px] text-muted-foreground">
-            结果仅供参考：部分解析器有缓存，TTL 未到期时可能暂时不一致。
+            {{ $t('结果仅供参考：部分解析器有缓存，TTL 未到期时可能暂时不一致。') }}
           </p>
         </div>
       </DialogContent>
@@ -1002,14 +1001,12 @@
     <AlertDialog :open="pendingDisableOneDay">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>确认关闭 1 天前提醒</AlertDialogTitle>
-          <AlertDialogDescription>
-            域名 {{ domain?.name }} 在这一天后到期，您确定不提醒吗？关闭后将无法在到期前 1 天收到任何提醒，可能导致错过最后续费机会。
-          </AlertDialogDescription>
+          <AlertDialogTitle>{{ $t('确认关闭 1 天前提醒') }}</AlertDialogTitle>
+          <AlertDialogDescription>{{ $t('域名 {p0} 在这一天后到期，您确定不提醒吗？关闭后将无法在到期前 1 天收到任何提醒，可能导致错过最后续费机会。', { p0: domain?.name }) }}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel @click="pendingDisableOneDay = false">取消</AlertDialogCancel>
-          <AlertDialogAction @click="confirmDisableOneDayRemind">确认关闭</AlertDialogAction>
+          <AlertDialogCancel @click="pendingDisableOneDay = false">{{ $t('取消') }}</AlertDialogCancel>
+          <AlertDialogAction @click="confirmDisableOneDayRemind">{{ $t('确认关闭') }}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -1063,6 +1060,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const route = useRoute();
 const router = useRouter();
@@ -1132,7 +1132,7 @@ const bulkCdnLoading = ref(false);
 
 const cdnSupported = computed(() => domain.value?.cdnProxy?.supported === true);
 const cdnProxyTypes = computed(() => domain.value?.cdnProxy?.proxyRecordTypes || ['A', 'AAAA', 'CNAME']);
-const cdnLabel = computed(() => domain.value?.cdnProxy?.proxyLabel || 'CDN 保护');
+const cdnLabel = computed(() => domain.value?.cdnProxy?.proxyLabel || t('CDN 保护'));
 const cdnDescription = computed(
   () => domain.value?.cdnProxy?.proxyDescription || '',
 );
@@ -1146,9 +1146,9 @@ async function toggleRecordCdn(r: DnsRecord, enabled: boolean) {
   togglingCdnId.value = r.id;
   try {
     await store.updateRecord(domainId.value, r.id, { proxied: enabled });
-    toastSuccess(enabled ? '已开启 CDN 保护' : '已关闭 CDN 保护');
+    toastSuccess(enabled ? t('已开启 CDN 保护') : t('已关闭 CDN 保护'));
   } catch (err: any) {
-    toastError('更新失败', err.response?.data?.error || err.message);
+    toastError(t('更新失败'), err.response?.data?.error || err.message);
   } finally {
     togglingCdnId.value = null;
   }
@@ -1160,24 +1160,24 @@ async function handleBulkCdn(enabled: boolean) {
     return r && canToggleCdn(r);
   });
   if (!ids.length) {
-    toastError('所选记录中没有可开关 CDN 的类型', `支持：${cdnProxyTypes.value.join(', ')}`);
+    toastError(t('所选记录中没有可开关 CDN 的类型'), t('支持：{p0}', { p0: cdnProxyTypes.value.join(', ') }));
     return;
   }
   const ok = await confirmDialog({
-    title: enabled ? '批量开启 CDN' : '批量关闭 CDN',
-    description: `将对 ${ids.length} 条 ${cdnProxyTypes.value.join('/')} 记录${enabled ? '开启' : '关闭'} CDN 保护（${cdnLabel.value}）。`,
-    confirmText: enabled ? '开启' : '关闭',
+    title: enabled ? t('批量开启 CDN') : t('批量关闭 CDN'),
+    description: t('将对 {p0} 条 {p1} 记录{p2} CDN 保护（{p3}）。', { p0: ids.length, p1: cdnProxyTypes.value.join('/'), p2: enabled ? t('开启') : t('关闭'), p3: cdnLabel.value }),
+    confirmText: enabled ? t('开启') : t('关闭'),
   });
   if (!ok) return;
   bulkCdnLoading.value = true;
   try {
     const result = await store.bulkUpdateRecords(domainId.value, ids, { proxied: enabled });
-    if (result.succeeded === result.total) toastSuccess(`已更新 ${result.succeeded} 条`);
-    else toastError(`完成：成功 ${result.succeeded}，失败 ${result.failed}`);
+    if (result.succeeded === result.total) toastSuccess(t('已更新 {p0} 条', { p0: result.succeeded }));
+    else toastError(t('完成：成功 {p0}，失败 {p1}', { p0: result.succeeded, p1: result.failed }));
     selectedRecordIds.value = [];
     await loadRecords();
   } catch (err: any) {
-    toastError('批量更新失败', err.response?.data?.error || err.message);
+    toastError(t('批量更新失败'), err.response?.data?.error || err.message);
   } finally {
     bulkCdnLoading.value = false;
   }
@@ -1185,11 +1185,11 @@ async function handleBulkCdn(enabled: boolean) {
 
 const sslExpiryLabel = computed(() => {
   const d = domain.value;
-  if (!d?.sslExpiresAt) return '未检测';
+  if (!d?.sslExpiresAt) return t('未检测');
   const days = Math.ceil((new Date(d.sslExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  if (days < 0) return `已过期 ${Math.abs(days)} 天`;
-  if (days === 0) return '今天到期';
-  return `${new Date(d.sslExpiresAt).toLocaleDateString('zh-CN')}（${days}天）`;
+  if (days < 0) return t('已过期 {p0} 天', { p0: Math.abs(days) });
+  if (days === 0) return t('今天到期');
+  return t('{p0}（{p1}天）', { p0: new Date(d.sslExpiresAt).toLocaleDateString('zh-CN'), p1: days });
 });
 
 const sslExpiryClass = computed(() => {
@@ -1207,11 +1207,11 @@ async function handlePropagate(r: DnsRecord) {
     const data = await store.checkPropagation(domainId.value, r.id);
     propagateResult.value = data;
     showPropagateDialog.value = true;
-    if (data.matched === data.total) toastSuccess('各解析器均已匹配');
-    else if (data.matched > 0) toastInfo('部分解析器已匹配', `${data.matched}/${data.total}`);
-    else toastError('尚未匹配', '可能仍在传播或记录值不一致');
+    if (data.matched === data.total) toastSuccess(t('各解析器均已匹配'));
+    else if (data.matched > 0) toastInfo(t('部分解析器已匹配'), `${data.matched}/${data.total}`);
+    else toastError(t('尚未匹配'), t('可能仍在传播或记录值不一致'));
   } catch (err: any) {
-    toastError('传播检测失败', err.response?.data?.error || err.message);
+    toastError(t('传播检测失败'), err.response?.data?.error || err.message);
   } finally {
     propagatingId.value = null;
   }
@@ -1223,17 +1223,17 @@ async function handleSslCheck() {
     const data = await store.checkSsl(domainId.value);
     if (data.success) {
       toastSuccess(
-        '证书检测完成',
+        t('证书检测完成'),
         data.daysRemaining != null
-          ? `剩余 ${data.daysRemaining} 天 · ${data.issuer || ''}`
-          : data.subject || '成功',
+          ? t('剩余 {p0} 天 · {p1}', { p0: data.daysRemaining, p1: data.issuer || '' })
+          : data.subject || t('成功'),
       );
       await store.fetchDomain(domainId.value);
     } else {
-      toastError('证书检测失败', data.error || '无法连接 443');
+      toastError(t('证书检测失败'), data.error || t('无法连接 443'));
     }
   } catch (err: any) {
-    toastError('证书检测失败', err.response?.data?.error || err.message);
+    toastError(t('证书检测失败'), err.response?.data?.error || err.message);
   } finally {
     checkingSsl.value = false;
   }
@@ -1282,7 +1282,7 @@ const savingNotes = ref(false);
 function toggleFavorite() {
   if (!domain.value) return;
   favorited.value = toggleFavoriteDomain(domain.value.id);
-  toastSuccess(favorited.value ? '已收藏' : '已取消收藏');
+  toastSuccess(favorited.value ? t('已收藏') : t('已取消收藏'));
 }
 
 function startEditNotes() {
@@ -1295,9 +1295,9 @@ async function saveNotes() {
   try {
     await store.updateDomainNotes(domainId.value, notesInput.value);
     editingNotes.value = false;
-    toastSuccess('备注已保存');
+    toastSuccess(t('备注已保存'));
   } catch (err: any) {
-    toastError('保存失败', err.response?.data?.error || err.message);
+    toastError(t('保存失败'), err.response?.data?.error || err.message);
   } finally {
     savingNotes.value = false;
   }
@@ -1317,9 +1317,9 @@ async function handleExportRecords(format: 'csv' | 'json' | 'zone' = 'csv') {
     link.download = format === 'zone' ? `${base}.zone` : `${base}-dns.${ext}`;
     link.click();
     URL.revokeObjectURL(url);
-    toastSuccess(format === 'zone' ? 'BIND Zone 已导出' : '记录已导出');
+    toastSuccess(format === 'zone' ? t('BIND Zone 已导出') : t('记录已导出'));
   } catch (err: any) {
-    toastError('导出失败', err.response?.data?.error || err.message);
+    toastError(t('导出失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1335,21 +1335,21 @@ async function handleBulkDeleteRecords() {
   const ids = [...selectedRecordIds.value];
   if (!ids.length) return;
   const ok = await confirmDialog({
-    title: '批量删除记录',
-    description: `确定删除选中的 ${ids.length} 条 DNS 记录吗？此操作会同步到 DNS 服务商。`,
-    confirmText: '删除',
+    title: t('批量删除记录'),
+    description: t('确定删除选中的 {p0} 条 DNS 记录吗？此操作会同步到 DNS 服务商。', { p0: ids.length }),
+    confirmText: t('删除'),
     variant: 'destructive',
   });
   if (!ok) return;
   try {
     const result = await store.bulkDeleteRecords(domainId.value, ids);
     selectedRecordIds.value = [];
-    if (result.succeeded === result.total) toastSuccess(`已删除 ${result.succeeded} 条记录`);
-    else toastError(`删除完成：成功 ${result.succeeded}，失败 ${result.failed}`);
+    if (result.succeeded === result.total) toastSuccess(t('已删除 {p0} 条记录', { p0: result.succeeded }));
+    else toastError(t('删除完成：成功 {p0}，失败 {p1}', { p0: result.succeeded, p1: result.failed }));
     await loadRecords();
     store.fetchDomain(domainId.value);
   } catch (err: any) {
-    toastError('批量删除失败', err.response?.data?.error || err.message);
+    toastError(t('批量删除失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1359,19 +1359,19 @@ async function handleBulkTtl(value: string) {
   bulkTtl.value = '';
   if (!ids.length || !ttl) return;
   const ok = await confirmDialog({
-    title: '批量修改 TTL',
-    description: `将选中的 ${ids.length} 条记录 TTL 改为 ${ttl} 秒？`,
-    confirmText: '确认修改',
+    title: t('批量修改 TTL'),
+    description: t('将选中的 {p0} 条记录 TTL 改为 {p1} 秒？', { p0: ids.length, p1: ttl }),
+    confirmText: t('确认修改'),
   });
   if (!ok) return;
   try {
     const result = await store.bulkUpdateRecords(domainId.value, ids, { ttl });
-    if (result.succeeded === result.total) toastSuccess(`已更新 ${result.succeeded} 条 TTL`);
-    else toastError(`更新完成：成功 ${result.succeeded}，失败 ${result.failed}`);
+    if (result.succeeded === result.total) toastSuccess(t('已更新 {p0} 条 TTL', { p0: result.succeeded }));
+    else toastError(t('更新完成：成功 {p0}，失败 {p1}', { p0: result.succeeded, p1: result.failed }));
     selectedRecordIds.value = [];
     await loadRecords();
   } catch (err: any) {
-    toastError('批量改 TTL 失败', err.response?.data?.error || err.message);
+    toastError(t('批量改 TTL 失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1402,7 +1402,7 @@ function copyDigCommand(r: DnsRecord) {
         ? r.name
         : `${r.name}.${domain.value?.name || ''}`;
   const cmd = `dig ${r.recordType} ${host}`;
-  copyText(cmd, 'dig 命令已复制');
+  copyText(cmd, t('dig 命令已复制'));
 }
 
 const recordTypes = DNS_RECORD_TYPES;
@@ -1437,7 +1437,7 @@ async function applyToggleRemindDay(day: number) {
     await api.put(`/domains/${domainId.value}/expiry-remind`, { expiryRemindDays: current });
     store.fetchDomain(domainId.value);
   } catch (err: any) {
-    toastError('更新失败', err.response?.data?.error || err.message);
+    toastError(t('更新失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1454,7 +1454,7 @@ async function toggleAutoCheck() {
     });
     store.fetchDomain(domainId.value);
   } catch (err: any) {
-    toastError('更新失败', err.response?.data?.error || err.message);
+    toastError(t('更新失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1486,9 +1486,9 @@ function statusVariant(status: string): 'default' | 'destructive' | 'secondary' 
 }
 
 function statusLabel(status: string) {
-  if (status === 'active') return '正常';
-  if (status === 'expired') return '已过期';
-  if (status === 'transferred') return '已转移';
+  if (status === 'active') return t('正常');
+  if (status === 'expired') return t('已过期');
+  if (status === 'transferred') return t('已转移');
   return status;
 }
 
@@ -1499,9 +1499,9 @@ function triggerBadgeVariant(trigger: string): 'default' | 'secondary' | 'outlin
 }
 
 function triggerLabel(trigger: string) {
-  if (trigger === 'manual') return '手动';
-  if (trigger === 'on_change') return '自动';
-  if (trigger === 'scheduled') return '定时';
+  if (trigger === 'manual') return t('手动');
+  if (trigger === 'on_change') return t('自动');
+  if (trigger === 'scheduled') return t('定时');
   return trigger;
 }
 
@@ -1512,9 +1512,9 @@ async function handleSync() {
     syncResult.value = await store.syncRecords(domainId.value);
     await store.fetchDomain(domainId.value);
     loadRecords();
-    toastSuccess('同步完成', `处理 ${syncResult.value.synced} 条记录`);
+    toastSuccess(t('同步完成'), t('处理 {p0} 条记录', { p0: syncResult.value.synced }));
   } catch (err: any) {
-    toastError('同步失败', err.response?.data?.error || err.message);
+    toastError(t('同步失败'), err.response?.data?.error || err.message);
   } finally {
     syncing.value = false;
   }
@@ -1522,18 +1522,18 @@ async function handleSync() {
 
 async function handleDelete() {
   const ok = await confirmDialog({
-    title: '删除域名',
-    description: `确定删除域名 ${domain.value?.name} 吗？\n将同时删除所有 DNS 记录和分配信息，此操作不可撤销。`,
-    confirmText: '删除',
+    title: t('删除域名'),
+    description: t('确定删除域名 {p0} 吗？\\n将同时删除所有 DNS 记录和分配信息，此操作不可撤销。', { p0: domain.value?.name }),
+    confirmText: t('删除'),
     variant: 'destructive',
   });
   if (!ok) return;
   try {
     await store.deleteDomain(domainId.value);
-    toastSuccess('域名已删除');
+    toastSuccess(t('域名已删除'));
     router.push('/domains');
   } catch (err: any) {
-    toastError('删除失败', err.response?.data?.error || err.message);
+    toastError(t('删除失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1551,18 +1551,18 @@ function openEditRecord(record: DnsRecord) {
 
 async function handleDeleteRecord(recordId: string) {
   const ok = await confirmDialog({
-    title: '删除记录',
-    description: '确定删除该 DNS 记录吗？将同步到 DNS 服务商。',
-    confirmText: '删除',
+    title: t('删除记录'),
+    description: t('确定删除该 DNS 记录吗？将同步到 DNS 服务商。'),
+    confirmText: t('删除'),
     variant: 'destructive',
   });
   if (!ok) return;
   try {
     await store.deleteRecord(domainId.value, recordId);
     selectedRecordIds.value = selectedRecordIds.value.filter((id) => id !== recordId);
-    toastSuccess('记录已删除');
+    toastSuccess(t('记录已删除'));
   } catch (err: any) {
-    toastError('删除失败', err.response?.data?.error || err.message);
+    toastError(t('删除失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1570,7 +1570,7 @@ function handleRecordSaved() {
   closeRecordForm();
   loadRecords();
   store.fetchDomain(domainId.value);
-  toastSuccess('记录已保存');
+  toastSuccess(t('记录已保存'));
 }
 
 async function handleCreateSnapshot() {
@@ -1578,9 +1578,9 @@ async function handleCreateSnapshot() {
   try {
     await store.createSnapshot(domainId.value);
     await store.fetchSnapshots(domainId.value);
-    toastSuccess('快照已创建');
+    toastSuccess(t('快照已创建'));
   } catch (err: any) {
-    toastError('创建快照失败', err.response?.data?.error || err.message);
+    toastError(t('创建快照失败'), err.response?.data?.error || err.message);
   } finally {
     creatingSnapshot.value = false;
   }
@@ -1591,29 +1591,29 @@ async function viewSnapshotDetail(snapshotId: string) {
     await store.getSnapshotDetail(domainId.value, snapshotId);
     showSnapshotDetail.value = true;
   } catch (err: any) {
-    toastError('获取快照详情失败', err.response?.data?.error || err.message);
+    toastError(t('获取快照详情失败'), err.response?.data?.error || err.message);
   }
 }
 
 async function handleRollback(snapshotId: string, version: number) {
   const ok = await confirmDialog({
-    title: `回滚到 v${version}`,
-    description: '将替换所有当前 DNS 记录，当前状态会先保存为快照。此操作影响线上解析，请确认。',
-    confirmText: '确认回滚',
+    title: t('回滚到 v{p0}', { p0: version }),
+    description: t('将替换所有当前 DNS 记录，当前状态会先保存为快照。此操作影响线上解析，请确认。'),
+    confirmText: t('确认回滚'),
     variant: 'destructive',
   });
   if (!ok) return;
   try {
     const result = await store.rollbackSnapshot(domainId.value, snapshotId);
     toastSuccess(
-      '回滚完成',
-      `删除 ${result.deleted} 条，新增 ${result.created} 条，更新 ${result.updated} 条`,
+      t('回滚完成'),
+      t('删除 {p0} 条，新增 {p1} 条，更新 {p2} 条', { p0: result.deleted, p1: result.created, p2: result.updated }),
     );
     await store.fetchDomain(domainId.value);
     loadRecords();
     await store.fetchSnapshots(domainId.value);
   } catch (err: any) {
-    toastError('回滚失败', err.response?.data?.error || err.message);
+    toastError(t('回滚失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1622,7 +1622,7 @@ async function handleDiff() {
   try {
     await store.diffSnapshots(domainId.value, Number(diffFromVersion.value), Number(diffToVersion.value));
   } catch (err: any) {
-    toastError('比较失败', err.response?.data?.error || err.message);
+    toastError(t('比较失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1635,9 +1635,9 @@ async function saveGroup() {
   try {
     await store.updateDomainGroup(domainId.value, groupInput.value);
     editingGroup.value = false;
-    toastSuccess('分组已更新');
+    toastSuccess(t('分组已更新'));
   } catch (err: any) {
-    toastError('更新失败', err.response?.data?.error || err.message);
+    toastError(t('更新失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1652,16 +1652,16 @@ function startEditExpiry() {
 
 async function saveExpiry() {
   if (!expiryInput.value) {
-    toastError('请选择到期日期');
+    toastError(t('请选择到期日期'));
     return;
   }
   try {
     await api.put(`/domains/${domainId.value}/expiry`, { expiresAt: expiryInput.value });
     editingExpiry.value = false;
     await store.fetchDomain(domainId.value);
-    toastSuccess('到期时间已更新');
+    toastSuccess(t('到期时间已更新'));
   } catch (err: any) {
-    toastError('更新失败', err.response?.data?.error || err.message);
+    toastError(t('更新失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1670,13 +1670,13 @@ async function handleCheckExpiry() {
   try {
     const { data } = await api.post(`/domains/${domainId.value}/check-expiry`);
     await store.fetchDomain(domainId.value);
-    const date = data.expiresAt ? new Date(data.expiresAt).toLocaleDateString('zh-CN') : '未知';
+    const date = data.expiresAt ? new Date(data.expiresAt).toLocaleDateString('zh-CN') : t('未知');
     toastSuccess(
-      'WHOIS 查询成功',
-      `到期时间: ${date}${data.registrar ? ` · 注册商: ${data.registrar}` : ''}`,
+      t('WHOIS 查询成功'),
+      data.registrar ? t('到期时间: {p0} · 注册商: {p1}', { p0: date, p1: data.registrar }) : t('到期时间: {p0}', { p0: date }),
     );
   } catch (err: any) {
-    toastError('WHOIS 查询失败', err.response?.data?.error || err.message);
+    toastError(t('WHOIS 查询失败'), err.response?.data?.error || err.message);
   } finally {
     checkingExpiry.value = false;
   }
@@ -1691,9 +1691,9 @@ async function addTag() {
   try {
     await store.updateDomainTags(domainId.value, currentTags);
     newTag.value = '';
-    toastSuccess('标签已添加');
+    toastSuccess(t('标签已添加'));
   } catch (err: any) {
-    toastError('添加标签失败', err.response?.data?.error || err.message);
+    toastError(t('添加标签失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1702,7 +1702,7 @@ async function removeTag(tag: string) {
   try {
     await store.updateDomainTags(domainId.value, currentTags);
   } catch (err: any) {
-    toastError('删除标签失败', err.response?.data?.error || err.message);
+    toastError(t('删除标签失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1711,34 +1711,34 @@ async function handleConfigureUptime() {
   try {
     await uptimeStore.configure(uptimePushUrl.value);
     uptimePushUrl.value = '';
-    toastSuccess('UptimeKuma 已配置');
+    toastSuccess(t('UptimeKuma 已配置'));
   } catch (err: any) {
-    toastError('配置失败', err.response?.data?.error || err.message);
+    toastError(t('配置失败'), err.response?.data?.error || err.message);
   }
 }
 
 async function handleRemoveUptime() {
   const ok = await confirmDialog({
-    title: '移除监控配置',
-    description: '确定移除 UptimeKuma 配置吗？',
-    confirmText: '移除',
+    title: t('移除监控配置'),
+    description: t('确定移除 UptimeKuma 配置吗？'),
+    confirmText: t('移除'),
     variant: 'destructive',
   });
   if (!ok) return;
   try {
     await uptimeStore.removeConfig();
-    toastSuccess('已移除配置');
+    toastSuccess(t('已移除配置'));
   } catch (err: any) {
-    toastError('移除失败', err.response?.data?.error || err.message);
+    toastError(t('移除失败'), err.response?.data?.error || err.message);
   }
 }
 
 async function handleHealthCheck() {
   try {
     await uptimeStore.checkDomain(domainId.value);
-    toastSuccess('健康检查完成');
+    toastSuccess(t('健康检查完成'));
   } catch (err: any) {
-    toastError('检查失败', err.response?.data?.error || err.message);
+    toastError(t('检查失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1746,9 +1746,9 @@ async function handleMonitorCheck() {
   try {
     await monitorStore.checkNow(domainId.value);
     await monitorStore.fetchHistory(domainId.value);
-    toastSuccess('探测完成');
+    toastSuccess(t('探测完成'));
   } catch (err: any) {
-    toastError('探测失败', err.response?.data?.error || err.message);
+    toastError(t('探测失败'), err.response?.data?.error || err.message);
   }
 }
 
@@ -1756,30 +1756,30 @@ async function handleToggleMonitor(enabled: boolean) {
   try {
     await monitorStore.setEnabled(domainId.value, enabled);
     monitorEnabled.value = enabled;
-    toastSuccess(enabled ? '监控已启用' : '监控已关闭');
+    toastSuccess(enabled ? t('监控已启用') : t('监控已关闭'));
     if (enabled) {
       monitorStore.fetchHistory(domainId.value).catch(() => {});
     }
   } catch (err: any) {
-    toastError('操作失败', err.response?.data?.error || err.message);
+    toastError(t('操作失败'), err.response?.data?.error || err.message);
   }
 }
 
 async function handleDnsTest() {
   try {
     await speedtestStore.runDnsTest(domainId.value);
-    toastSuccess('DNS 测速完成');
+    toastSuccess(t('DNS 测速完成'));
   } catch (err: any) {
-    toastError('DNS 测试失败', err.response?.data?.error || err.message);
+    toastError(t('DNS 测试失败'), err.response?.data?.error || err.message);
   }
 }
 
 async function handleHttpTest() {
   try {
     await speedtestStore.runHttpTest(domainId.value);
-    toastSuccess('HTTP 测试完成');
+    toastSuccess(t('HTTP 测试完成'));
   } catch (err: any) {
-    toastError('HTTP 测试失败', err.response?.data?.error || err.message);
+    toastError(t('HTTP 测试失败'), err.response?.data?.error || err.message);
   }
 }
 

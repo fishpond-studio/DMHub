@@ -10,6 +10,9 @@ import { marked } from 'marked';
 import { Globe, Shield, Bell, Users, ArrowRight, LayoutDashboard } from 'lucide-vue-next';
 import { getAccessToken } from '@/lib/axios';
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const router = useRouter();
 
 const name = ref('DMHub');
@@ -22,17 +25,17 @@ const renderedFooter = ref('');
 const isLoggedIn = computed(() => !!getAccessToken());
 
 const features = [
-  { icon: Globe, title: '域名统一管理', desc: '多服务商域名集中查看，分组标签一目了然' },
-  { icon: Shield, title: '解析协作与审计', desc: '权限指派、操作留痕，变更可追溯可回滚' },
-  { icon: Bell, title: '到期智能提醒', desc: '多渠道通知，不再错过续费窗口' },
-  { icon: Users, title: '团队协作', desc: '邀请码入队、角色权限，适合小团队共管' },
+  { icon: Globe, title: t('域名统一管理'), desc: t('多服务商域名集中查看，分组标签一目了然') },
+  { icon: Shield, title: t('解析协作与审计'), desc: t('权限指派、操作留痕，变更可追溯可回滚') },
+  { icon: Bell, title: t('到期智能提醒'), desc: t('多渠道通知，不再错过续费窗口') },
+  { icon: Users, title: t('团队协作'), desc: t('邀请码入队、角色权限，适合小团队共管') },
 ];
 
 onMounted(async () => {
   try {
     const { data } = await api.get('/public/landing');
     name.value = data.name || 'DMHub';
-    subtitle.value = data.subtitle || '面向团队的域名协作管理平台';
+    subtitle.value = data.subtitle || t('面向团队的域名协作管理平台');
     logoUrl.value = data.logoUrl || null;
     backgroundUrl.value = data.backgroundUrl || null;
     footerContent.value = data.footerContent || '';
@@ -44,7 +47,7 @@ onMounted(async () => {
         : sanitizeHtml(await marked(footerContent.value));
     }
   } catch {
-    if (!subtitle.value) subtitle.value = '面向团队的域名协作管理平台';
+    if (!subtitle.value) subtitle.value = t('面向团队的域名协作管理平台');
   }
 });
 </script>
@@ -74,7 +77,7 @@ onMounted(async () => {
           @click="router.push('/dashboard')"
         >
           <LayoutDashboard class="mr-1.5 h-4 w-4" />
-          进入控制台
+          {{ $t('进入控制台') }}
         </Button>
         <template v-else>
           <Button
@@ -83,10 +86,10 @@ onMounted(async () => {
             :class="backgroundUrl ? 'text-white hover:bg-white/10 hover:text-white' : ''"
             @click="router.push('/login')"
           >
-            登录
+            {{ $t('登录') }}
           </Button>
           <Button size="sm" @click="router.push('/register')">
-            注册
+            {{ $t('注册') }}
           </Button>
         </template>
       </div>
@@ -121,7 +124,7 @@ onMounted(async () => {
         class="mb-10 max-w-2xl text-center text-base leading-relaxed md:text-lg animate-fade-in stagger-3"
         :class="backgroundUrl ? 'text-white/85' : 'text-muted-foreground'"
       >
-        {{ subtitle || '面向团队的域名协作管理平台' }}
+        {{ subtitle || $t('面向团队的域名协作管理平台') }}
       </p>
 
       <div class="flex flex-col items-center gap-3 animate-fade-in stagger-4 sm:flex-row">
@@ -130,7 +133,7 @@ onMounted(async () => {
           class="shadow-md"
           @click="router.push(isLoggedIn ? '/dashboard' : '/login')"
         >
-          {{ isLoggedIn ? '进入控制台' : '开始使用' }}
+          {{ isLoggedIn ? $t('进入控制台') : $t('开始使用') }}
           <ArrowRight class="ml-2 h-4 w-4" />
         </Button>
         <Button
@@ -140,7 +143,7 @@ onMounted(async () => {
           :class="backgroundUrl ? 'border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white' : ''"
           @click="router.push('/register')"
         >
-          创建账户
+          {{ $t('创建账户') }}
         </Button>
       </div>
 

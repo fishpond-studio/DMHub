@@ -1,19 +1,19 @@
 ﻿<template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-foreground">DNS 服务商配置</h1>
+      <h1 class="text-2xl font-bold text-foreground">{{ $t('DNS 服务商配置') }}</h1>
       <Button @click="openAddForm">
         <Plus class="h-4 w-4 mr-1" />
-        添加服务商
+        {{ $t('添加服务商') }}
       </Button>
     </div>
 
-      <div v-if="store.loading" class="text-center py-12 text-muted-foreground">加载中...</div>
+      <div v-if="store.loading" class="text-center py-12 text-muted-foreground">{{ $t('加载中․․․') }}</div>
 
       <div v-else-if="store.providers.length === 0 && !showForm" class="text-center py-16">
         <Server class="mx-auto h-12 w-12 text-muted-foreground" />
-        <p class="mt-4 text-muted-foreground">尚未配置任何 DNS 服务商</p>
-        <Button class="mt-4" @click="openAddForm">添加第一个服务商</Button>
+        <p class="mt-4 text-muted-foreground">{{ $t('尚未配置任何 DNS 服务商') }}</p>
+        <Button class="mt-4" @click="openAddForm">{{ $t('添加第一个服务商') }}</Button>
       </div>
 
       <div v-else class="space-y-6">
@@ -26,32 +26,32 @@
                   <Badge v-else-if="provider.providerId === 'aliyun'" variant="default" class="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/15">Aliyun</Badge>
                   <Badge v-else-if="provider.providerId === 'tencent'" variant="default" class="bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/30 hover:bg-green-500/15">Tencent</Badge>
                   <h3 class="text-base font-semibold text-foreground">{{ provider.name }}</h3>
-                  <Badge v-if="!provider.enabled" variant="secondary">已禁用</Badge>
+                  <Badge v-if="!provider.enabled" variant="secondary">{{ $t('已禁用') }}</Badge>
                 </div>
                 <p class="mt-1 text-xs text-muted-foreground tnum">
-                  创建于 {{ formatDate(provider.createdAt) }}
+                  {{ $t('创建于') }} {{ formatDate(provider.createdAt) }}
                 </p>
               </div>
               <div class="flex items-center gap-2 flex-wrap">
                 <Button variant="outline" size="sm" @click="handleTest(provider.id)" :disabled="testingId === provider.id">
-                  {{ testingId === provider.id ? '测试中...' : '测试' }}
+                  {{ testingId === provider.id ? $t('测试中․․․') : $t('测试') }}
                 </Button>
                 <Button size="sm" class="bg-primary hover:bg-primary/90" @click="handleSync(provider.id)" :disabled="syncingId === provider.id">
-                  {{ syncingId === provider.id ? '同步中...' : '同步' }}
+                  {{ syncingId === provider.id ? $t('同步中․․․') : $t('同步') }}
                 </Button>
-                <Button variant="outline" size="sm" @click="openEditForm(provider)">编辑</Button>
-                <Button variant="outline" size="sm" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="handleDelete(provider)">删除</Button>
+                <Button variant="outline" size="sm" @click="openEditForm(provider)">{{ $t('编辑') }}</Button>
+                <Button variant="outline" size="sm" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="handleDelete(provider)">{{ $t('删除') }}</Button>
               </div>
             </div>
 
             <div v-if="testResult && testResult.id === provider.id" class="mt-3">
-              <div v-if="testResult.success" class="rounded-md bg-primary/10 p-3 text-sm text-primary">连接成功</div>
-              <div v-else class="rounded-md bg-destructive/10 p-3 text-sm text-destructive">连接失败: {{ testResult.error }}</div>
+              <div v-if="testResult.success" class="rounded-md bg-primary/10 p-3 text-sm text-primary">{{ $t('连接成功') }}</div>
+              <div v-else class="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{{ $t('连接失败:') }} {{ testResult.error }}</div>
             </div>
 
             <div v-if="syncResult && syncResult.id === provider.id" class="mt-3">
               <div class="rounded-md bg-primary/10 p-3 text-sm text-primary tnum">
-                同步完成: {{ syncResult.result.syncedDomains }} 个域名, {{ syncResult.result.syncedRecords }} 条记录
+                {{ $t('同步完成:') }} {{ syncResult.result.syncedDomains }} {{ $t('个域名,') }} {{ syncResult.result.syncedRecords }} {{ $t('条记录') }}
               </div>
             </div>
           </CardContent>
@@ -61,62 +61,62 @@
       <Dialog :open="showForm" @update:open="showForm = $event">
         <DialogContent class="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{{ editingId ? '编辑服务商' : '添加服务商' }}</DialogTitle>
+            <DialogTitle>{{ editingId ? $t('编辑服务商') : $t('添加服务商') }}</DialogTitle>
           </DialogHeader>
           <div class="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
             <div>
-              <Label class="mb-1 block">服务商类型</Label>
+              <Label class="mb-1 block">{{ $t('服务商类型') }}</Label>
               <Select v-model="form.providerId" :disabled="!!editingId">
                 <SelectTrigger :disabled="!!editingId">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cloudflare">Cloudflare</SelectItem>
-                  <SelectItem value="aliyun">Aliyun（阿里云）</SelectItem>
-                  <SelectItem value="tencent">Tencent（腾讯云）</SelectItem>
+                  <SelectItem value="aliyun">{{ $t('Aliyun（阿里云）') }}</SelectItem>
+                  <SelectItem value="tencent">{{ $t('Tencent（腾讯云）') }}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label class="mb-1 block">配置名称</Label>
-              <Input v-model="form.name" type="text" placeholder="例: 我的 Cloudflare 账号" />
+              <Label class="mb-1 block">{{ $t('配置名称') }}</Label>
+              <Input v-model="form.name" type="text" :placeholder="$t('例: 我的 Cloudflare 账号')" />
             </div>
 
             <template v-if="form.providerId === 'cloudflare'">
               <CloudflareSetupGuide />
               <div>
                 <Label class="mb-1 block">API Token</Label>
-                <Input v-model="form.credentials.token" type="password" placeholder="输入 Cloudflare API Token" />
+                <Input v-model="form.credentials.token" type="password" :placeholder="$t('输入 Cloudflare API Token')" />
               </div>
             </template>
 
             <template v-if="form.providerId === 'aliyun'">
               <div>
                 <Label class="mb-1 block">AccessKey ID</Label>
-                <Input v-model="form.credentials.accessKeyId" type="password" placeholder="输入阿里云 AccessKey ID" />
+                <Input v-model="form.credentials.accessKeyId" type="password" :placeholder="$t('输入阿里云 AccessKey ID')" />
               </div>
               <div>
                 <Label class="mb-1 block">AccessKey Secret</Label>
-                <Input v-model="form.credentials.accessKeySecret" type="password" placeholder="输入阿里云 AccessKey Secret" />
+                <Input v-model="form.credentials.accessKeySecret" type="password" :placeholder="$t('输入阿里云 AccessKey Secret')" />
               </div>
             </template>
 
             <template v-if="form.providerId === 'tencent'">
               <div>
                 <Label class="mb-1 block">SecretId</Label>
-                <Input v-model="form.credentials.secretId" type="password" placeholder="输入腾讯云 SecretId" />
+                <Input v-model="form.credentials.secretId" type="password" :placeholder="$t('输入腾讯云 SecretId')" />
               </div>
               <div>
                 <Label class="mb-1 block">SecretKey</Label>
-                <Input v-model="form.credentials.secretKey" type="password" placeholder="输入腾讯云 SecretKey" />
+                <Input v-model="form.credentials.secretKey" type="password" :placeholder="$t('输入腾讯云 SecretKey')" />
               </div>
             </template>
           </div>
           <DialogFooter>
-            <Button variant="outline" @click="showForm = false">取消</Button>
+            <Button variant="outline" @click="showForm = false">{{ $t('取消') }}</Button>
             <Button @click="handleSave" :disabled="saving">
-              {{ saving ? '保存中...' : '保存' }}
+              {{ saving ? $t('保存中․․․') : $t('保存') }}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -125,12 +125,12 @@
       <AlertDialog :open="confirmDelete.open">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认删除服务商配置</AlertDialogTitle>
+            <AlertDialogTitle>{{ $t('确认删除服务商配置') }}</AlertDialogTitle>
             <AlertDialogDescription>{{ confirmDelete.message }}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel @click="cancelDelete">取消</AlertDialogCancel>
-            <AlertDialogAction @click="proceedDelete">确认删除</AlertDialogAction>
+            <AlertDialogCancel @click="cancelDelete">{{ $t('取消') }}</AlertDialogCancel>
+            <AlertDialogAction @click="proceedDelete">{{ $t('确认删除') }}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -150,6 +150,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import CloudflareSetupGuide from '@/components/provider/CloudflareSetupGuide.vue';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const store = useProviderStore();
 const showForm = ref(false);
@@ -218,27 +221,27 @@ function openEditForm(provider: ProviderConfig) {
 
 async function handleSave() {
   if (!form.name.trim()) {
-    alert('请输入配置名称');
+    alert(t('请输入配置名称'));
     return;
   }
 
   let credentials: Record<string, string> = {};
   if (form.providerId === 'cloudflare') {
     if (!form.credentials.token && !editingId.value) {
-      alert('请输入 API Token');
+      alert(t('请输入 API Token'));
       return;
     }
     if (form.credentials.token) credentials = { token: form.credentials.token };
   } else if (form.providerId === 'aliyun') {
     if (!editingId.value && (!form.credentials.accessKeyId || !form.credentials.accessKeySecret)) {
-      alert('请输入 AccessKey ID 和 AccessKey Secret');
+      alert(t('请输入 AccessKey ID 和 AccessKey Secret'));
       return;
     }
     if (form.credentials.accessKeyId) credentials.accessKeyId = form.credentials.accessKeyId;
     if (form.credentials.accessKeySecret) credentials.accessKeySecret = form.credentials.accessKeySecret;
   } else if (form.providerId === 'tencent') {
     if (!editingId.value && (!form.credentials.secretId || !form.credentials.secretKey)) {
-      alert('请输入 SecretId 和 SecretKey');
+      alert(t('请输入 SecretId 和 SecretKey'));
       return;
     }
     if (form.credentials.secretId) credentials.secretId = form.credentials.secretId;
@@ -261,7 +264,7 @@ async function handleSave() {
     }
     showForm.value = false;
   } catch (err: any) {
-    alert(err.response?.data?.error || '保存失败');
+    alert(err.response?.data?.error || t('保存失败'));
   } finally {
     saving.value = false;
   }
@@ -274,7 +277,7 @@ async function handleTest(id: string) {
     const result = await store.testConnection(id);
     testResult.value = { id, ...result };
   } catch (err: any) {
-    testResult.value = { id, success: false, error: err.response?.data?.error || '测试失败' };
+    testResult.value = { id, success: false, error: err.response?.data?.error || t('测试失败') };
   } finally {
     testingId.value = null;
   }
@@ -287,7 +290,7 @@ async function handleSync(id: string) {
     const result = await store.syncDomains(id);
     syncResult.value = { id, result };
   } catch (err: any) {
-    alert(err.response?.data?.error || '同步失败');
+    alert(err.response?.data?.error || t('同步失败'));
   } finally {
     syncingId.value = null;
   }
@@ -298,12 +301,12 @@ async function handleDelete(provider: ProviderConfig) {
     const result = await store.deleteProvider(provider.id, false);
     if (result.requiresConfirmation) {
       confirmDelete.open = true;
-      confirmDelete.message = result.warning ?? '确定要删除该服务商配置吗？';
+      confirmDelete.message = result.warning ?? t('确定要删除该服务商配置吗？');
       confirmDelete.id = provider.id;
       confirmDelete.domainCount = result.domainCount ?? 0;
     }
   } catch (err: any) {
-    alert(err.response?.data?.error || '删除失败');
+    alert(err.response?.data?.error || t('删除失败'));
   }
 }
 
@@ -311,7 +314,7 @@ async function proceedDelete() {
   try {
     await store.deleteProvider(confirmDelete.id, true);
   } catch (err: any) {
-    alert(err.response?.data?.error || '删除失败');
+    alert(err.response?.data?.error || t('删除失败'));
   } finally {
     confirmDelete.open = false;
   }

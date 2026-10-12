@@ -6,52 +6,52 @@
           <ArrowLeft class="h-5 w-5" />
         </Button>
         <div class="min-w-0 flex-1">
-          <h1 class="text-2xl font-bold text-foreground">操作日志</h1>
-          <p class="text-sm text-muted-foreground mt-0.5">审计域名、解析与团队相关操作</p>
+          <h1 class="text-2xl font-bold text-foreground">{{ $t('操作日志') }}</h1>
+          <p class="text-sm text-muted-foreground mt-0.5">{{ $t('审计域名、解析与团队相关操作') }}</p>
         </div>
         <Button variant="outline" size="sm" :disabled="exporting" @click="handleExport">
           <Download class="mr-1.5 h-4 w-4" />
-          {{ exporting ? '导出中…' : '导出 CSV' }}
+          {{ exporting ? $t('导出中…') : $t('导出 CSV') }}
         </Button>
       </div>
 
       <div class="flex flex-wrap gap-3 mb-4">
         <Select v-model="filters.action" @update:model-value="fetchData">
           <SelectTrigger class="w-full sm:w-[150px]">
-            <SelectValue placeholder="全部操作" />
+            <SelectValue :placeholder="$t('全部操作')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部操作</SelectItem>
-            <SelectItem value="domain.add">添加域名</SelectItem>
-            <SelectItem value="domain.delete">删除域名</SelectItem>
-            <SelectItem value="record.create">创建记录</SelectItem>
-            <SelectItem value="record.update">更新记录</SelectItem>
-            <SelectItem value="record.delete">删除记录</SelectItem>
-            <SelectItem value="member.invite">邀请成员</SelectItem>
-            <SelectItem value="member.remove">移除成员</SelectItem>
-            <SelectItem value="member.role_change">角色变更</SelectItem>
-            <SelectItem value="team_settings.update">团队设置</SelectItem>
-            <SelectItem value="login">登录</SelectItem>
-            <SelectItem value="login_2fa">2FA 登录</SelectItem>
+            <SelectItem value="all">{{ $t('全部操作') }}</SelectItem>
+            <SelectItem value="domain.add">{{ $t('添加域名') }}</SelectItem>
+            <SelectItem value="domain.delete">{{ $t('删除域名') }}</SelectItem>
+            <SelectItem value="record.create">{{ $t('创建记录') }}</SelectItem>
+            <SelectItem value="record.update">{{ $t('更新记录') }}</SelectItem>
+            <SelectItem value="record.delete">{{ $t('删除记录') }}</SelectItem>
+            <SelectItem value="member.invite">{{ $t('邀请成员') }}</SelectItem>
+            <SelectItem value="member.remove">{{ $t('移除成员') }}</SelectItem>
+            <SelectItem value="member.role_change">{{ $t('角色变更') }}</SelectItem>
+            <SelectItem value="team_settings.update">{{ $t('团队设置') }}</SelectItem>
+            <SelectItem value="login">{{ $t('登录') }}</SelectItem>
+            <SelectItem value="login_2fa">{{ $t('2FA 登录') }}</SelectItem>
           </SelectContent>
         </Select>
 
         <Select v-model="filters.userId" @update:model-value="fetchData">
           <SelectTrigger class="w-full sm:w-[150px]">
-            <SelectValue placeholder="全部用户" />
+            <SelectValue :placeholder="$t('全部用户')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部用户</SelectItem>
+            <SelectItem value="all">{{ $t('全部用户') }}</SelectItem>
             <SelectItem v-for="u in users" :key="u.id" :value="u.id">{{ u.username }}</SelectItem>
           </SelectContent>
         </Select>
 
         <Select v-model="filters.domainId" @update:model-value="fetchData">
           <SelectTrigger class="w-full sm:w-[150px]">
-            <SelectValue placeholder="全部域名" />
+            <SelectValue :placeholder="$t('全部域名')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部域名</SelectItem>
+            <SelectItem value="all">{{ $t('全部域名') }}</SelectItem>
             <SelectItem v-for="d in domainList" :key="d.id" :value="d.id">{{ d.name }}</SelectItem>
           </SelectContent>
         </Select>
@@ -60,14 +60,14 @@
           v-model="filters.startDate"
           type="date"
           class="w-auto"
-          placeholder="开始日期"
+          :placeholder="$t('开始日期')"
           @change="fetchData"
         />
         <Input
           v-model="filters.endDate"
           type="date"
           class="w-auto"
-          placeholder="结束日期"
+          :placeholder="$t('结束日期')"
           @change="fetchData"
         />
       </div>
@@ -77,8 +77,8 @@
       </div>
 
       <div v-else-if="store.logs.length === 0" class="rounded-xl border border-dashed bg-muted/20 py-16 text-center">
-        <p class="font-medium text-foreground">暂无操作日志</p>
-        <p class="mt-1 text-sm text-muted-foreground">调整筛选条件，或等待团队产生新的操作记录</p>
+        <p class="font-medium text-foreground">{{ $t('暂无操作日志') }}</p>
+        <p class="mt-1 text-sm text-muted-foreground">{{ $t('调整筛选条件，或等待团队产生新的操作记录') }}</p>
       </div>
 
       <div v-else>
@@ -86,11 +86,11 @@
           <Table>
             <TableHeader>
               <TableRow class="bg-muted/40 hover:bg-muted/40">
-                <TableHead>时间</TableHead>
-                <TableHead>用户</TableHead>
-                <TableHead>操作</TableHead>
-                <TableHead>目标</TableHead>
-                <TableHead>详情</TableHead>
+                <TableHead>{{ $t('时间') }}</TableHead>
+                <TableHead>{{ $t('用户') }}</TableHead>
+                <TableHead>{{ $t('操作') }}</TableHead>
+                <TableHead>{{ $t('目标') }}</TableHead>
+                <TableHead>{{ $t('详情') }}</TableHead>
                 <TableHead>IP</TableHead>
               </TableRow>
             </TableHeader>
@@ -139,7 +139,7 @@
         </div>
 
         <div class="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
-          <p class="text-sm text-muted-foreground tnum">共 {{ store.total }} 条记录</p>
+          <p class="text-sm text-muted-foreground tnum">{{ $t('共') }} {{ store.total }} {{ $t('条记录') }}</p>
           <div class="flex gap-2 items-center">
             <Button
               :disabled="currentPage <= 1"
@@ -147,7 +147,7 @@
               variant="outline"
               size="sm"
             >
-              上一页
+              {{ $t('上一页') }}
             </Button>
             <span class="text-sm text-muted-foreground tnum">{{ currentPage }} / {{ totalPages }}</span>
             <Button
@@ -156,7 +156,7 @@
               variant="outline"
               size="sm"
             >
-              下一页
+              {{ $t('下一页') }}
             </Button>
           </div>
         </div>
@@ -177,6 +177,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { ArrowLeft, Download } from 'lucide-vue-next';
 import { toastError, toastSuccess } from '@/lib/toast-helpers';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const store = useLogStore();
 
@@ -242,9 +245,9 @@ async function handleExport() {
     link.download = `operation-logs-${Date.now()}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toastSuccess('操作日志已导出');
+    toastSuccess(t('操作日志已导出'));
   } catch (err: any) {
-    toastError('导出失败', err.response?.data?.error || err.message);
+    toastError(t('导出失败'), err.response?.data?.error || err.message);
   } finally {
     exporting.value = false;
   }
@@ -259,20 +262,20 @@ function formatTimeShort(dateStr: string) {
 }
 
 const ACTION_LABELS: Record<string, string> = {
-  'domain.add': '添加域名',
-  'domain.delete': '删除域名',
-  'record.create': '创建记录',
-  'record.update': '更新记录',
-  'record.delete': '删除记录',
-  'record.sync': '同步记录',
-  'member.invite': '邀请成员',
-  'member.remove': '移除成员',
-  'member.role_change': '角色变更',
-  'team_settings.update': '更新设置',
-  'login': '登录',
-  'login_2fa': '2FA 登录',
-  'provider.config': '服务商配置',
-  'notification.update': '通知配置',
+  'domain.add': t('添加域名'),
+  'domain.delete': t('删除域名'),
+  'record.create': t('创建记录'),
+  'record.update': t('更新记录'),
+  'record.delete': t('删除记录'),
+  'record.sync': t('同步记录'),
+  'member.invite': t('邀请成员'),
+  'member.remove': t('移除成员'),
+  'member.role_change': t('角色变更'),
+  'team_settings.update': t('更新设置'),
+  'login': t('登录'),
+  'login_2fa': t('2FA 登录'),
+  'provider.config': t('服务商配置'),
+  'notification.update': t('通知配置'),
 };
 
 function actionLabel(action: string): string {
@@ -289,11 +292,11 @@ function actionBadgeVariant(action: string): 'default' | 'destructive' | 'second
 
 function targetLabel(log: { targetType: string; targetId: string }): string {
   const typeLabels: Record<string, string> = {
-    domain: '域名',
-    dns_record: 'DNS 记录',
-    user: '用户',
-    invite_code: '邀请码',
-    team_settings: '团队设置',
+    domain: t('域名'),
+    dns_record: t('DNS 记录'),
+    user: t('用户'),
+    invite_code: t('邀请码'),
+    team_settings: t('团队设置'),
   };
   const label = typeLabels[log.targetType] ?? log.targetType;
   return `${label} ${log.targetId.slice(0, 8)}`;

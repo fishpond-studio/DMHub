@@ -19,6 +19,9 @@ import {
   FileKey,
 } from 'lucide-vue-next'
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const open = ref(false)
 const query = ref('')
 const activeIndex = ref(0)
@@ -42,79 +45,79 @@ const staticCommands = computed<CommandItem[]>(() => {
   const items: CommandItem[] = [
     {
       id: 'nav-dashboard',
-      label: '仪表盘',
-      description: '查看域名统计与到期提醒',
+      label: t('仪表盘'),
+      description: t('查看域名统计与到期提醒'),
       icon: LayoutDashboard,
-      group: '导航',
-      keywords: 'dashboard home 首页',
+      group: t('导航'),
+      keywords: t('dashboard home 首页'),
       action: () => router.push('/dashboard'),
     },
     {
       id: 'nav-domains',
-      label: '域名管理',
-      description: '浏览与管理全部域名',
+      label: t('域名管理'),
+      description: t('浏览与管理全部域名'),
       icon: Globe,
-      group: '导航',
+      group: t('导航'),
       keywords: 'domains dns',
       action: () => router.push('/domains'),
     },
     {
       id: 'nav-search',
-      label: '全局搜索',
-      description: '搜索 DNS 主机、记录值、类型',
+      label: t('全局搜索'),
+      description: t('搜索 DNS 主机、记录值、类型'),
       icon: Search,
-      group: '导航',
-      keywords: 'search dig find 记录',
+      group: t('导航'),
+      keywords: t('search dig find 记录'),
       action: () => router.push('/search'),
     },
     {
       id: 'nav-my-domains',
-      label: '我的域名',
-      description: '查看指派给我的域名',
+      label: t('我的域名'),
+      description: t('查看指派给我的域名'),
       icon: KeyRound,
-      group: '导航',
+      group: t('导航'),
       keywords: 'my assigned',
       action: () => router.push('/my-domains'),
     },
     {
       id: 'nav-logs',
-      label: '操作日志',
-      description: '审计团队操作记录',
+      label: t('操作日志'),
+      description: t('审计团队操作记录'),
       icon: ScrollText,
-      group: '导航',
+      group: t('导航'),
       keywords: 'logs audit',
       action: () => router.push('/logs'),
     },
     {
       id: 'nav-settings',
-      label: '系统设置',
-      description: '团队与个人设置',
+      label: t('系统设置'),
+      description: t('团队与个人设置'),
       icon: Settings,
-      group: '导航',
+      group: t('导航'),
       keywords: 'settings',
       action: () => router.push('/settings/team'),
     },
     {
       id: 'nav-profile',
-      label: '个人资料',
+      label: t('个人资料'),
       icon: User,
-      group: '快捷',
+      group: t('快捷'),
       keywords: 'profile account',
       action: () => router.push('/settings/profile'),
     },
     {
       id: 'nav-2fa',
-      label: '双因素认证',
+      label: t('双因素认证'),
       icon: Shield,
-      group: '快捷',
+      group: t('快捷'),
       keywords: '2fa totp security',
       action: () => router.push('/settings/2fa'),
     },
     {
       id: 'nav-tokens',
-      label: '我的令牌',
+      label: t('我的令牌'),
       icon: FileKey,
-      group: '快捷',
+      group: t('快捷'),
       keywords: 'token api',
       action: () => router.push('/settings/user-tokens'),
     },
@@ -124,35 +127,35 @@ const staticCommands = computed<CommandItem[]>(() => {
     items.push(
       {
         id: 'nav-import',
-        label: '批量导入',
-        description: 'CSV 导入域名与解析记录',
+        label: t('批量导入'),
+        description: t('CSV 导入域名与解析记录'),
         icon: Upload,
-        group: '导航',
+        group: t('导航'),
         keywords: 'import csv',
         action: () => router.push('/import'),
       },
       {
         id: 'action-add-domain',
-        label: '添加域名',
-        description: '创建新域名并关联 DNS 服务商',
+        label: t('添加域名'),
+        description: t('创建新域名并关联 DNS 服务商'),
         icon: Plus,
-        group: '操作',
+        group: t('操作'),
         keywords: 'add create domain',
         action: () => router.push({ path: '/domains', query: { add: '1' } }),
       },
       {
         id: 'nav-providers',
-        label: 'DNS 服务商',
+        label: t('DNS 服务商'),
         icon: Globe,
-        group: '快捷',
+        group: t('快捷'),
         keywords: 'cloudflare aliyun tencent provider',
         action: () => router.push('/settings/providers'),
       },
       {
         id: 'nav-members',
-        label: '成员管理',
+        label: t('成员管理'),
         icon: User,
-        group: '快捷',
+        group: t('快捷'),
         keywords: 'members team',
         action: () => router.push('/settings/members'),
       },
@@ -166,11 +169,11 @@ const domainCommands = computed<CommandItem[]>(() =>
   domainStore.domains.slice(0, 50).map((d) => ({
     id: `domain-${d.id}`,
     label: d.name,
-    description: [d.groupName, d.status === 'expired' ? '已过期' : null, d.providerName]
+    description: [d.groupName, d.status === 'expired' ? t('已过期') : null, d.providerName]
       .filter(Boolean)
-      .join(' · ') || '查看域名详情',
+      .join(' · ') || t('查看域名详情'),
     icon: Globe,
-    group: '域名',
+    group: t('域名'),
     keywords: `${d.name} ${(d.tags || []).join(' ')} ${d.groupName || ''}`,
     action: () => router.push(`/domains/${d.id}`),
   })),
@@ -189,10 +192,10 @@ const filtered = computed(() => {
   if (q.length >= 1) {
     items.unshift({
       id: 'action-global-search',
-      label: `搜索 DNS：「${query.value.trim()}」`,
-      description: '在全部有权限的记录中查找',
+      label: t('搜索 DNS：「{p0}」', { p0: query.value.trim() }),
+      description: t('在全部有权限的记录中查找'),
       icon: Search,
-      group: '搜索',
+      group: t('搜索'),
       action: () => router.push({ path: '/search', query: { q: query.value.trim() } }),
     })
   }
@@ -265,12 +268,12 @@ defineExpose({ open })
 <template>
   <Dialog :open="open" @update:open="(v) => (open = v)">
     <DialogContent class="overflow-hidden p-0 gap-0 max-w-xl top-[20%] translate-y-0">
-      <DialogTitle class="sr-only">命令面板</DialogTitle>
+      <DialogTitle class="sr-only">{{ $t('命令面板') }}</DialogTitle>
       <div class="flex items-center border-b px-3">
         <Search class="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
         <Input
           v-model="query"
-          placeholder="搜索页面、域名或操作..."
+          :placeholder="$t('搜索页面、域名或操作․․․')"
           class="border-0 shadow-none focus-visible:ring-0 h-12 text-base"
           @keydown.stop
         />
@@ -281,7 +284,7 @@ defineExpose({ open })
 
       <div class="max-h-[360px] overflow-y-auto p-2">
         <div v-if="flatFiltered.length === 0" class="py-10 text-center text-sm text-muted-foreground">
-          没有匹配结果
+          {{ $t('没有匹配结果') }}
         </div>
 
         <div v-for="[group, items] in grouped" :key="group" class="mb-2">
@@ -309,7 +312,7 @@ defineExpose({ open })
       </div>
 
       <div class="flex items-center justify-between border-t bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
-        <span>↑↓ 选择 · Enter 打开 · Esc 关闭</span>
+        <span>{{ $t('↑↓ 选择 · Enter 打开 · Esc 关闭') }}</span>
         <span>Ctrl/⌘ + K</span>
       </div>
     </DialogContent>

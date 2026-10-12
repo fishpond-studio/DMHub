@@ -12,16 +12,19 @@ import StepVerifyEmail from '@/components/setup/StepVerifyEmail.vue';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const store = useSetupStore();
 const router = useRouter();
 
 const steps = [
-  { label: '数据库' },
-  { label: '数据表' },
-  { label: '管理员' },
-  { label: '站点URL' },
+  { label: t('数据库') },
+  { label: t('数据表') },
+  { label: t('管理员') },
+  { label: t('站点URL') },
   { label: 'SMTP' },
-  { label: '验证邮箱' },
+  { label: t('验证邮箱') },
 ];
 
 const mountedSteps = reactive<Record<number, boolean>>({ 0: true });
@@ -57,7 +60,7 @@ onMounted(async () => {
     <div class="w-full max-w-2xl">
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold">DMHub</h1>
-        <p class="text-muted-foreground mt-1">系统初始化引导</p>
+        <p class="text-muted-foreground mt-1">{{ $t('系统初始化引导') }}</p>
       </div>
 
       <div class="flex items-center mb-8">
@@ -137,7 +140,7 @@ onMounted(async () => {
       </Card>
 
       <p class="text-center text-xs text-muted-foreground mt-6">
-        DMHub 初始化引导
+        {{ $t('DMHub 初始化引导') }}
       </p>
     </div>
   </div>

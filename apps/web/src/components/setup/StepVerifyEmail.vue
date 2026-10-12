@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const emit = defineEmits<{
   next: [];
   back: [];
@@ -46,7 +49,7 @@ async function bindEmail() {
     emailBound.value = true;
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } } };
-    error.value = err.response?.data?.message || '绑定邮箱失败';
+    error.value = err.response?.data?.message || t('绑定邮箱失败');
   } finally {
     binding.value = false;
   }
@@ -60,7 +63,7 @@ async function sendEmail() {
     startCountdown();
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } } };
-    error.value = err.response?.data?.message || '发送失败';
+    error.value = err.response?.data?.message || t('发送失败');
   } finally {
     sending.value = false;
   }
@@ -83,7 +86,7 @@ async function verify() {
     }, 1500);
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } } };
-    error.value = err.response?.data?.message || '验证失败';
+    error.value = err.response?.data?.message || t('验证失败');
   } finally {
     verifying.value = false;
   }
@@ -100,7 +103,7 @@ async function skipAndFinish() {
     }, 800);
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string; error?: string } } };
-    error.value = err.response?.data?.error || err.response?.data?.message || '完成失败';
+    error.value = err.response?.data?.error || err.response?.data?.message || t('完成失败');
   } finally {
     verifying.value = false;
   }
@@ -114,9 +117,9 @@ onUnmounted(() => {
 <template>
   <div class="space-y-6">
     <div v-if="!verified">
-      <h2 class="text-xl font-semibold tracking-tight">验证邮箱（可选）</h2>
+      <h2 class="text-xl font-semibold tracking-tight">{{ $t('验证邮箱（可选）') }}</h2>
       <p class="text-sm text-muted-foreground mt-1">
-        可跳过。未配置 SMTP 时请直接完成初始化；邮箱可登录后在个人资料中绑定。
+        {{ $t('可跳过。未配置 SMTP 时请直接完成初始化；邮箱可登录后在个人资料中绑定。') }}
       </p>
     </div>
 
@@ -128,8 +131,8 @@ onUnmounted(() => {
       <div class="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center">
         <CheckCircle2 class="h-10 w-10 text-primary" />
       </div>
-      <h2 class="text-2xl font-bold">初始化完成！</h2>
-      <p class="text-sm text-muted-foreground">系统已成功初始化，正在跳转到登录页面...</p>
+      <h2 class="text-2xl font-bold">{{ $t('初始化完成！') }}</h2>
+      <p class="text-sm text-muted-foreground">{{ $t('系统已成功初始化，正在跳转到登录页面․․․') }}</p>
       <Loader2 class="h-5 w-5 animate-spin text-muted-foreground" />
     </div>
 
@@ -137,13 +140,13 @@ onUnmounted(() => {
       <template v-if="!emailBound">
         <div class="space-y-4">
           <div class="space-y-2">
-            <Label>管理员邮箱</Label>
+            <Label>{{ $t('管理员邮箱') }}</Label>
             <Input v-model="email" type="email" placeholder="admin@example.com" />
-            <p class="text-xs text-muted-foreground">用于接收系统通知和验证邮件</p>
+            <p class="text-xs text-muted-foreground">{{ $t('用于接收系统通知和验证邮件') }}</p>
           </div>
           <Button @click="bindEmail" :disabled="binding || !email">
             <Loader2 v-if="binding" class="mr-2 h-4 w-4 animate-spin" />
-            {{ binding ? '绑定中...' : '绑定邮箱' }}
+            {{ binding ? $t('绑定中․․․') : $t('绑定邮箱') }}
           </Button>
         </div>
       </template>
@@ -154,19 +157,19 @@ onUnmounted(() => {
             <Mail class="h-6 w-6 text-primary" />
           </div>
 
-          <p class="text-sm text-muted-foreground text-center">验证邮件将发送至 {{ email }}</p>
+          <p class="text-sm text-muted-foreground text-center">{{ $t('验证邮件将发送至') }} {{ email }}</p>
 
           <Button variant="outline" @click="sendEmail" :disabled="sending || countdown > 0">
             <Loader2 v-if="sending" class="mr-2 h-4 w-4 animate-spin" />
             <Send v-else class="mr-2 h-4 w-4" />
-            <template v-if="sending">发送中...</template>
-            <template v-else-if="countdown > 0">{{ countdown }}秒后可重新发送</template>
-            <template v-else>发送验证邮件</template>
+            <template v-if="sending">{{ $t('发送中․․․') }}</template>
+            <template v-else-if="countdown > 0">{{ $t('{p0}秒后可重新发送', { p0: countdown }) }}</template>
+            <template v-else>{{ $t('发送验证邮件') }}</template>
           </Button>
         </div>
 
         <div class="space-y-2">
-          <Label>验证码</Label>
+          <Label>{{ $t('验证码') }}</Label>
           <Input
             :model-value="code"
             @update:model-value="onCodeInput"
@@ -174,21 +177,21 @@ onUnmounted(() => {
             placeholder="000000"
             maxlength="6"
           />
-          <p class="text-sm text-muted-foreground">请输入6位数字验证码</p>
+          <p class="text-sm text-muted-foreground">{{ $t('请输入6位数字验证码') }}</p>
         </div>
       </template>
 
       <div class="flex justify-between pt-4 border-t gap-2">
         <Button variant="outline" @click="emit('back')">
-          上一步
+          {{ $t('上一步') }}
         </Button>
         <div class="flex gap-2">
           <Button variant="secondary" @click="skipAndFinish" :disabled="verifying">
-            跳过并完成初始化
+            {{ $t('跳过并完成初始化') }}
           </Button>
           <Button v-if="emailBound" @click="verify" :disabled="verifying || code.length !== 6">
             <Loader2 v-if="verifying" class="mr-2 h-4 w-4 animate-spin" />
-            {{ verifying ? '验证中...' : '验证并完成' }}
+            {{ verifying ? $t('验证中․․․') : $t('验证并完成') }}
           </Button>
         </div>
       </div>

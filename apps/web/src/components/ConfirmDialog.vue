@@ -51,21 +51,21 @@ defineExpose({ open });
       <div v-if="visible" class="confirm-overlay" @click.self="handleCancel">
         <div class="confirm-dialog" :class="options.type || 'default'">
           <div class="confirm-header">
-            <h3>{{ options.title || '确认操作' }}</h3>
+            <h3>{{ options.title || $t('确认操作') }}</h3>
           </div>
           <div class="confirm-body">
             <p>{{ options.message }}</p>
           </div>
           <div class="confirm-footer">
             <button class="btn-cancel" @click="handleCancel">
-              {{ options.cancelText || '取消' }}
+              {{ options.cancelText || $t('取消') }}
             </button>
             <button
               class="btn-confirm"
               :class="options.type || 'default'"
               @click="handleConfirm"
             >
-              {{ options.confirmText || '确认' }}
+              {{ options.confirmText || $t('确认') }}
             </button>
           </div>
         </div>

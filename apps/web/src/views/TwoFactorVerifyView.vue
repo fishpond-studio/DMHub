@@ -6,8 +6,8 @@
     </router-link>
     <Card class="w-full max-w-sm">
       <CardHeader class="text-center">
-        <CardTitle class="text-2xl font-bold">两步验证</CardTitle>
-        <CardDescription>请选择验证方式完成登录</CardDescription>
+        <CardTitle class="text-2xl font-bold">{{ $t('两步验证') }}</CardTitle>
+        <CardDescription>{{ $t('请选择验证方式完成登录') }}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -24,27 +24,27 @@
           </TabsList>
 
           <TabsContent value="passkey" class="space-y-4 mt-4">
-            <p class="text-sm text-muted-foreground text-center">使用已注册的通行密钥完成验证</p>
+            <p class="text-sm text-muted-foreground text-center">{{ $t('使用已注册的通行密钥完成验证') }}</p>
             <p v-if="passkeyError" class="text-sm text-destructive">{{ passkeyError }}</p>
             <Button @click="handlePasskeyVerify" :disabled="passkeyLoading" class="w-full">
               <Loader2 v-if="passkeyLoading" class="mr-2 h-4 w-4 animate-spin" />
-              {{ passkeyLoading ? '验证中...' : '使用通行密钥验证' }}
+              {{ passkeyLoading ? $t('验证中․․․') : $t('使用通行密钥验证') }}
             </Button>
           </TabsContent>
 
           <TabsContent value="email" class="space-y-4 mt-4">
             <div v-if="!emailCodeSent" class="text-center">
-              <p class="text-sm text-muted-foreground mb-4">发送验证码到您的邮箱</p>
+              <p class="text-sm text-muted-foreground mb-4">{{ $t('发送验证码到您的邮箱') }}</p>
               <Button @click="handleSendEmailCode" :disabled="emailSending" class="w-full">
                 <Loader2 v-if="emailSending" class="mr-2 h-4 w-4 animate-spin" />
-                {{ emailSending ? '发送中...' : '发送验证码' }}
+                {{ emailSending ? $t('发送中․․․') : $t('发送验证码') }}
               </Button>
               <p v-if="emailSendError" class="text-sm text-destructive mt-2">{{ emailSendError }}</p>
             </div>
             <template v-else>
-              <p class="text-sm text-muted-foreground text-center">验证码已发送到您的邮箱</p>
+              <p class="text-sm text-muted-foreground text-center">{{ $t('验证码已发送到您的邮箱') }}</p>
               <div class="space-y-2">
-                <Label>6位验证码</Label>
+                <Label>{{ $t('6位验证码') }}</Label>
                 <Input
                   v-model="emailCode"
                   type="text"
@@ -64,13 +64,13 @@
                   :disabled="emailSending || emailCooldown > 0"
                   class="px-0 tnum"
                 >
-                  {{ emailCooldown > 0 ? `${emailCooldown}s 后重发` : '重新发送' }}
+                  {{ emailCooldown > 0 ? $t('{p0}s 后重发', { p0: emailCooldown }) : $t('重新发送') }}
                 </Button>
               </div>
               <p v-if="emailError" class="text-sm text-destructive">{{ emailError }}</p>
               <Button @click="handleEmailVerify" :disabled="emailLoading || emailCode.length !== 6" class="w-full">
                 <Loader2 v-if="emailLoading" class="mr-2 h-4 w-4 animate-spin" />
-                {{ emailLoading ? '验证中...' : '验证' }}
+                {{ emailLoading ? $t('验证中․․․') : $t('验证') }}
               </Button>
             </template>
           </TabsContent>
@@ -78,7 +78,7 @@
           <TabsContent value="totp" class="space-y-4 mt-4">
             <form class="space-y-4" @submit.prevent="handleVerify">
               <div class="space-y-2">
-                <Label>6位验证码</Label>
+                <Label>{{ $t('6位验证码') }}</Label>
                 <Input
                   v-model="totpCode"
                   type="text"
@@ -93,7 +93,7 @@
               <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
               <Button type="submit" :disabled="loading" class="w-full">
                 <Loader2 v-if="loading" class="mr-2 h-4 w-4 animate-spin" />
-                {{ loading ? '验证中...' : '验证' }}
+                {{ loading ? $t('验证中․․․') : $t('验证') }}
               </Button>
             </form>
           </TabsContent>
@@ -101,7 +101,7 @@
           <TabsContent value="backup" class="space-y-4 mt-4">
             <form class="space-y-4" @submit.prevent="handleVerify">
               <div class="space-y-2">
-                <Label>备用验证码</Label>
+                <Label>{{ $t('备用验证码') }}</Label>
                 <Input
                   v-model="backupCode"
                   type="text"
@@ -114,7 +114,7 @@
               <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
               <Button type="submit" :disabled="loading" class="w-full">
                 <Loader2 v-if="loading" class="mr-2 h-4 w-4 animate-spin" />
-                {{ loading ? '验证中...' : '验证' }}
+                {{ loading ? $t('验证中․․․') : $t('验证') }}
               </Button>
             </form>
           </TabsContent>
@@ -126,7 +126,7 @@
 
         <div class="mt-4 text-center">
           <Button variant="link" size="sm" @click="startAdminHelp" class="text-primary">
-            请求管理员帮助
+            {{ $t('请求管理员帮助') }}
           </Button>
         </div>
       </CardContent>
@@ -138,13 +138,13 @@
           <Button variant="ghost" size="icon" @click="cancelAdminHelp" class="mr-2">
             <ArrowLeft class="h-4 w-4" />
           </Button>
-          <span class="text-lg font-semibold">请求管理员帮助重置备用码</span>
+          <span class="text-lg font-semibold">{{ $t('请求管理员帮助重置备用码') }}</span>
         </div>
 
         <div v-if="adminHelpStep === 'select'">
-          <p class="text-sm text-muted-foreground mb-3">选择一位管理员并发送重置请求：</p>
-          <div v-if="adminListLoading" class="text-sm text-muted-foreground">加载中...</div>
-          <div v-else-if="adminList.length === 0" class="text-sm text-warning">没有可联系的管理员</div>
+          <p class="text-sm text-muted-foreground mb-3">{{ $t('选择一位管理员并发送重置请求：') }}</p>
+          <div v-if="adminListLoading" class="text-sm text-muted-foreground">{{ $t('加载中․․․') }}</div>
+          <div v-else-if="adminList.length === 0" class="text-sm text-warning">{{ $t('没有可联系的管理员') }}</div>
           <div v-else class="space-y-2 mb-4">
             <Button
               v-for="admin in adminList"
@@ -158,7 +158,7 @@
           </div>
           <div v-if="adminList.length > 0" class="space-y-3">
             <div class="space-y-2">
-              <Label>备用邮箱地址</Label>
+              <Label>{{ $t('备用邮箱地址') }}</Label>
               <Input v-model="alternateEmail" type="email" placeholder="your@email.com" />
             </div>
             <p v-if="adminHelpError" class="text-sm text-destructive">{{ adminHelpError }}</p>
@@ -168,48 +168,48 @@
               class="w-full"
             >
               <Loader2 v-if="adminHelpLoading" class="mr-2 h-4 w-4 animate-spin" />
-              {{ adminHelpLoading ? '提交中...' : '提交请求' }}
+              {{ adminHelpLoading ? $t('提交中․․․') : $t('提交请求') }}
             </Button>
           </div>
         </div>
 
         <div v-if="adminHelpStep === 'verify-email'">
-          <p class="text-sm text-muted-foreground mb-3">验证码已发送到 {{ alternateEmail }}，请输入6位验证码：</p>
+          <p class="text-sm text-muted-foreground mb-3">{{ $t('验证码已发送到') }} {{ alternateEmail }}{{ $t('，请输入6位验证码：') }}</p>
           <div class="space-y-3">
             <Input v-model="adminHelpEmailCode" type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" class="text-center text-lg tracking-widest" placeholder="000000" />
             <p v-if="adminHelpError" class="text-sm text-destructive">{{ adminHelpError }}</p>
             <Button @click="handleAdminResetVerifyEmail" :disabled="adminHelpEmailCode.length !== 6 || adminHelpLoading" class="w-full">
               <Loader2 v-if="adminHelpLoading" class="mr-2 h-4 w-4 animate-spin" />
-              {{ adminHelpLoading ? '验证中...' : '验证' }}
+              {{ adminHelpLoading ? $t('验证中․․․') : $t('验证') }}
             </Button>
           </div>
         </div>
 
         <div v-if="adminHelpStep === 'waiting'">
-          <p class="text-sm text-muted-foreground mb-3">请求已发送给管理员，批准后重置码将发送到 {{ alternateEmail }}</p>
+          <p class="text-sm text-muted-foreground mb-3">{{ $t('请求已发送给管理员，批准后重置码将发送到') }} {{ alternateEmail }}</p>
           <div class="space-y-3 mt-4">
             <div class="space-y-2">
-              <Label>输入收到的重置码</Label>
+              <Label>{{ $t('输入收到的重置码') }}</Label>
               <Input v-model="adminResetCode" type="text" class="text-center text-lg tracking-widest" placeholder="XXXXXXXX" />
             </div>
             <p v-if="adminHelpError" class="text-sm text-destructive">{{ adminHelpError }}</p>
             <Button @click="handleAdminResetApply" :disabled="!adminResetCode || adminHelpLoading" class="w-full">
               <Loader2 v-if="adminHelpLoading" class="mr-2 h-4 w-4 animate-spin" />
-              {{ adminHelpLoading ? '提交中...' : '重置备用码' }}
+              {{ adminHelpLoading ? $t('提交中․․․') : $t('重置备用码') }}
             </Button>
           </div>
         </div>
 
         <div v-if="adminHelpStep === 'success'">
-          <p class="text-sm text-primary font-medium mb-3">备用验证码已重置！请妥善保存以下备用码：</p>
+          <p class="text-sm text-primary font-medium mb-3">{{ $t('备用验证码已重置！请妥善保存以下备用码：') }}</p>
           <div class="grid grid-cols-2 gap-2 mb-4">
             <Badge v-for="(code, i) in newBackupCodes" :key="i" variant="secondary" class="justify-center font-record py-1">
               {{ code }}
             </Badge>
           </div>
-          <p class="text-sm text-muted-foreground mb-3">您可以使用新的备用码完成登录验证</p>
+          <p class="text-sm text-muted-foreground mb-3">{{ $t('您可以使用新的备用码完成登录验证') }}</p>
           <Button @click="useNewBackupCode" class="w-full">
-            返回登录验证
+            {{ $t('返回登录验证') }}
           </Button>
         </div>
       </CardFooter>
@@ -218,11 +218,11 @@
     <AlertDialog :open="backupCodesExhausted">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>备用码已用完</AlertDialogTitle>
-          <AlertDialogDescription>所有备用码已用完，请立即重新生成备用码，否则丢失 2FA 设备后将无法恢复账户访问。</AlertDialogDescription>
+          <AlertDialogTitle>{{ $t('备用码已用完') }}</AlertDialogTitle>
+          <AlertDialogDescription>{{ $t('所有备用码已用完，请立即重新生成备用码，否则丢失 2FA 设备后将无法恢复账户访问。') }}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogAction @click="backupCodesWarning = ''">我知道了</AlertDialogAction>
+          <AlertDialogAction @click="backupCodesWarning = ''">{{ $t('我知道了') }}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -246,6 +246,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Loader2, ArrowLeft } from 'lucide-vue-next';
 
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
+
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
@@ -258,6 +261,7 @@ const backupCode = ref('');
 const loading = ref(false);
 const error = ref('');
 const backupCodesWarning = ref('');
+// backupCodesWarning 是服务端返回的中文原文，比较必须用原文
 const backupCodesExhausted = computed(() => backupCodesWarning.value.includes('已用完'));
 
 const passkeyLoading = ref(false);
@@ -288,7 +292,7 @@ const tempToken = (route.query.token as string) || '';
 
 const availableTabs = ref<{ key: TabKey; label: string }[]>([
   { key: 'totp', label: 'TOTP' },
-  { key: 'backup', label: '备用码' },
+  { key: 'backup', label: t('备用码') },
 ]);
 
 onMounted(async () => {
@@ -299,15 +303,15 @@ onMounted(async () => {
     const methods: TwoFactorMethod[] = data.twoFactorMethods || [];
     const tabs: { key: TabKey; label: string }[] = [];
     if (methods.includes('totp')) tabs.push({ key: 'totp', label: 'TOTP' });
-    if (methods.includes('passkey')) tabs.push({ key: 'passkey', label: '通行密钥' });
-    if (methods.includes('email')) tabs.push({ key: 'email', label: '邮箱验证' });
-    tabs.push({ key: 'backup', label: '备用码' });
+    if (methods.includes('passkey')) tabs.push({ key: 'passkey', label: t('通行密钥') });
+    if (methods.includes('email')) tabs.push({ key: 'email', label: t('邮箱验证') });
+    tabs.push({ key: 'backup', label: t('备用码') });
     availableTabs.value = tabs;
     if (tabs.length > 0) activeTab.value = tabs[0].key;
   } catch {
     availableTabs.value = [
       { key: 'totp', label: 'TOTP' },
-      { key: 'backup', label: '备用码' },
+      { key: 'backup', label: t('备用码') },
     ];
   }
 });
@@ -329,11 +333,11 @@ async function handleVerify() {
   error.value = '';
   const code = activeTab.value === 'totp' ? totpCode.value : backupCode.value;
   if (!code) {
-    error.value = '请输入验证码';
+    error.value = t('请输入验证码');
     return;
   }
   if (!tempToken) {
-    error.value = '缺少验证令牌，请重新登录';
+    error.value = t('缺少验证令牌，请重新登录');
     return;
   }
   loading.value = true;
@@ -346,7 +350,7 @@ async function handleVerify() {
       router.push('/dashboard');
     }
   } catch (err: any) {
-    error.value = err.response?.data?.error || '验证失败';
+    error.value = err.response?.data?.error || t('验证失败');
   } finally {
     loading.value = false;
   }
@@ -355,7 +359,7 @@ async function handleVerify() {
 async function handlePasskeyVerify() {
   passkeyError.value = '';
   if (!tempToken) {
-    passkeyError.value = '缺少验证令牌，请重新登录';
+    passkeyError.value = t('缺少验证令牌，请重新登录');
     return;
   }
   passkeyLoading.value = true;
@@ -367,7 +371,7 @@ async function handlePasskeyVerify() {
       router.push('/dashboard');
     }
   } catch (err: any) {
-    passkeyError.value = err.response?.data?.error || err.message || '通行密钥验证失败';
+    passkeyError.value = err.response?.data?.error || err.message || t('通行密钥验证失败');
   } finally {
     passkeyLoading.value = false;
   }
@@ -376,7 +380,7 @@ async function handlePasskeyVerify() {
 async function handleSendEmailCode() {
   emailSendError.value = '';
   if (!tempToken) {
-    emailSendError.value = '缺少验证令牌，请重新登录';
+    emailSendError.value = t('缺少验证令牌，请重新登录');
     return;
   }
   emailSending.value = true;
@@ -394,7 +398,7 @@ async function handleSendEmailCode() {
       }
     }, 1000);
   } catch (err: any) {
-    emailSendError.value = err.response?.data?.error || '发送失败';
+    emailSendError.value = err.response?.data?.error || t('发送失败');
   } finally {
     emailSending.value = false;
   }
@@ -403,7 +407,7 @@ async function handleSendEmailCode() {
 async function handleEmailVerify() {
   emailError.value = '';
   if (!tempToken) {
-    emailError.value = '缺少验证令牌，请重新登录';
+    emailError.value = t('缺少验证令牌，请重新登录');
     return;
   }
   emailLoading.value = true;
@@ -415,7 +419,7 @@ async function handleEmailVerify() {
       router.push('/dashboard');
     }
   } catch (err: any) {
-    emailError.value = err.response?.data?.error || '验证失败';
+    emailError.value = err.response?.data?.error || t('验证失败');
   } finally {
     emailLoading.value = false;
   }
@@ -431,7 +435,7 @@ async function startAdminHelp() {
     });
     adminList.value = data.admins;
   } catch (err: any) {
-    adminHelpError.value = err.response?.data?.error || '获取管理员列表失败';
+    adminHelpError.value = err.response?.data?.error || t('获取管理员列表失败');
   } finally {
     adminListLoading.value = false;
   }
@@ -459,7 +463,7 @@ async function handleAdminResetRequest() {
     adminHelpRequestId.value = data.requestId;
     adminHelpStep.value = 'verify-email';
   } catch (err: any) {
-    adminHelpError.value = err.response?.data?.error || '请求失败';
+    adminHelpError.value = err.response?.data?.error || t('请求失败');
   } finally {
     adminHelpLoading.value = false;
   }
@@ -477,7 +481,7 @@ async function handleAdminResetVerifyEmail() {
     });
     adminHelpStep.value = 'waiting';
   } catch (err: any) {
-    adminHelpError.value = err.response?.data?.error || '验证失败';
+    adminHelpError.value = err.response?.data?.error || t('验证失败');
   } finally {
     adminHelpLoading.value = false;
   }
@@ -495,7 +499,7 @@ async function handleAdminResetApply() {
     newBackupCodes.value = data.backupCodes;
     adminHelpStep.value = 'success';
   } catch (err: any) {
-    adminHelpError.value = err.response?.data?.error || '重置失败';
+    adminHelpError.value = err.response?.data?.error || t('重置失败');
   } finally {
     adminHelpLoading.value = false;
   }

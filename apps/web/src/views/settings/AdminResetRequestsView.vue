@@ -1,10 +1,10 @@
 ﻿<template>
   <div>
-    <h1 class="text-2xl font-bold text-foreground mb-6">备用码重置请求</h1>
+    <h1 class="text-2xl font-bold text-foreground mb-6">{{ $t('备用码重置请求') }}</h1>
 
-      <div v-if="loading" class="text-center py-12 text-muted-foreground">加载中...</div>
+      <div v-if="loading" class="text-center py-12 text-muted-foreground">{{ $t('加载中․․․') }}</div>
 
-      <div v-else-if="pendingRequests.length === 0" class="text-center py-12 text-muted-foreground">暂无待审核的请求</div>
+      <div v-else-if="pendingRequests.length === 0" class="text-center py-12 text-muted-foreground">{{ $t('暂无待审核的请求') }}</div>
 
       <div v-else class="space-y-4">
         <Card v-for="r in pendingRequests" :key="r.requestId">
@@ -12,17 +12,17 @@
             <div class="flex items-start justify-between">
               <div>
                 <div class="text-sm text-muted-foreground mb-1">
-                  用户 <span class="font-medium text-foreground">{{ r.username }}</span> 请求重置备用验证码
+                  {{ $t('用户') }} <span class="font-medium text-foreground">{{ r.username }}</span> {{ $t('请求重置备用验证码') }}
                 </div>
                 <div class="text-sm text-muted-foreground">
-                  备用邮箱：<span class="text-foreground">{{ r.alternateEmail }}</span>
+                  {{ $t('备用邮箱：') }}<span class="text-foreground">{{ r.alternateEmail }}</span>
                 </div>
                 <div class="text-xs text-muted-foreground mt-1 tnum">{{ formatDate(r.createdAt) }}</div>
               </div>
               <div class="flex space-x-2 ml-4">
-                <Button variant="destructive" size="sm" @click="openRejectDialog(r.requestId)">拒绝</Button>
+                <Button variant="destructive" size="sm" @click="openRejectDialog(r.requestId)">{{ $t('拒绝') }}</Button>
                 <Button size="sm" @click="handleApprove(r.requestId)" :disabled="approving === r.requestId">
-                  {{ approving === r.requestId ? '处理中...' : '批准' }}
+                  {{ approving === r.requestId ? $t('处理中․․․') : $t('批准') }}
                 </Button>
               </div>
             </div>
@@ -33,14 +33,14 @@
       <Dialog :open="!!rejectDialogId" @update:open="rejectDialogId = $event ? rejectDialogId : null">
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>拒绝重置请求</DialogTitle>
+            <DialogTitle>{{ $t('拒绝重置请求') }}</DialogTitle>
           </DialogHeader>
-          <Textarea v-model="rejectReason" rows="3" placeholder="拒绝理由（可选）" />
+          <Textarea v-model="rejectReason" rows="3" :placeholder="$t('拒绝理由（可选）')" />
           <p v-if="actionError" class="text-sm text-destructive">{{ actionError }}</p>
           <DialogFooter>
-            <Button variant="outline" @click="rejectDialogId = null">取消</Button>
+            <Button variant="outline" @click="rejectDialogId = null">{{ $t('取消') }}</Button>
             <Button variant="destructive" @click="handleReject" :disabled="rejecting">
-              {{ rejecting ? '处理中...' : '确认拒绝' }}
+              {{ rejecting ? $t('处理中․․․') : $t('确认拒绝') }}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -55,6 +55,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const loading = ref(true);
 const pendingRequests = ref<{ requestId: string; userId: string; username: string; alternateEmail: string; createdAt: string }[]>([]);
@@ -89,7 +92,7 @@ async function handleApprove(requestId: string) {
     await api.post(`/2fa/backup-codes/admin-reset/${requestId}/approve`);
     await fetchPending();
   } catch (err: any) {
-    actionError.value = err.response?.data?.error || '审批失败';
+    actionError.value = err.response?.data?.error || t('审批失败');
   } finally {
     approving.value = '';
   }
@@ -112,7 +115,7 @@ async function handleReject() {
     rejectDialogId.value = null;
     await fetchPending();
   } catch (err: any) {
-    actionError.value = err.response?.data?.error || '拒绝失败';
+    actionError.value = err.response?.data?.error || t('拒绝失败');
   } finally {
     rejecting.value = false;
   }

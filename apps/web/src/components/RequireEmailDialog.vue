@@ -64,6 +64,7 @@ async function sendCode() {
     const msg = err.response?.data?.error || err.message || '';
     error.value = msg;
     // SMTP 未配置时允许暂时跳过，避免把用户锁死在弹窗里
+    // 服务端固定返回中文原文，这里必须用原文比较，不能用 t()
     smtpMissing.value = typeof msg === 'string' && msg.includes('邮件服务未配置');
   } finally {
     sending.value = false;

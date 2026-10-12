@@ -3,6 +3,7 @@
  * 防止快速重复请求导致的数据竞态问题
  */
 import { ref, shallowRef, onUnmounted, type Ref } from 'vue';
+import i18n from '@/i18n';
 
 interface UseRequestResult<T> {
   loading: Ref<boolean>;
@@ -36,7 +37,7 @@ export function useRequest<T = unknown>(): UseRequestResult<T> {
       return result;
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') return null;
-      error.value = (err instanceof Error ? err.message : null) || '请求失败';
+      error.value = (err instanceof Error ? err.message : null) || i18n.global.t('请求失败');
       throw err;
     } finally {
       if (controller?.signal.aborted === false) {

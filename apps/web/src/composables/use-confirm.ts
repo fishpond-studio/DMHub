@@ -1,4 +1,5 @@
 import { ref, shallowRef } from 'vue'
+import i18n from '@/i18n';
 
 export interface ConfirmOptions {
   title?: string
@@ -14,10 +15,10 @@ let resolver: ((value: boolean) => void) | null = null
 
 export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
   options.value = {
-    title: opts.title ?? '确认操作',
+    title: opts.title ?? i18n.global.t('确认操作'),
     description: opts.description,
-    confirmText: opts.confirmText ?? '确认',
-    cancelText: opts.cancelText ?? '取消',
+    confirmText: opts.confirmText ?? i18n.global.t('确认'),
+    cancelText: opts.cancelText ?? i18n.global.t('取消'),
     variant: opts.variant ?? 'default',
   }
   open.value = true

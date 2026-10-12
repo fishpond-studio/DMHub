@@ -1,17 +1,17 @@
 ﻿<template>
   <div>
-    <h1 class="text-2xl font-bold text-foreground mb-6">团队设置</h1>
+    <h1 class="text-2xl font-bold text-foreground mb-6">{{ $t('团队设置') }}</h1>
 
-      <div v-if="loading" class="text-center py-12 text-muted-foreground">加载中...</div>
+      <div v-if="loading" class="text-center py-12 text-muted-foreground">{{ $t('加载中․․․') }}</div>
 
       <div v-else class="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>基本信息</CardTitle>
+            <CardTitle>{{ $t('基本信息') }}</CardTitle>
           </CardHeader>
           <CardContent class="space-y-5">
             <div>
-              <Label class="mb-1 block">团队 Logo</Label>
+              <Label class="mb-1 block">{{ $t('团队 Logo') }}</Label>
               <div
                 class="relative w-24 h-24 border-2 border-dashed border-input rounded-lg flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors"
                 @click="fileInput?.click()"
@@ -24,21 +24,21 @@
                 <Upload v-else class="h-8 w-8 text-muted-foreground" />
               </div>
               <input ref="fileInput" type="file" accept=".png,.jpg,.jpeg,.svg" class="hidden" @change="handleFileChange" />
-              <p class="text-xs text-muted-foreground mt-1">支持 PNG、JPG、SVG，最大 1MB，推荐 128×128px</p>
+              <p class="text-xs text-muted-foreground mt-1">{{ $t('支持 PNG、JPG、SVG，最大 1MB，推荐 128×128px') }}</p>
             </div>
 
             <div>
-              <Label class="mb-1 block">团队名称</Label>
-              <Input v-model="form.name" type="text" placeholder="输入团队名称" />
+              <Label class="mb-1 block">{{ $t('团队名称') }}</Label>
+              <Input v-model="form.name" type="text" :placeholder="$t('输入团队名称')" />
             </div>
 
             <div>
-              <Label class="mb-1 block">团队描述</Label>
-              <Textarea v-model="form.description" rows="3" placeholder="输入团队描述" />
+              <Label class="mb-1 block">{{ $t('团队描述') }}</Label>
+              <Textarea v-model="form.description" rows="3" :placeholder="$t('输入团队描述')" />
             </div>
 
             <div>
-              <Label class="mb-1 block">站点 URL</Label>
+              <Label class="mb-1 block">{{ $t('站点 URL') }}</Label>
               <Input v-model="form.siteUrl" type="url" placeholder="https://example.com" />
             </div>
           </CardContent>
@@ -46,60 +46,60 @@
 
         <Card>
           <CardHeader>
-            <CardTitle>SMTP 邮件配置</CardTitle>
+            <CardTitle>{{ $t('SMTP 邮件配置') }}</CardTitle>
           </CardHeader>
           <CardContent class="space-y-5">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label class="mb-1 block">SMTP 主机</Label>
+                <Label class="mb-1 block">{{ $t('SMTP 主机') }}</Label>
                 <Input v-model="form.smtpHost" type="text" placeholder="smtp.example.com" />
               </div>
               <div>
-                <Label class="mb-1 block">端口</Label>
+                <Label class="mb-1 block">{{ $t('端口') }}</Label>
                 <Input :model-value="form.smtpPort ?? ''" @update:model-value="form.smtpPort = $event ? Number($event) : null" type="number" placeholder="587" />
               </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label class="mb-1 block">用户名</Label>
+                <Label class="mb-1 block">{{ $t('用户名') }}</Label>
                 <Input v-model="form.smtpUser" type="text" placeholder="user@example.com" />
               </div>
               <div>
-                <Label class="mb-1 block">密码</Label>
-                <Input v-model="form.smtpPassword" type="password" placeholder="留空则不修改" />
+                <Label class="mb-1 block">{{ $t('密码') }}</Label>
+                <Input v-model="form.smtpPassword" type="password" :placeholder="$t('留空则不修改')" />
               </div>
             </div>
 
             <div>
-              <Label class="mb-1 block">发件人地址</Label>
+              <Label class="mb-1 block">{{ $t('发件人地址') }}</Label>
               <Input v-model="form.smtpFrom" type="text" placeholder="noreply@example.com" />
             </div>
 
             <div class="flex items-center space-x-2">
               <Checkbox id="smtpSecure" :checked="form.smtpSecure" @update:checked="form.smtpSecure = $event" />
-              <Label for="smtpSecure">使用 SSL/TLS</Label>
+              <Label for="smtpSecure">{{ $t('使用 SSL/TLS') }}</Label>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>注册与邀请</CardTitle>
-            <CardDescription>控制新用户注册方式</CardDescription>
+            <CardTitle>{{ $t('注册与邀请') }}</CardTitle>
+            <CardDescription>{{ $t('控制新用户注册方式') }}</CardDescription>
           </CardHeader>
           <CardContent class="space-y-5">
             <div class="flex items-center justify-between">
               <div>
-                <Label>允许注册</Label>
-                <p class="text-xs text-muted-foreground mt-0.5">关闭后新用户无法注册账号</p>
+                <Label>{{ $t('允许注册') }}</Label>
+                <p class="text-xs text-muted-foreground mt-0.5">{{ $t('关闭后新用户无法注册账号') }}</p>
               </div>
               <Switch :checked="form.registrationEnabled" @update:checked="form.registrationEnabled = $event" />
             </div>
             <div class="flex items-center justify-between">
               <div>
-                <Label>邀请码注册</Label>
-                <p class="text-xs text-muted-foreground mt-0.5">开启后，新用户注册时需要输入邀请码</p>
+                <Label>{{ $t('邀请码注册') }}</Label>
+                <p class="text-xs text-muted-foreground mt-0.5">{{ $t('开启后，新用户注册时需要输入邀请码') }}</p>
               </div>
               <Switch :checked="form.inviteCodeEnabled" @update:checked="form.inviteCodeEnabled = $event" />
             </div>
@@ -108,41 +108,41 @@
 
         <Card>
           <CardHeader>
-            <CardTitle>审计与日志</CardTitle>
-            <CardDescription>操作日志保留策略与缓存配置</CardDescription>
+            <CardTitle>{{ $t('审计与日志') }}</CardTitle>
+            <CardDescription>{{ $t('操作日志保留策略与缓存配置') }}</CardDescription>
           </CardHeader>
           <CardContent class="space-y-5">
             <div>
-              <Label class="mb-1 block">日志保留天数</Label>
+              <Label class="mb-1 block">{{ $t('日志保留天数') }}</Label>
               <Input
                 :model-value="form.logRetentionDays ?? ''"
                 @update:model-value="form.logRetentionDays = $event ? Number($event) : null"
                 type="number"
-                placeholder="0 或留空表示永久保留"
+                :placeholder="$t('0 或留空表示永久保留')"
               />
-              <p class="text-xs text-muted-foreground mt-1">超过该天数的操作日志与监控历史将被定时清理（每天 03:00 执行）</p>
+              <p class="text-xs text-muted-foreground mt-1">{{ $t('超过该天数的操作日志与监控历史将被定时清理（每天 03:00 执行）') }}</p>
             </div>
             <div>
-              <Label class="mb-1 block">Redis 连接地址</Label>
+              <Label class="mb-1 block">{{ $t('Redis 连接地址') }}</Label>
               <Input v-model="form.redisUrl" type="text" placeholder="redis://localhost:6379" />
-              <p class="text-xs text-muted-foreground mt-1">留空使用进程内存缓存；配置后需重启服务生效，用于验证码、限流等共享状态</p>
+              <p class="text-xs text-muted-foreground mt-1">{{ $t('留空使用进程内存缓存；配置后需重启服务生效，用于验证码、限流等共享状态') }}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>站外公告</CardTitle>
-            <CardDescription>在登录页面向未登录用户展示公告</CardDescription>
+            <CardTitle>{{ $t('站外公告') }}</CardTitle>
+            <CardDescription>{{ $t('在登录页面向未登录用户展示公告') }}</CardDescription>
           </CardHeader>
           <CardContent class="space-y-5">
             <div>
-              <Label class="mb-1 block">公告内容</Label>
-              <Textarea v-model="form.announcement" rows="4" placeholder="输入公告内容..." />
-              <p class="text-xs text-muted-foreground mt-1">留空则不显示公告</p>
+              <Label class="mb-1 block">{{ $t('公告内容') }}</Label>
+              <Textarea v-model="form.announcement" rows="4" :placeholder="$t('输入公告内容․․․')" />
+              <p class="text-xs text-muted-foreground mt-1">{{ $t('留空则不显示公告') }}</p>
             </div>
             <div>
-              <Label class="mb-1 block">公告格式</Label>
+              <Label class="mb-1 block">{{ $t('公告格式') }}</Label>
               <div class="flex items-center gap-4">
                 <label class="flex items-center gap-1.5 text-sm cursor-pointer">
                   <input type="radio" v-model="form.announcementFormat" value="markdown" class="accent-primary" />
@@ -159,17 +159,17 @@
 
         <Card>
           <CardHeader>
-            <CardTitle>主页设置</CardTitle>
-            <CardDescription>配置站外主页 (/landing) 的显示内容</CardDescription>
+            <CardTitle>{{ $t('主页设置') }}</CardTitle>
+            <CardDescription>{{ $t('配置站外主页 (/landing) 的显示内容') }}</CardDescription>
           </CardHeader>
           <CardContent class="space-y-5">
             <div>
-              <Label class="mb-1 block">副标题</Label>
-              <Input v-model="form.landingSubtitle" placeholder="域名协作管理工具" />
+              <Label class="mb-1 block">{{ $t('副标题') }}</Label>
+              <Input v-model="form.landingSubtitle" :placeholder="$t('域名协作管理工具')" />
             </div>
 
             <div>
-              <Label class="mb-1 block">背景图片</Label>
+              <Label class="mb-1 block">{{ $t('背景图片') }}</Label>
               <div
                 class="relative w-full h-32 border-2 border-dashed border-input rounded-lg flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden"
                 @click="bgFileInput?.click()"
@@ -181,20 +181,20 @@
                 <img v-if="form.landingBackgroundUrl" :src="form.landingBackgroundUrl" class="w-full h-full object-cover" alt="Background" />
                 <div v-else class="flex flex-col items-center text-muted-foreground">
                   <ImageIcon class="h-8 w-8 mb-1" />
-                  <span class="text-xs">点击或拖拽上传</span>
+                  <span class="text-xs">{{ $t('点击或拖拽上传') }}</span>
                 </div>
               </div>
               <input ref="bgFileInput" type="file" accept=".png,.jpg,.jpeg,.webp,.gif" class="hidden" @change="handleBgFileChange" />
-              <p class="text-xs text-muted-foreground mt-1">支持 PNG、JPG、WEBP、GIF，最大 5MB</p>
+              <p class="text-xs text-muted-foreground mt-1">{{ $t('支持 PNG、JPG、WEBP、GIF，最大 5MB') }}</p>
             </div>
 
             <div>
-              <Label class="mb-1 block">底栏内容</Label>
-              <Textarea v-model="form.footerContent" rows="4" placeholder="输入底栏内容..." />
-              <p class="text-xs text-muted-foreground mt-1">支持 HTML 和 Markdown 代码，用于自定义底栏显示内容</p>
+              <Label class="mb-1 block">{{ $t('底栏内容') }}</Label>
+              <Textarea v-model="form.footerContent" rows="4" :placeholder="$t('输入底栏内容․․․')" />
+              <p class="text-xs text-muted-foreground mt-1">{{ $t('支持 HTML 和 Markdown 代码，用于自定义底栏显示内容') }}</p>
             </div>
             <div>
-              <Label class="mb-1 block">底栏格式</Label>
+              <Label class="mb-1 block">{{ $t('底栏格式') }}</Label>
               <div class="flex items-center gap-4">
                 <label class="flex items-center gap-1.5 text-sm cursor-pointer">
                   <input type="radio" v-model="form.footerFormat" value="markdown" class="accent-primary" />
@@ -217,7 +217,7 @@
 
         <div class="flex justify-end">
           <Button @click="handleSave" :disabled="saving">
-            {{ saving ? '保存中...' : '保存设置' }}
+            {{ saving ? $t('保存中․․․') : $t('保存设置') }}
           </Button>
         </div>
       </div>
@@ -225,12 +225,12 @@
       <AlertDialog :open="confirmSiteUrl">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认修改站点 URL</AlertDialogTitle>
-            <AlertDialogDescription>站点 URL 变更会影响 OAuth 回调地址和 Cookie 域名设置，确定继续吗？</AlertDialogDescription>
+            <AlertDialogTitle>{{ $t('确认修改站点 URL') }}</AlertDialogTitle>
+            <AlertDialogDescription>{{ $t('站点 URL 变更会影响 OAuth 回调地址和 Cookie 域名设置，确定继续吗？') }}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel @click="cancelSave">取消</AlertDialogCancel>
-            <AlertDialogAction @click="proceedSave">确认修改</AlertDialogAction>
+            <AlertDialogCancel @click="cancelSave">{{ $t('取消') }}</AlertDialogCancel>
+            <AlertDialogAction @click="proceedSave">{{ $t('确认修改') }}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -238,12 +238,12 @@
       <AlertDialog :open="confirmSmtp">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认修改 SMTP 配置</AlertDialogTitle>
-            <AlertDialogDescription>SMTP 配置变更后建议重新验证邮件发送是否正常，确定继续吗？</AlertDialogDescription>
+            <AlertDialogTitle>{{ $t('确认修改 SMTP 配置') }}</AlertDialogTitle>
+            <AlertDialogDescription>{{ $t('SMTP 配置变更后建议重新验证邮件发送是否正常，确定继续吗？') }}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel @click="cancelSave">取消</AlertDialogCancel>
-            <AlertDialogAction @click="proceedSave">确认修改</AlertDialogAction>
+            <AlertDialogCancel @click="cancelSave">{{ $t('取消') }}</AlertDialogCancel>
+            <AlertDialogAction @click="proceedSave">{{ $t('确认修改') }}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -263,6 +263,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const store = useTeamStore();
 const loading = ref(true);
@@ -352,7 +355,7 @@ async function uploadLogo(file: File) {
     await store.uploadLogo(file);
     form.logoUrl = store.settings?.logoUrl ?? null;
   } catch (err: any) {
-    alert(err.response?.data?.error || '上传失败');
+    alert(err.response?.data?.error || t('上传失败'));
   }
 }
 
@@ -376,7 +379,7 @@ async function uploadBackground(file: File) {
     });
     form.landingBackgroundUrl = data.landingBackgroundUrl;
   } catch (err: any) {
-    alert(err.response?.data?.error || '上传背景失败');
+    alert(err.response?.data?.error || t('上传背景失败'));
   }
 }
 
@@ -443,7 +446,7 @@ async function doSave() {
     oldSmtpSecure.value = form.smtpSecure;
     form.smtpPassword = '';
   } catch (err: any) {
-    alert(err.response?.data?.error || '保存失败');
+    alert(err.response?.data?.error || t('保存失败'));
   } finally {
     saving.value = false;
   }

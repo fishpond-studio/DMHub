@@ -2,8 +2,8 @@
   <div class="min-h-screen bg-background">
     <div class="app-container py-6 md:py-8">
       <PageHeader
-        title="全局搜索"
-        description="搜索主机、记录值、备注；输入 IP 可反查指向它的记录"
+        :title="$t('全局搜索')"
+        :description="$t('搜索主机、记录值、备注；输入 IP 可反查指向它的记录')"
         back-to="/dashboard"
         show-back
       />
@@ -14,32 +14,32 @@
           <Input
             v-model="q"
             class="pl-9"
-            placeholder="例如：www、1.2.3.4（反查 IP）、CDN、MX"
+            :placeholder="$t('例如：www、1․2․3․4（反查 IP）、CDN、MX')"
             autofocus
             @keydown.enter="runSearch"
           />
         </div>
         <Button :disabled="loading || !q.trim()" @click="runSearch">
           <Loader2 v-if="loading" class="mr-2 h-4 w-4 animate-spin" />
-          搜索
+          {{ $t('搜索') }}
         </Button>
       </div>
 
       <div v-if="error" class="mb-4 text-sm text-destructive">{{ error }}</div>
 
       <div v-if="searched && !loading && results.length === 0" class="py-16 text-center text-muted-foreground">
-        没有匹配的记录
+        {{ $t('没有匹配的记录') }}
       </div>
 
       <div v-else-if="results.length" class="overflow-hidden rounded-xl border">
         <Table>
           <TableHeader>
             <TableRow class="bg-muted/40 hover:bg-muted/40">
-              <TableHead>域名</TableHead>
-              <TableHead>类型</TableHead>
-              <TableHead>主机</TableHead>
-              <TableHead>记录值</TableHead>
-              <TableHead>备注</TableHead>
+              <TableHead>{{ $t('域名') }}</TableHead>
+              <TableHead>{{ $t('类型') }}</TableHead>
+              <TableHead>{{ $t('主机') }}</TableHead>
+              <TableHead>{{ $t('记录值') }}</TableHead>
+              <TableHead>{{ $t('备注') }}</TableHead>
               <TableHead class="w-20"></TableHead>
             </TableRow>
           </TableHeader>
@@ -64,15 +64,15 @@
                   variant="ghost"
                   size="sm"
                   class="h-7"
-                  @click.stop="copyText(r.value, '已复制记录值')"
+                  @click.stop="copyText(r.value, $t('已复制记录值'))"
                 >
-                  复制
+                  {{ $t('复制') }}
                 </Button>
               </TableCell>
             </TableRow>
           </TableBody>
         </Table>
-        <p class="border-t px-3 py-2 text-xs text-muted-foreground tnum">共 {{ results.length }} 条（最多 50）</p>
+        <p class="border-t px-3 py-2 text-xs text-muted-foreground tnum">{{ $t('共') }} {{ results.length }} {{ $t('条（最多 50）') }}</p>
       </div>
     </div>
   </div>
@@ -89,6 +89,9 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { copyText } from '@/lib/copy'
 import { Search, Loader2 } from 'lucide-vue-next'
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 interface SearchHit {
   id: string
@@ -120,7 +123,7 @@ async function runSearch() {
     const { data } = await api.get('/domains/search/records', { params: { q: query, limit: 50 } })
     results.value = data.results || []
   } catch (err: any) {
-    error.value = err.response?.data?.error || '搜索失败'
+    error.value = err.response?.data?.error || t('搜索失败')
     results.value = []
   } finally {
     loading.value = false

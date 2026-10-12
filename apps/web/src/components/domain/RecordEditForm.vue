@@ -2,9 +2,8 @@
   <Dialog :open="true" @update:open="(v) => { if (!v) $emit('close') }">
     <DialogContent class="max-w-lg max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>{{ isEdit ? '编辑记录' : defaults ? '克隆记录' : '添加记录' }}</DialogTitle>
-        <DialogDescription v-if="domainName">
-          域名 {{ domainName }}
+        <DialogTitle>{{ isEdit ? $t('编辑记录') : defaults ? $t('克隆记录') : $t('添加记录') }}</DialogTitle>
+        <DialogDescription v-if="domainName">{{ $t('域名 {p0}', { p0: domainName }) }}
         </DialogDescription>
       </DialogHeader>
 
@@ -12,7 +11,7 @@
         v-if="allowedPatterns && allowedPatterns.length > 0"
         class="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs"
       >
-        <p class="font-medium text-foreground">你只能操作以下范围内的主机记录：</p>
+        <p class="font-medium text-foreground">{{ $t('你只能操作以下范围内的主机记录：') }}</p>
         <ul class="mt-1.5 space-y-1 text-muted-foreground">
           <li v-for="(p, i) in allowedPatterns" :key="i" class="font-mono">
             {{ formatHostPreview(domainName, p) }}
@@ -23,7 +22,7 @@
 
       <div class="space-y-4">
         <div>
-          <Label class="mb-1">记录类型</Label>
+          <Label class="mb-1">{{ $t('记录类型') }}</Label>
           <Select v-model="form.recordType" :disabled="isEdit">
             <SelectTrigger :disabled="isEdit">
               <SelectValue />
@@ -36,27 +35,27 @@
         </div>
 
         <div>
-          <Label class="mb-1">主机记录</Label>
+          <Label class="mb-1">{{ $t('主机记录') }}</Label>
           <Input
             v-model="form.name"
             type="text"
-            placeholder="例: www, @, subdomain"
+            :placeholder="$t('例: www, @, subdomain')"
           />
           <p v-if="hostPreview" class="mt-1 text-xs text-muted-foreground">
-            完整主机：
+            {{ $t('完整主机：') }}
             <span class="font-mono text-foreground">{{ hostPreview }}</span>
           </p>
           <p v-if="nameOutOfScope" class="mt-1 text-xs text-destructive">
-            当前主机不在你的指派范围内，保存会被拒绝
+            {{ $t('当前主机不在你的指派范围内，保存会被拒绝') }}
           </p>
         </div>
 
         <div>
-          <Label class="mb-1">记录值</Label>
+          <Label class="mb-1">{{ $t('记录值') }}</Label>
           <Input
             v-model="form.value"
             type="text"
-            :placeholder="selectedExample || '请输入记录值'"
+            :placeholder="selectedExample || $t('请输入记录值')"
           />
         </div>
 
@@ -68,20 +67,20 @@
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="60">1 分钟</SelectItem>
-                <SelectItem value="300">5 分钟</SelectItem>
-                <SelectItem value="900">15 分钟</SelectItem>
-                <SelectItem value="1800">30 分钟</SelectItem>
-                <SelectItem value="3600">1 小时</SelectItem>
-                <SelectItem value="21600">6 小时</SelectItem>
-                <SelectItem value="43200">12 小时</SelectItem>
-                <SelectItem value="86400">1 天</SelectItem>
+                <SelectItem value="60">{{ $t('1 分钟') }}</SelectItem>
+                <SelectItem value="300">{{ $t('5 分钟') }}</SelectItem>
+                <SelectItem value="900">{{ $t('15 分钟') }}</SelectItem>
+                <SelectItem value="1800">{{ $t('30 分钟') }}</SelectItem>
+                <SelectItem value="3600">{{ $t('1 小时') }}</SelectItem>
+                <SelectItem value="21600">{{ $t('6 小时') }}</SelectItem>
+                <SelectItem value="43200">{{ $t('12 小时') }}</SelectItem>
+                <SelectItem value="86400">{{ $t('1 天') }}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div v-if="showPriority">
-            <Label class="mb-1">优先级</Label>
+            <Label class="mb-1">{{ $t('优先级') }}</Label>
             <Input
               v-model.number="form.priority"
               type="number"
@@ -104,20 +103,20 @@
         </p>
 
         <div>
-          <Label class="mb-1">备注（可选）</Label>
+          <Label class="mb-1">{{ $t('备注（可选）') }}</Label>
           <Input
             v-model="form.notes"
             type="text"
             maxlength="200"
-            placeholder="例如：官网 CDN、邮件、验证记录…"
+            :placeholder="$t('例如：官网 CDN、邮件、验证记录…')"
           />
         </div>
       </div>
 
       <DialogFooter>
-        <Button @click="$emit('close')" variant="outline">取消</Button>
+        <Button @click="$emit('close')" variant="outline">{{ $t('取消') }}</Button>
         <Button @click="handleSave" :disabled="saving || nameOutOfScope">
-          {{ saving ? '保存中...' : '保存' }}
+          {{ saving ? $t('保存中․․․') : $t('保存') }}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -136,6 +135,9 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { formatHostPreview, formatScopeLabel, normalizePattern } from '@/lib/subdomain-scope';
 import { toastError } from '@/lib/toast-helpers';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const props = defineProps<{
   domainId: string;
@@ -196,11 +198,11 @@ const proxyTypes = computed(() =>
   props.cdnProxyTypes?.length ? props.cdnProxyTypes : ['A', 'AAAA', 'CNAME'],
 );
 
-const cdnLabel = computed(() => props.cdnLabel || 'CDN 保护');
+const cdnLabel = computed(() => props.cdnLabel || t('CDN 保护'));
 const cdnDescription = computed(
   () =>
     props.cdnDescription ||
-    '开启后流量经服务商 CDN/反代，可隐藏源站 IP（仅部分服务商支持，如 Cloudflare）',
+    t('开启后流量经服务商 CDN/反代，可隐藏源站 IP（仅部分服务商支持，如 Cloudflare）'),
 );
 
 /** 仅当服务商支持且记录类型允许时显示 CDN 开关 */
@@ -213,12 +215,12 @@ const showProxied = computed(
 const cdnUnsupportedHint = computed(() => {
   if (props.cdnSupported === true) {
     if (!proxyTypes.value.includes(form.recordType)) {
-      return `当前记录类型 ${form.recordType} 不支持 CDN 代理（支持：${proxyTypes.value.join(' / ')}）`;
+      return t('当前记录类型 {p0} 不支持 CDN 代理（支持：{p1}）', { p0: form.recordType, p1: proxyTypes.value.join(' / ') });
     }
     return '';
   }
   if (props.cdnSupported === false) {
-    return '当前域名接入商不支持在 DNS 记录上直接开启 CDN 保护（如阿里云/腾讯云请使用其 CDN 产品）';
+    return t('当前域名接入商不支持在 DNS 记录上直接开启 CDN 保护（如阿里云/腾讯云请使用其 CDN 产品）');
   }
   return '';
 });
@@ -261,11 +263,11 @@ const nameOutOfScope = computed(() => {
 async function handleSave() {
   const name = form.name.trim() === '' ? '@' : form.name.trim();
   if (!form.value.trim()) {
-    toastError('请填写记录值');
+    toastError(t('请填写记录值'));
     return;
   }
   if (nameOutOfScope.value) {
-    toastError('主机不在指派范围内', '请按上方可管理范围填写主机记录');
+    toastError(t('主机不在指派范围内'), t('请按上方可管理范围填写主机记录'));
     return;
   }
 
@@ -296,7 +298,7 @@ async function handleSave() {
     }
     emit('saved');
   } catch (err: any) {
-    toastError('保存失败', err.response?.data?.error || err.message);
+    toastError(t('保存失败'), err.response?.data?.error || err.message);
   } finally {
     saving.value = false;
   }

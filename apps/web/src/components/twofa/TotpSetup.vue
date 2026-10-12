@@ -2,21 +2,21 @@
   <div class="space-y-6">
     <Card>
       <CardHeader>
-        <CardTitle>第一步：扫描二维码</CardTitle>
-        <CardDescription>使用身份验证器应用扫描下方二维码，或手动输入密钥。</CardDescription>
+        <CardTitle>{{ $t('第一步：扫描二维码') }}</CardTitle>
+        <CardDescription>{{ $t('使用身份验证器应用扫描下方二维码，或手动输入密钥。') }}</CardDescription>
       </CardHeader>
       <CardContent>
         <div class="flex flex-col items-center space-y-4">
-          <p class="text-sm text-muted-foreground text-center">推荐使用 Google Authenticator、Microsoft Authenticator 或 Authy</p>
+          <p class="text-sm text-muted-foreground text-center">{{ $t('推荐使用 Google Authenticator、Microsoft Authenticator 或 Authy') }}</p>
           <div class="bg-white p-3 rounded-lg border shadow-sm">
             <QrcodeVue :value="otpauthUri" :size="200" level="M" />
           </div>
           <div class="w-full">
-            <Label class="mb-1">手动密钥</Label>
+            <Label class="mb-1">{{ $t('手动密钥') }}</Label>
             <div class="flex items-center space-x-2">
               <code class="flex-1 rounded-md bg-muted px-3 py-2 font-record select-all break-all">{{ secret }}</code>
               <Button @click="copySecret" variant="outline" size="sm">
-                {{ copied ? '已复制' : '复制' }}
+                {{ copied ? $t('已复制') : $t('复制') }}
               </Button>
             </div>
           </div>
@@ -26,8 +26,8 @@
 
     <Card>
       <CardHeader>
-        <CardTitle>第二步：输入验证码</CardTitle>
-        <CardDescription>输入验证器应用中显示的6位数字。</CardDescription>
+        <CardTitle>{{ $t('第二步：输入验证码') }}</CardTitle>
+        <CardDescription>{{ $t('输入验证器应用中显示的6位数字。') }}</CardDescription>
       </CardHeader>
       <CardContent>
         <form class="space-y-4" @submit.prevent="handleVerify">
@@ -51,14 +51,14 @@
               variant="outline"
               class="flex-1"
             >
-              取消
+              {{ $t('取消') }}
             </Button>
             <Button
               type="submit"
               :disabled="loading || code.length !== 6"
               class="flex-1"
             >
-              {{ loading ? '验证中...' : '验证' }}
+              {{ loading ? $t('验证中․․․') : $t('验证') }}
             </Button>
           </div>
         </form>
@@ -75,6 +75,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const props = defineProps<{
   otpauthUri: string;
@@ -116,7 +119,7 @@ async function handleVerify() {
     const { data } = await api.post('/2fa/totp/verify', { code: code.value });
     emit('verified', data.backupCodes);
   } catch (err: any) {
-    error.value = err.response?.data?.error || '验证失败';
+    error.value = err.response?.data?.error || t('验证失败');
   } finally {
     loading.value = false;
   }

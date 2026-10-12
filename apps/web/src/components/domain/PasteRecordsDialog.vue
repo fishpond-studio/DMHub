@@ -2,9 +2,9 @@
   <Dialog :open="open" @update:open="(v) => emit('update:open', v)">
     <DialogContent class="max-w-xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>粘贴批量导入</DialogTitle>
+        <DialogTitle>{{ $t('粘贴批量导入') }}</DialogTitle>
         <DialogDescription>
-          每行一条：类型 主机 值 [TTL] [优先级]。支持空格或制表符分隔。
+          {{ $t('每行一条：类型 主机 值 [TTL] [优先级]。支持空格或制表符分隔。') }}
         </DialogDescription>
       </DialogHeader>
 
@@ -16,16 +16,16 @@
           placeholder="A www 1.2.3.4 600&#10;CNAME blog cname.example.com 3600&#10;MX @ mail.example.com 3600 10&#10;TXT @ v=spf1 include:_spf.google.com ~all"
         />
         <p class="text-xs text-muted-foreground">
-          已解析 <span class="font-medium text-foreground">{{ parsed.length }}</span> 条
-          <span v-if="parseErrors.length" class="text-destructive"> · {{ parseErrors.length }} 行无法识别</span>
+          {{ $t('已解析') }} <span class="font-medium text-foreground">{{ parsed.length }}</span> {{ $t('条') }}
+          <span v-if="parseErrors.length" class="text-destructive"> · {{ parseErrors.length }} {{ $t('行无法识别') }}</span>
         </p>
         <div v-if="parsed.length" class="max-h-40 overflow-y-auto rounded-md border text-xs">
           <table class="w-full">
             <thead class="bg-muted/50 sticky top-0">
               <tr>
-                <th class="px-2 py-1 text-left font-medium">类型</th>
-                <th class="px-2 py-1 text-left font-medium">主机</th>
-                <th class="px-2 py-1 text-left font-medium">值</th>
+                <th class="px-2 py-1 text-left font-medium">{{ $t('类型') }}</th>
+                <th class="px-2 py-1 text-left font-medium">{{ $t('主机') }}</th>
+                <th class="px-2 py-1 text-left font-medium">{{ $t('值') }}</th>
                 <th class="px-2 py-1 text-left font-medium">TTL</th>
               </tr>
             </thead>
@@ -39,7 +39,7 @@
             </tbody>
           </table>
           <p v-if="parsed.length > 30" class="px-2 py-1 text-muted-foreground border-t">
-            … 另有 {{ parsed.length - 30 }} 条
+            {{ $t('… 另有') }} {{ parsed.length - 30 }} {{ $t('条') }}
           </p>
         </div>
         <ul v-if="parseErrors.length" class="text-xs text-destructive space-y-0.5 max-h-20 overflow-y-auto">
@@ -48,9 +48,9 @@
       </div>
 
       <DialogFooter>
-        <Button variant="outline" @click="emit('update:open', false)">取消</Button>
+        <Button variant="outline" @click="emit('update:open', false)">{{ $t('取消') }}</Button>
         <Button :disabled="!parsed.length || applying" @click="apply">
-          {{ applying ? '导入中…' : `导入 ${parsed.length} 条` }}
+          {{ applying ? $t('导入中…') : $t('导入 {p0} 条', { p0: parsed.length }) }}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -64,6 +64,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { toastError, toastSuccess } from '@/lib/toast-helpers'
+
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const props = defineProps<{
   open: boolean
@@ -98,12 +101,12 @@ const parseResult = computed(() => {
     if (!raw || raw.startsWith('#') || raw.startsWith('//')) return
     const parts = raw.split(/[\s\t]+/).filter(Boolean)
     if (parts.length < 3) {
-      errors.push(`第 ${idx + 1} 行字段不足`)
+      errors.push(t('第 {p0} 行字段不足', { p0: idx + 1 }))
       return
     }
     const recordType = parts[0].toUpperCase()
     if (!ALLOWED.has(recordType)) {
-      errors.push(`第 ${idx + 1} 行未知类型 ${parts[0]}`)
+      errors.push(t('第 {p0} 行未知类型 {p1}', { p0: idx + 1, p1: parts[0] }))
       return
     }
     const name = parts[1]
@@ -184,14 +187,14 @@ async function apply() {
   try {
     const result = await store.bulkCreateRecords(props.domainId, parsed.value)
     if (result.succeeded === result.total) {
-      toastSuccess(`已导入 ${result.succeeded} 条记录`)
+      toastSuccess(t('已导入 {p0} 条记录', { p0: result.succeeded }))
     } else {
-      toastError(`导入完成：成功 ${result.succeeded}，失败 ${result.total - result.succeeded}`)
+      toastError(t('导入完成：成功 {p0}，失败 {p1}', { p0: result.succeeded, p1: result.total - result.succeeded }))
     }
     emit('applied')
     emit('update:open', false)
   } catch (err: any) {
-    toastError('导入失败', err.response?.data?.error || err.message)
+    toastError(t('导入失败'), err.response?.data?.error || err.message)
   } finally {
     applying.value = false
   }
