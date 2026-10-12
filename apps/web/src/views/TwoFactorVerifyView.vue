@@ -261,7 +261,8 @@ const backupCode = ref('');
 const loading = ref(false);
 const error = ref('');
 const backupCodesWarning = ref('');
-const backupCodesExhausted = computed(() => backupCodesWarning.value.includes(t('已用完')));
+// backupCodesWarning 是服务端返回的中文原文，比较必须用原文
+const backupCodesExhausted = computed(() => backupCodesWarning.value.includes('已用完'));
 
 const passkeyLoading = ref(false);
 const passkeyError = ref('');

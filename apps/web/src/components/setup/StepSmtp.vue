@@ -36,7 +36,8 @@ const testError = ref('');
 const saving = ref(false);
 
 watch(selectedPreset, (name) => {
-  if (!name || name === t('自定义')) return;
+  // 哨兵值保持原文，不能随语言切换变化
+  if (!name || name === '自定义') return;
   const preset = [...SMTP_PRESETS].find((p) => p.name === name);
   if (preset) {
     form.host = preset.host;
@@ -120,13 +121,13 @@ async function saveAndNext() {
             <SelectValue :placeholder="$t('请选择․․․')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem :value="$t('自定义')">{{ $t('自定义') }}</SelectItem>
+            <SelectItem value="自定义">{{ $t('自定义') }}</SelectItem>
             <SelectItem v-for="preset in SMTP_PRESETS" :key="preset.name" :value="preset.name">
               {{ preset.name }}
             </SelectItem>
           </SelectContent>
         </Select>
-        <p v-if="selectedPreset && selectedPreset !== $t('自定义')" class="text-sm text-muted-foreground">
+        <p v-if="selectedPreset && selectedPreset !== '自定义'" class="text-sm text-muted-foreground">
           {{ [...SMTP_PRESETS].find(p => p.name === selectedPreset)?.note }}
         </p>
       </div>
