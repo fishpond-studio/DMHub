@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import api, { getAccessToken, setAccessToken } from '@/lib/axios';
-import axios from 'axios';
+import api, {
+  getAccessToken,
+  needsRefresh,
+  refreshAccessToken,
+  SessionExpiredError,
+} from '@/lib/axios';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -118,8 +122,6 @@ export function invalidateSetupStatus() {
 
 const publicRoutes = new Set(['landing', 'login', 'register', '2fa-verify', 'setup', 'oauth-callback']);
 
-let refreshingPromise: Promise<void> | null = null;
-
 router.beforeEach(async (to) => {
   const stale = Date.now() - statusCheckedAt > STATUS_TTL_MS;
   // 进入引导页时始终重查，避免缓存的 false 把已安装实例锁在 setup
@@ -146,39 +148,25 @@ router.beforeEach(async (to) => {
     return { name: 'login' };
   }
 
-  if (isInitialized && !publicRoutes.has(to.name as string) && !getAccessToken()) {
-    if (!refreshingPromise) {
-      refreshingPromise = (async () => {
-        try {
-          const { data } = await axios.post('/api/auth/refresh', null, { withCredentials: true });
-          setAccessToken(data.accessToken);
-          // 刷新成功，清除整页重试标记
-          sessionStorage.removeItem('dmhub_refresh_retried');
-          const { useAuthStore } = await import('@/stores/auth');
-          const authStore = useAuthStore();
-          authStore.token = data.accessToken;
-          await authStore.fetchUser();
-        } catch {
-          // 刷新失败可能源于多标签页下的刷新令牌轮换竞态（先到先得，后到的失败）。
-          // 此时浏览器 cookie 往往已被其他标签页更新为最新令牌，整页重载后再试一次；
-          // 仅当重载后仍失败时才真正登出。
-          if (!sessionStorage.getItem('dmhub_refresh_retried')) {
-            sessionStorage.setItem('dmhub_refresh_retried', '1');
-            window.location.reload();
-            // 返回永不 resolve 的 Promise，挂起导航等待页面重载
-            return new Promise<void>(() => {});
-          }
-          sessionStorage.removeItem('dmhub_refresh_retried');
+  if (isInitialized && !publicRoutes.has(to.name as string)) {
+    const token = getAccessToken();
+    // 令牌缺失或已过期/即将过期时先续期，避免页面刚打开就撞上 401
+    if (!token || needsRefresh(token)) {
+      try {
+        await refreshAccessToken();
+        const { useAuthStore } = await import('@/stores/auth');
+        const authStore = useAuthStore();
+        authStore.token = getAccessToken();
+        await authStore.fetchUser();
+      } catch (err) {
+        // 只有服务端明确判定刷新令牌无效时才登出；
+        // 网络抖动等临时故障保留登录态，等后续导航或主动刷新恢复
+        if (err instanceof SessionExpiredError) {
           const { useAuthStore } = await import('@/stores/auth');
           useAuthStore().clearAuth();
-        } finally {
-          refreshingPromise = null;
+          return { name: 'login' };
         }
-      })();
-    }
-    await refreshingPromise;
-    if (!getAccessToken() && to.name !== 'login') {
-      return { name: 'login' };
+      }
     }
   }
 

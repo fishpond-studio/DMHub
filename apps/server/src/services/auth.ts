@@ -5,6 +5,7 @@ import { getDb } from '../db/index.js';
 import { users, inviteCodes, refreshTokens, teamSettings, userTokens } from '../db/schema.js';
 import { insertReturningOne } from '../db/helpers.js';
 import { signAccessToken, signRefreshToken, sign2FAToken, verifyToken } from '../lib/jwt.js';
+import { RefreshTokenRejectedError } from '../lib/refresh-token.js';
 import type { RegisterInput } from '@dmhub/shared';
 import { logOperation } from '../lib/log.js';
 import { decrypt } from '../lib/crypto.js';
@@ -171,11 +172,11 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
   try {
     payload = verifyToken(oldRefreshToken) as { userId: string };
   } catch {
-    throw new Error('刷新令牌无效或已过期');
+    throw new RefreshTokenRejectedError(false, '刷新令牌无效或已过期');
   }
 
   if ('scope' in payload && (payload as any).scope === '2fa') {
-    throw new Error('无效的刷新令牌');
+    throw new RefreshTokenRejectedError(false, '无效的刷新令牌');
   }
 
   const tokenHash = hashToken(oldRefreshToken);
@@ -185,12 +186,13 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
     .limit(1);
 
   if (!storedToken) {
-    throw new Error('刷新令牌无效或已过期');
+    // 库中查不到：可能是刚被另一个请求轮换掉（多标签页竞态），客户端重试即可
+    throw new RefreshTokenRejectedError(true, '刷新令牌已被使用');
   }
 
   if (new Date(storedToken.expiresAt) < new Date()) {
     await db.delete(refreshTokens).where(eq(refreshTokens.id, storedToken.id));
-    throw new Error('刷新令牌无效或已过期');
+    throw new RefreshTokenRejectedError(false, '刷新令牌已过期');
   }
 
   // 原子删除：通过 returning() 检测删除行数，防止竞态条件
@@ -200,7 +202,7 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
 
   if (deleted.length === 0) {
     // 令牌已被其他请求消费
-    throw new Error('刷新令牌无效或已过期');
+    throw new RefreshTokenRejectedError(true, '刷新令牌已被使用');
   }
 
   const [user] = await db.select({ id: users.id, role: users.role })

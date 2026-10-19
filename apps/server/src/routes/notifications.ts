@@ -21,6 +21,8 @@ import {
 } from '../services/notification.js';
 
 const MAX_CONNECTIONS_PER_USER = 5;
+/** 心跳间隔：反向代理通常按空闲超时断开长连接，定期发注释行保活 */
+const SSE_KEEPALIVE_INTERVAL_MS = 25_000;
 
 export async function notificationRoutes(app: FastifyInstance) {
   app.post('/stream-ticket', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
@@ -66,7 +68,18 @@ export async function notificationRoutes(app: FastifyInstance) {
 
     reply.raw.write(`data: ${JSON.stringify({ event: 'connected' })}\n\n`);
 
+    // 心跳：标签页在后台时连接容易闲置到被代理断开，断开后前端会退回轮询并触发额外请求
+    const keepalive = setInterval(() => {
+      try {
+        reply.raw.write(': ping\n\n');
+      } catch {
+        /* 连接已断开，交给 close 事件清理 */
+      }
+    }, SSE_KEEPALIVE_INTERVAL_MS);
+    keepalive.unref?.();
+
     request.raw.on('close', () => {
+      clearInterval(keepalive);
       removeSSEClient(connectedUserId, client);
     });
   });

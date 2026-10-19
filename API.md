@@ -245,6 +245,8 @@
 
 **Response:** `{ accessToken, refreshToken }`
 
+**错误码：** 401 `REFRESH_TOKEN_MISSING` 缺少刷新令牌 | 401 `REFRESH_TOKEN_INVALID` 令牌无效或已过期（会话结束，清除 Cookie）| 401 `REFRESH_TOKEN_REUSED` 令牌刚被其他请求消费（多标签页竞态，稍后重试即可）| 503 `REFRESH_UNAVAILABLE` 服务端临时故障（保留 Cookie，可稍后重试）
+
 ### POST /auth/logout
 
 登出，使当前 Refresh Token 失效，清除 Cookie。

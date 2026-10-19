@@ -2,6 +2,18 @@ export const JWT_ACCESS_EXPIRY = '15m';
 export const JWT_REFRESH_EXPIRY = '7d';
 export const JWT_2FA_EXPIRY = '5m';
 
+/** 刷新令牌接口的错误码：区分「会话真的结束」与「临时故障，可重试」 */
+export const REFRESH_ERROR_CODES = {
+  /** 缺少刷新令牌 */
+  MISSING: 'REFRESH_TOKEN_MISSING',
+  /** 刷新令牌确实无效或已过期，必须重新登录 */
+  INVALID: 'REFRESH_TOKEN_INVALID',
+  /** 刷新令牌刚被别的请求抢先消费，稍后重试即可恢复 */
+  REUSED: 'REFRESH_TOKEN_REUSED',
+  /** 服务端临时故障，保留登录态稍后重试 */
+  UNAVAILABLE: 'REFRESH_UNAVAILABLE',
+} as const;
+
 export const BACKUP_CODE_COUNT = 8;
 export const BACKUP_CODE_FORMAT = 'XXXX-XXXX';
 

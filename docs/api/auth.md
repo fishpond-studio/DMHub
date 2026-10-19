@@ -52,6 +52,15 @@
 }
 ```
 
+**错误码：**
+
+| 状态码 | code | 说明 |
+| :-- | :-- | :-- |
+| 401 | `REFRESH_TOKEN_MISSING` | 缺少刷新令牌 |
+| 401 | `REFRESH_TOKEN_INVALID` | 令牌无效或已过期，会话结束并清除 Cookie |
+| 401 | `REFRESH_TOKEN_REUSED` | 令牌刚被其他请求消费（多标签页竞态），稍后重试即可 |
+| 503 | `REFRESH_UNAVAILABLE` | 服务端临时故障，保留 Cookie，可稍后重试 |
+
 ### POST /api/auth/logout
 
 吊销当前 refresh token。
