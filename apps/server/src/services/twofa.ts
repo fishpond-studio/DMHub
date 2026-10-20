@@ -189,7 +189,8 @@ export async function verify2FALogin(userId: string, method: 'totp' | 'backup' |
   }
 
   const accessToken = signAccessToken(user.id, user.role);
-  const refreshToken = signRefreshToken(user.id);
+  // 2FA 完成后统一签发 7 天持久 cookie，刷新令牌要带着同样的选择
+  const refreshToken = signRefreshToken(user.id, true);
 
   const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
   await db.insert(refreshTokens).values({
@@ -455,7 +456,8 @@ export async function verifyPasskeyAuth(userId: string, response: any, hostname?
     if (!user) throw new Error('用户不存在');
 
     const accessToken = signAccessToken(user.id, user.role);
-    const refreshToken = signRefreshToken(user.id);
+    // 通行密钥登录同样签发 7 天持久 cookie，刷新令牌保持一致
+    const refreshToken = signRefreshToken(user.id, true);
 
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     await db.insert(refreshTokens).values({
