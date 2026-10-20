@@ -82,6 +82,23 @@ export interface HttpErrorLike {
   };
 }
 
+/** 标记「原始 401 只是刷新时的临时故障」的错误属性 */
+const TRANSIENT_REFRESH_FAILURE = 'transientRefreshFailure';
+
+/**
+ * 标记原始请求的 401：它的刷新过程失败于网络抖动 / 5xx，
+ * 不是服务端判定会话失效。调用方看到带此标记的 401 时不应登出。
+ */
+export function markTransientRefreshFailure(err: unknown): void {
+  if (err && typeof err === 'object') {
+    (err as Record<string, unknown>)[TRANSIENT_REFRESH_FAILURE] = true;
+  }
+}
+
+export function isTransientRefreshFailure(err: unknown): boolean {
+  return (err as Record<string, unknown> | null | undefined)?.[TRANSIENT_REFRESH_FAILURE] === true;
+}
+
 /** 读取刷新失败里的状态码、错误码与提示文案 */
 export function readRefreshRejection(err: unknown): {
   status?: number;

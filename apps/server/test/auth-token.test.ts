@@ -12,7 +12,7 @@ function makeToken(payload: Record<string, unknown>): string {
   return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode(payload)}.signature`;
 }
 
-const { getTokenExpiry, isAccessTokenExpired, needsRefresh, isRefreshRejected, isRefreshReused, refreshWithRetry, SessionExpiredError } =
+const { getTokenExpiry, isAccessTokenExpired, needsRefresh, isRefreshRejected, isRefreshReused, refreshWithRetry, SessionExpiredError, markTransientRefreshFailure, isTransientRefreshFailure } =
   await import('../../web/src/lib/token.ts');
 
 const NOW = 1_700_000_000_000;
@@ -113,4 +113,16 @@ test('a network failure keeps the session instead of logging out', async () => {
     }, [0, 0, 0]),
     (err: unknown) => !(err instanceof SessionExpiredError),
   );
+});
+
+test('marks the original 401 so callers do not treat a transient refresh failure as a logout', () => {
+  const err = { response: { status: 401 } };
+  assert.equal(isTransientRefreshFailure(err), false);
+
+  markTransientRefreshFailure(err);
+  assert.equal(isTransientRefreshFailure(err), true);
+
+  // 非对象 / 空值不应抛错
+  assert.equal(isTransientRefreshFailure(null), false);
+  assert.equal(isTransientRefreshFailure('401'), false);
 });

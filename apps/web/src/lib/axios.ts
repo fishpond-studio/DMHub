@@ -3,6 +3,7 @@ import router from '@/router';
 import {
   ACCESS_TOKEN_REFRESH_SKEW_MS,
   getTokenExpiry,
+  markTransientRefreshFailure,
   needsRefresh,
   refreshWithRetry,
   SessionExpiredError,
@@ -10,7 +11,7 @@ import {
 
 let accessToken: string | null = sessionStorage.getItem('dmhub_token');
 
-export { ACCESS_TOKEN_REFRESH_SKEW_MS, getTokenExpiry, needsRefresh, SessionExpiredError };
+export { ACCESS_TOKEN_REFRESH_SKEW_MS, getTokenExpiry, markTransientRefreshFailure, needsRefresh, SessionExpiredError };
 
 /** 刷新重试退避序列（毫秒），第一项表示立即尝试 */
 const REFRESH_RETRY_DELAYS_MS = [0, 400, 1200];
@@ -180,6 +181,9 @@ api.interceptors.response.use(
       } catch (err) {
         if (err instanceof SessionExpiredError) {
           await expireSession();
+        } else {
+          // 临时故障：给原始 401 打标记，调用方不要把它当作会话失效
+          markTransientRefreshFailure(error);
         }
         // 临时故障不登出：保留登录态，等后续请求或主动刷新恢复
         return Promise.reject(error);
