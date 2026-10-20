@@ -16,8 +16,16 @@ export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-export async function storeRefreshToken(userId: string, rawToken: string, deviceInfo?: string) {
-  const db = getDb();
+/** 数据库客户端或事务句柄 */
+type DbExecutor = ReturnType<typeof getDb>;
+
+export async function storeRefreshToken(
+  userId: string,
+  rawToken: string,
+  deviceInfo?: string,
+  executor: DbExecutor = getDb(),
+) {
+  const db = executor;
   const tokenHash = hashToken(rawToken);
   await db.insert(refreshTokens).values({
     userId,
@@ -195,27 +203,33 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
     throw new RefreshTokenRejectedError(false, '刷新令牌已过期');
   }
 
-  // 原子删除：通过 returning() 检测删除行数，防止竞态条件
-  const deleted = await db.delete(refreshTokens)
-    .where(eq(refreshTokens.id, storedToken.id))
-    .returning({ id: refreshTokens.id });
-
-  if (deleted.length === 0) {
-    // 令牌已被其他请求消费
-    throw new RefreshTokenRejectedError(true, '刷新令牌已被使用');
-  }
-
   const [user] = await db.select({ id: users.id, role: users.role })
     .from(users).where(eq(users.id, storedToken.userId)).limit(1);
 
   if (!user) {
-    throw new Error('用户不存在');
+    // 用户已被删除，续期没有意义，让客户端直接登出
+    throw new RefreshTokenRejectedError(false, '用户不存在');
   }
 
   const accessToken = signAccessToken(user.id, user.role);
   const newRefreshToken = signRefreshToken(user.id);
 
-  await storeRefreshToken(user.id, newRefreshToken, deviceInfo);
+  // 先写新令牌、再删旧令牌，两步放进同一事务。
+  // 反过来先删后写，一旦两步之间遇到数据库故障，用户手里唯一的刷新令牌已经没了，
+  // 客户端重试只会拿到 REUSED，瞬时故障最终仍会演变成强制登出。
+  await db.transaction(async (tx: DbExecutor) => {
+    await storeRefreshToken(user.id, newRefreshToken, deviceInfo, tx);
+
+    // 原子删除：通过 returning() 检测删除行数，防止竞态条件
+    const deleted = await tx.delete(refreshTokens)
+      .where(eq(refreshTokens.id, storedToken.id))
+      .returning({ id: refreshTokens.id });
+
+    if (deleted.length === 0) {
+      // 令牌已被其他请求消费：回滚，连带撤销刚写入的新令牌
+      throw new RefreshTokenRejectedError(true, '刷新令牌已被使用');
+    }
+  });
 
   return { accessToken, refreshToken: newRefreshToken };
 }
