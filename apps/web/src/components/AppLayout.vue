@@ -104,9 +104,15 @@ function isActive(path: string) {
   return route.path === path || route.path.startsWith(path + '/')
 }
 
-function handleLogout() {
+async function handleLogout() {
   notificationStore.disconnect()
-  authStore.clearAuth()
+  // 必须通知服务端吊销刷新令牌：只清本地状态的话 httpOnly cookie 仍然有效，
+  // 用户后退或访问受保护路由时会被守卫静默登回去。
+  try {
+    await authStore.logout()
+  } catch {
+    // 服务端不可达时 logout() 已在 finally 里清理本地状态，照常回登录页
+  }
   router.push('/login')
 }
 

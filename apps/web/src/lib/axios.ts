@@ -40,8 +40,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       const isTwoFARequest = originalRequest.headers?.['X-2FA-Auth'];
       const onTwoFAPage = router.currentRoute.value.path === '/2fa/verify';
+      // 登录 / 注册返回 401 表示凭据错误，不是访问令牌过期。
+      // 此时若浏览器还留着上一个会话的刷新 cookie，刷新只会把旧用户重新登回来。
+      const isAuthEntryRequest = /^\/auth\/(login|register)(\?|$)/.test(originalRequest.url ?? '');
 
-      if (isTwoFARequest || onTwoFAPage) {
+      if (isTwoFARequest || onTwoFAPage || isAuthEntryRequest) {
         return Promise.reject(error);
       }
 
