@@ -4,7 +4,9 @@ import { eq, or, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { users, inviteCodes, refreshTokens, teamSettings, userTokens } from '../db/schema.js';
 import { insertReturningOne } from '../db/helpers.js';
+import { isMysqlLike } from '../db/schema.js';
 import { signAccessToken, signRefreshToken, sign2FAToken, verifyToken } from '../lib/jwt.js';
+import { RefreshTokenRejectedError } from '../lib/refresh-token.js';
 import type { RegisterInput } from '@dmhub/shared';
 import { logOperation } from '../lib/log.js';
 import { decrypt } from '../lib/crypto.js';
@@ -15,8 +17,16 @@ export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-export async function storeRefreshToken(userId: string, rawToken: string, deviceInfo?: string) {
-  const db = getDb();
+/** 数据库客户端或事务句柄 */
+type DbExecutor = ReturnType<typeof getDb>;
+
+export async function storeRefreshToken(
+  userId: string,
+  rawToken: string,
+  deviceInfo?: string,
+  executor: DbExecutor = getDb(),
+) {
+  const db = executor;
   const tokenHash = hashToken(rawToken);
   await db.insert(refreshTokens).values({
     userId,
@@ -171,11 +181,11 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
   try {
     payload = verifyToken(oldRefreshToken) as { userId: string };
   } catch {
-    throw new Error('刷新令牌无效或已过期');
+    throw new RefreshTokenRejectedError(false, '刷新令牌无效或已过期');
   }
 
   if ('scope' in payload && (payload as any).scope === '2fa') {
-    throw new Error('无效的刷新令牌');
+    throw new RefreshTokenRejectedError(false, '无效的刷新令牌');
   }
 
   const tokenHash = hashToken(oldRefreshToken);
@@ -185,35 +195,52 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
     .limit(1);
 
   if (!storedToken) {
-    throw new Error('刷新令牌无效或已过期');
+    // 库中查不到：可能是刚被另一个请求轮换掉（多标签页竞态），客户端重试即可
+    throw new RefreshTokenRejectedError(true, '刷新令牌已被使用');
   }
 
   if (new Date(storedToken.expiresAt) < new Date()) {
     await db.delete(refreshTokens).where(eq(refreshTokens.id, storedToken.id));
-    throw new Error('刷新令牌无效或已过期');
-  }
-
-  // 原子删除：通过 returning() 检测删除行数，防止竞态条件
-  const deleted = await db.delete(refreshTokens)
-    .where(eq(refreshTokens.id, storedToken.id))
-    .returning({ id: refreshTokens.id });
-
-  if (deleted.length === 0) {
-    // 令牌已被其他请求消费
-    throw new Error('刷新令牌无效或已过期');
+    throw new RefreshTokenRejectedError(false, '刷新令牌已过期');
   }
 
   const [user] = await db.select({ id: users.id, role: users.role })
     .from(users).where(eq(users.id, storedToken.userId)).limit(1);
 
   if (!user) {
-    throw new Error('用户不存在');
+    // 用户已被删除，续期没有意义，让客户端直接登出
+    throw new RefreshTokenRejectedError(false, '用户不存在');
   }
 
   const accessToken = signAccessToken(user.id, user.role);
   const newRefreshToken = signRefreshToken(user.id);
 
-  await storeRefreshToken(user.id, newRefreshToken, deviceInfo);
+  // 先写新令牌、再删旧令牌，两步放进同一事务。
+  // 反过来先删后写，一旦两步之间遇到数据库故障，用户手里唯一的刷新令牌已经没了，
+  // 客户端重试只会拿到 REUSED，瞬时故障最终仍会演变成强制登出。
+  await db.transaction(async (tx: DbExecutor) => {
+    await storeRefreshToken(user.id, newRefreshToken, deviceInfo, tx);
+
+    // 原子删除：用受影响行数检测是否被并发请求抢先消费，防止竞态条件。
+    // 两种方言的「删除行数」来源不同：PG 走 returning()，MySQL/MariaDB 的
+    // drizzle 不支持 delete().returning()，改读 ResultSetHeader.affectedRows。
+    let deletedCount: number;
+    if (isMysqlLike) {
+      const [header] = (await tx.delete(refreshTokens)
+        .where(eq(refreshTokens.id, storedToken.id))) as Array<{ affectedRows?: number }>;
+      deletedCount = header?.affectedRows ?? 0;
+    } else {
+      const deleted = await tx.delete(refreshTokens)
+        .where(eq(refreshTokens.id, storedToken.id))
+        .returning({ id: refreshTokens.id });
+      deletedCount = deleted.length;
+    }
+
+    if (deletedCount === 0) {
+      // 令牌已被其他请求消费：回滚，连带撤销刚写入的新令牌
+      throw new RefreshTokenRejectedError(true, '刷新令牌已被使用');
+    }
+  });
 
   return { accessToken, refreshToken: newRefreshToken };
 }

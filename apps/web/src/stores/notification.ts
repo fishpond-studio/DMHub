@@ -5,6 +5,9 @@ import { getAccessToken } from '@/lib/axios';
 import type { NotificationLevel } from '@dmhub/shared';
 import { toast } from '@/components/ui/toast/use-toast';
 
+/** SSE 重连的最大退避间隔（毫秒） */
+const RECONNECT_MAX_DELAY_MS = 60_000;
+
 export interface NotificationConfig {
   id: string;
   channel: string;
@@ -33,6 +36,8 @@ export const useNotificationStore = defineStore('notification', () => {
   const connected = ref(false);
   let eventSource: EventSource | null = null;
   let pollingTimer: ReturnType<typeof setInterval> | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let reconnectAttempts = 0;
   let started = false;
 
   const unreadCount = computed(() => notifications.value.filter((n) => !n.read).length);
@@ -174,6 +179,7 @@ export const useNotificationStore = defineStore('notification', () => {
       ticket = data.ticket;
     } catch {
       startPolling();
+      scheduleReconnect();
       return;
     }
 
@@ -184,6 +190,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
     eventSource.onopen = () => {
       connected.value = true;
+      reconnectAttempts = 0;
       stopPolling();
     };
 
@@ -212,8 +219,22 @@ export const useNotificationStore = defineStore('notification', () => {
       connected.value = false;
       eventSource?.close();
       eventSource = null;
+      // 轮询兜底，同时按退避重连 SSE；标签页在后台时连接容易被浏览器/代理掐断
       startPolling();
+      scheduleReconnect();
     };
+  }
+
+  /** SSE 断开后按指数退避重连，避免高频重试打爆服务端 */
+  function scheduleReconnect() {
+    if (reconnectTimer || !started) return;
+    const delay = Math.min(RECONNECT_MAX_DELAY_MS, 1000 * 2 ** reconnectAttempts);
+    reconnectAttempts += 1;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      if (!started) return;
+      void connectSSE();
+    }, delay);
   }
 
   function startPolling() {
@@ -235,6 +256,11 @@ export const useNotificationStore = defineStore('notification', () => {
     connected.value = false;
     started = false;
     stopPolling();
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    reconnectAttempts = 0;
   }
 
   /** 登录后启动：拉历史 + SSE */

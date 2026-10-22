@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import api, { setAccessToken as setApiToken } from '@/lib/axios';
+import { isTransientRefreshFailure } from '@/lib/token';
 import { startAuthentication } from '@simplewebauthn/browser';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -62,8 +63,14 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await api.get('/auth/me');
       user.value = data.user;
-    } catch {
-      clearAuth();
+    } catch (err) {
+      // 只有服务端明确判定令牌无效时才清除登录态；
+      // 网络抖动、超时等临时错误不应把用户踢出登录。
+      // 拦截器会在刷新因临时故障失败时把原始 401 标记出来，要排除掉。
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401 && !isTransientRefreshFailure(err)) {
+        clearAuth();
+      }
     }
   }
 

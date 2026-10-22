@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { loginSchema, registerSchema } from '@dmhub/shared';
+import { loginSchema, registerSchema, REFRESH_ERROR_CODES } from '@dmhub/shared';
 import { register, login, refreshAuth, logout } from '../services/auth.js';
+import { describeRefreshFailure } from '../lib/refresh-token.js';
 import { config } from '../config/index.js';
 import { authenticate } from '../middleware/auth.js';
 import { logOperation } from '../lib/log.js';
@@ -96,7 +97,7 @@ export async function authRoutes(app: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const refreshToken = request.cookies.refresh_token || (request.body as any)?.refreshToken;
     if (!refreshToken) {
-      return reply.status(401).send({ error: '缺少刷新令牌' });
+      return reply.status(401).send({ error: '缺少刷新令牌', code: REFRESH_ERROR_CODES.MISSING });
     }
 
     try {
@@ -106,9 +107,16 @@ export async function authRoutes(app: FastifyInstance) {
       const cookieOptions = existingCookie ? COOKIE_OPTIONS_REMEMBER : COOKIE_OPTIONS_SESSION;
       reply.setCookie('refresh_token', result.refreshToken, cookieOptions);
       return { accessToken: result.accessToken, refreshToken: result.refreshToken };
-    } catch (err: any) {
-      reply.clearCookie('refresh_token', { path: '/api/auth' });
-      return reply.status(401).send({ error: err.message || '刷新令牌无效' });
+    } catch (err) {
+      const failure = describeRefreshFailure(err);
+      // 只有会话真的结束才清 cookie；临时故障保留它，客户端可以稍后重试
+      if (failure.clearCookie) {
+        reply.clearCookie('refresh_token', { path: '/api/auth' });
+      }
+      if (failure.status >= 500) {
+        request.log.error({ err }, '刷新访问令牌失败');
+      }
+      return reply.status(failure.status).send({ error: failure.message, code: failure.code });
     }
   });
 
