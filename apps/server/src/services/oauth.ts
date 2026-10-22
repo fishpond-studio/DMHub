@@ -170,7 +170,8 @@ async function issueSession(user: {
   role: string;
 }, deviceInfo?: string) {
   const accessToken = signAccessToken(user.id, user.role);
-  const refreshToken = signRefreshToken(user.id);
+  // OAuth 登录固定签发 7 天持久 cookie，刷新令牌要保持这一选择
+  const refreshToken = signRefreshToken(user.id, true);
   await storeRefreshToken(user.id, refreshToken, deviceInfo);
   return {
     accessToken,

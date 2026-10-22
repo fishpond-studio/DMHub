@@ -111,7 +111,14 @@ export async function register(input: RegisterInput, deviceInfo?: string) {
   return { user, accessToken, refreshToken };
 }
 
-export async function login(username: string, password: string, deviceInfo?: string, ipAddress?: string, userAgent?: string) {
+export async function login(
+  username: string,
+  password: string,
+  deviceInfo?: string,
+  ipAddress?: string,
+  userAgent?: string,
+  rememberMe = false,
+) {
   const db = getDb();
 
   const [user] = await db.select({
@@ -157,7 +164,7 @@ export async function login(username: string, password: string, deviceInfo?: str
   });
 
   const accessToken = signAccessToken(user.id, user.role);
-  const refreshToken = signRefreshToken(user.id);
+  const refreshToken = signRefreshToken(user.id, rememberMe);
 
   await storeRefreshToken(user.id, refreshToken, deviceInfo);
 
@@ -177,9 +184,9 @@ export async function login(username: string, password: string, deviceInfo?: str
 export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) {
   const db = getDb();
 
-  let payload: { userId: string };
+  let payload: { userId: string; remember?: boolean };
   try {
-    payload = verifyToken(oldRefreshToken) as { userId: string };
+    payload = verifyToken(oldRefreshToken) as { userId: string; remember?: boolean };
   } catch {
     throw new RefreshTokenRejectedError(false, '刷新令牌无效或已过期');
   }
@@ -187,6 +194,9 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
   if ('scope' in payload && (payload as any).scope === '2fa') {
     throw new RefreshTokenRejectedError(false, '无效的刷新令牌');
   }
+
+  // 刷新后保持登录时的选择：勾了「记住我」才继续签发持久 cookie
+  const remember = payload.remember === true;
 
   const tokenHash = hashToken(oldRefreshToken);
 
@@ -213,7 +223,7 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
   }
 
   const accessToken = signAccessToken(user.id, user.role);
-  const newRefreshToken = signRefreshToken(user.id);
+  const newRefreshToken = signRefreshToken(user.id, remember);
 
   // 先写新令牌、再删旧令牌，两步放进同一事务。
   // 反过来先删后写，一旦两步之间遇到数据库故障，用户手里唯一的刷新令牌已经没了，
@@ -242,7 +252,7 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
     }
   });
 
-  return { accessToken, refreshToken: newRefreshToken };
+  return { accessToken, refreshToken: newRefreshToken, remember };
 }
 
 export async function logout(rawToken: string) {

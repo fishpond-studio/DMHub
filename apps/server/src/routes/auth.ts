@@ -20,7 +20,8 @@ const COOKIE_OPTIONS_REMEMBER = {
   secure: config.NODE_ENV === 'production',
   sameSite: (config.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
   path: '/api/auth',
-  maxAge: 30 * 24 * 60 * 60,
+  // 与刷新令牌自身的 7 天有效期一致；cookie 活得比令牌久只会留下一个无效凭据
+  maxAge: 7 * 24 * 60 * 60,
 };
 
 const COOKIE_OPTIONS_SESSION = {
@@ -59,7 +60,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     try {
       const deviceInfo = request.headers['user-agent'] as string | undefined;
-      const result = await login(parsed.data.username, parsed.data.password, deviceInfo, request.ip, request.headers['user-agent']);
+      const result = await login(parsed.data.username, parsed.data.password, deviceInfo, request.ip, request.headers['user-agent'], parsed.data.rememberMe);
 
       if (result.requires2FA) {
         return { requires2FA: true, tempToken: result.tempToken };
@@ -102,9 +103,9 @@ export async function authRoutes(app: FastifyInstance) {
 
     try {
       const deviceInfo = request.headers['user-agent'] as string | undefined;
-      const existingCookie = request.cookies.refresh_token;
       const result = await refreshAuth(refreshToken, deviceInfo);
-      const cookieOptions = existingCookie ? COOKIE_OPTIONS_REMEMBER : COOKIE_OPTIONS_SESSION;
+      // 保持登录时的选择：会话级 cookie 不会因为一次刷新被升级成持久 cookie
+      const cookieOptions = result.remember ? COOKIE_OPTIONS_REMEMBER : COOKIE_OPTIONS_SESSION;
       reply.setCookie('refresh_token', result.refreshToken, cookieOptions);
       return { accessToken: result.accessToken, refreshToken: result.refreshToken };
     } catch (err) {
