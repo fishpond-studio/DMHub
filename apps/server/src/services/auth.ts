@@ -4,6 +4,7 @@ import { eq, or, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { users, inviteCodes, refreshTokens, teamSettings, userTokens } from '../db/schema.js';
 import { insertReturningOne } from '../db/helpers.js';
+import { isMysqlLike } from '../db/schema.js';
 import { signAccessToken, signRefreshToken, sign2FAToken, verifyToken } from '../lib/jwt.js';
 import { RefreshTokenRejectedError } from '../lib/refresh-token.js';
 import type { RegisterInput } from '@dmhub/shared';
@@ -220,12 +221,22 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
   await db.transaction(async (tx: DbExecutor) => {
     await storeRefreshToken(user.id, newRefreshToken, deviceInfo, tx);
 
-    // 原子删除：通过 returning() 检测删除行数，防止竞态条件
-    const deleted = await tx.delete(refreshTokens)
-      .where(eq(refreshTokens.id, storedToken.id))
-      .returning({ id: refreshTokens.id });
+    // 原子删除：用受影响行数检测是否被并发请求抢先消费，防止竞态条件。
+    // 两种方言的「删除行数」来源不同：PG 走 returning()，MySQL/MariaDB 的
+    // drizzle 不支持 delete().returning()，改读 ResultSetHeader.affectedRows。
+    let deletedCount: number;
+    if (isMysqlLike) {
+      const [header] = (await tx.delete(refreshTokens)
+        .where(eq(refreshTokens.id, storedToken.id))) as Array<{ affectedRows?: number }>;
+      deletedCount = header?.affectedRows ?? 0;
+    } else {
+      const deleted = await tx.delete(refreshTokens)
+        .where(eq(refreshTokens.id, storedToken.id))
+        .returning({ id: refreshTokens.id });
+      deletedCount = deleted.length;
+    }
 
-    if (deleted.length === 0) {
+    if (deletedCount === 0) {
       // 令牌已被其他请求消费：回滚，连带撤销刚写入的新令牌
       throw new RefreshTokenRejectedError(true, '刷新令牌已被使用');
     }
