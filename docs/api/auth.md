@@ -61,6 +61,10 @@
 | 401 | `REFRESH_TOKEN_REUSED` | 令牌刚被其他请求消费（多标签页竞态），稍后重试即可 |
 | 503 | `REFRESH_UNAVAILABLE` | 服务端临时故障，保留 Cookie，可稍后重试 |
 
+`REFRESH_TOKEN_REUSED` 只在令牌被消费后的 60 秒宽限窗口内返回。数据库里查不到
+令牌（已登出、已被吊销、从未登记）或令牌已过期，一律返回 `REFRESH_TOKEN_INVALID`
+并清除 Cookie；宽限窗口之后再次使用已消费的令牌视为重放，服务端会撤销整条轮换链。
+
 ### POST /api/auth/logout
 
 吊销当前 refresh token。

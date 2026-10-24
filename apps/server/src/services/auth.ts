@@ -4,9 +4,13 @@ import { eq, or, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { users, inviteCodes, refreshTokens, teamSettings, userTokens } from '../db/schema.js';
 import { insertReturningOne } from '../db/helpers.js';
-import { isMysqlLike } from '../db/schema.js';
 import { signAccessToken, signRefreshToken, sign2FAToken, verifyToken } from '../lib/jwt.js';
-import { RefreshTokenRejectedError } from '../lib/refresh-token.js';
+import {
+  RefreshTokenRejectedError,
+  classifyStoredRefreshToken,
+  type StoredRefreshToken,
+} from '../lib/refresh-token.js';
+import { claimRefreshToken, revokeRefreshTokenFamily } from '../lib/refresh-rotation.js';
 import type { RegisterInput } from '@dmhub/shared';
 import { logOperation } from '../lib/log.js';
 import { decrypt } from '../lib/crypto.js';
@@ -204,18 +208,34 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
     .where(eq(refreshTokens.tokenHash, tokenHash))
     .limit(1);
 
-  if (!storedToken) {
-    // 库中查不到：可能是刚被另一个请求轮换掉（多标签页竞态），客户端重试即可
+  const state = classifyStoredRefreshToken(storedToken ?? null);
+
+  if (state.action === 'reused') {
+    // 刚被另一个请求轮换消费：对方会写回新 cookie，客户端重试即可恢复
     throw new RefreshTokenRejectedError(true, '刷新令牌已被使用');
   }
 
-  if (new Date(storedToken.expiresAt) < new Date()) {
-    await db.delete(refreshTokens).where(eq(refreshTokens.id, storedToken.id));
-    throw new RefreshTokenRejectedError(false, '刷新令牌已过期');
+  if (state.action === 'invalid') {
+    if (state.reason === 'expired' && storedToken) {
+      await db.delete(refreshTokens).where(eq(refreshTokens.id, storedToken.id));
+    }
+    if (state.reason === 'replayed' && storedToken) {
+      // 宽限期之后重放已消费的令牌：可能已泄露，撤销整条轮换链
+      try {
+        await revokeRefreshTokenFamily(db, storedToken);
+      } catch (err) {
+        console.warn('[auth] 撤销重放的刷新令牌链失败:', err);
+      }
+    }
+    // 不存在 / 已登出 / 已吊销 / 已过期 / 重放：会话确实结束
+    throw new RefreshTokenRejectedError(false, '刷新令牌无效或已过期');
   }
 
+  // state.action === 'rotate' 时必然查到记录
+  const stored = storedToken as StoredRefreshToken & { id: string; userId: string };
+
   const [user] = await db.select({ id: users.id, role: users.role })
-    .from(users).where(eq(users.id, storedToken.userId)).limit(1);
+    .from(users).where(eq(users.id, stored.userId)).limit(1);
 
   if (!user) {
     // 用户已被删除，续期没有意义，让客户端直接登出
@@ -224,32 +244,17 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
 
   const accessToken = signAccessToken(user.id, user.role);
   const newRefreshToken = signRefreshToken(user.id, remember);
+  const newTokenHash = hashToken(newRefreshToken);
 
-  // 先写新令牌、再删旧令牌，两步放进同一事务。
-  // 反过来先删后写，一旦两步之间遇到数据库故障，用户手里唯一的刷新令牌已经没了，
-  // 客户端重试只会拿到 REUSED，瞬时故障最终仍会演变成强制登出。
   await db.transaction(async (tx: DbExecutor) => {
-    await storeRefreshToken(user.id, newRefreshToken, deviceInfo, tx);
-
-    // 原子删除：用受影响行数检测是否被并发请求抢先消费，防止竞态条件。
-    // 两种方言的「删除行数」来源不同：PG 走 returning()，MySQL/MariaDB 的
-    // drizzle 不支持 delete().returning()，改读 ResultSetHeader.affectedRows。
-    let deletedCount: number;
-    if (isMysqlLike) {
-      const [header] = (await tx.delete(refreshTokens)
-        .where(eq(refreshTokens.id, storedToken.id))) as Array<{ affectedRows?: number }>;
-      deletedCount = header?.affectedRows ?? 0;
-    } else {
-      const deleted = await tx.delete(refreshTokens)
-        .where(eq(refreshTokens.id, storedToken.id))
-        .returning({ id: refreshTokens.id });
-      deletedCount = deleted.length;
-    }
-
-    if (deletedCount === 0) {
-      // 令牌已被其他请求消费：回滚，连带撤销刚写入的新令牌
+    // 先原子认领旧令牌，再写入新令牌，两步在同一事务里。
+    // 认领失败说明另一个请求先一步完成了轮换，回滚即可，客户端重试会拿到新 cookie。
+    const claimed = await claimRefreshToken(tx, stored.id, newTokenHash, new Date());
+    if (!claimed) {
       throw new RefreshTokenRejectedError(true, '刷新令牌已被使用');
     }
+
+    await storeRefreshToken(user.id, newRefreshToken, deviceInfo, tx);
   });
 
   return { accessToken, refreshToken: newRefreshToken, remember };

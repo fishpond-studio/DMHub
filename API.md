@@ -242,6 +242,7 @@
 ### POST /auth/refresh
 
 刷新 Access Token。Refresh Token 通过 HttpOnly Cookie 自动携带，也可在 body 中传入。
+`REFRESH_TOKEN_REUSED` 只在令牌刚被其他请求消费的 60 秒宽限窗口内返回；查不到、已吊销或已过期的令牌返回 `REFRESH_TOKEN_INVALID` 并清除 Cookie。
 
 **Response:** `{ accessToken, refreshToken }`
 

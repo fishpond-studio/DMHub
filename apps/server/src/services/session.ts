@@ -1,4 +1,4 @@
-import { eq, desc, and, ne } from 'drizzle-orm';
+import { eq, desc, and, ne, isNull } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { refreshTokens, users } from '../db/schema.js';
 import { hashToken } from './auth.js';
@@ -24,7 +24,8 @@ export async function listUserSessions(userId: string, currentTokenHash?: string
       createdAt: refreshTokens.createdAt,
     })
     .from(refreshTokens)
-    .where(eq(refreshTokens.userId, userId))
+    // 已轮换的旧令牌只是为了重用检测而保留，不能出现在会话列表里
+    .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.rotatedAt)))
     .orderBy(desc(refreshTokens.createdAt));
 
   return rows.map((r: any) => ({
@@ -53,7 +54,7 @@ export async function revokeOtherSessions(userId: string, currentTokenHash: stri
   const db = getDb();
   await db
     .delete(refreshTokens)
-    .where(and(eq(refreshTokens.userId, userId), ne(refreshTokens.tokenHash, currentTokenHash)));
+    .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.rotatedAt), ne(refreshTokens.tokenHash, currentTokenHash)));
 }
 
 export async function revokeAllUserSessions(userId: string): Promise<void> {
@@ -83,6 +84,7 @@ export async function listAllSessions(): Promise<AdminSessionInfo[]> {
     })
     .from(refreshTokens)
     .innerJoin(users, eq(refreshTokens.userId, users.id))
+    .where(isNull(refreshTokens.rotatedAt))
     .orderBy(desc(refreshTokens.createdAt))
     .limit(500);
 

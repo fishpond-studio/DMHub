@@ -374,6 +374,8 @@ export async function ensureSchemaPatches(): Promise<void> {
         'ALTER TABLE `domains` ADD COLUMN `monitor_response_ms` int NULL',
         'ALTER TABLE `domains` ADD COLUMN `monitor_last_checked_at` datetime NULL',
         'ALTER TABLE `team_settings` ADD COLUMN `log_retention_days` int NULL',
+        'ALTER TABLE `refresh_tokens` ADD COLUMN `rotated_at` timestamp(3) NULL',
+        'ALTER TABLE `refresh_tokens` ADD COLUMN `replaced_by_hash` varchar(255) NULL',
         'CREATE TABLE IF NOT EXISTS `monitor_checks` (`id` varchar(36) NOT NULL, `domain_id` varchar(36) NOT NULL, `check_type` varchar(16) NOT NULL DEFAULT \'http\', `status` varchar(8) NOT NULL, `status_code` int NULL, `response_ms` int NULL, `error` text NULL, `checked_at` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), PRIMARY KEY (`id`))',
         'CREATE INDEX IF NOT EXISTS `idx_monitor_checks_domain_time` ON `monitor_checks` (`domain_id`, `checked_at`)',
       ]) {
@@ -397,6 +399,8 @@ ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_status" varchar(16);
 ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_response_ms" integer;
 ALTER TABLE "domains" ADD COLUMN IF NOT EXISTS "monitor_last_checked_at" timestamptz;
 ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "log_retention_days" integer;
+ALTER TABLE "refresh_tokens" ADD COLUMN IF NOT EXISTS "rotated_at" timestamptz;
+ALTER TABLE "refresh_tokens" ADD COLUMN IF NOT EXISTS "replaced_by_hash" varchar(255);
 CREATE TABLE IF NOT EXISTS "monitor_checks" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "domain_id" uuid NOT NULL,
@@ -759,6 +763,8 @@ ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "footer_content" text;
 ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "footer_format" varchar(16) DEFAULT 'markdown';
 ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "registration_enabled" boolean NOT NULL DEFAULT true;
 ALTER TABLE "team_settings" ADD COLUMN IF NOT EXISTS "log_retention_days" integer;
+ALTER TABLE "refresh_tokens" ADD COLUMN IF NOT EXISTS "rotated_at" timestamptz;
+ALTER TABLE "refresh_tokens" ADD COLUMN IF NOT EXISTS "replaced_by_hash" varchar(255);
 ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "email_notifications_enabled" boolean NOT NULL DEFAULT false;
 
 CREATE TABLE IF NOT EXISTS "domains" (
@@ -944,6 +950,8 @@ CREATE TABLE IF NOT EXISTS "refresh_tokens" (
   "token_hash" varchar(255) NOT NULL,
   "device_info" varchar(255),
   "expires_at" timestamptz NOT NULL,
+  "rotated_at" timestamptz,
+  "replaced_by_hash" varchar(255),
   "created_at" timestamptz NOT NULL DEFAULT now()
 );
 
@@ -1242,6 +1250,8 @@ CREATE TABLE IF NOT EXISTS \`refresh_tokens\` (
   \`token_hash\` varchar(255) NOT NULL,
   \`device_info\` varchar(255),
   \`expires_at\` timestamp(3) NOT NULL,
+  \`rotated_at\` timestamp(3) NULL,
+  \`replaced_by_hash\` varchar(255) NULL,
   \`created_at\` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
 );
 
