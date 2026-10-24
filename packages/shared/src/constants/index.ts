@@ -1,5 +1,11 @@
 export const JWT_ACCESS_EXPIRY = '15m';
+/** 「记住我」的刷新令牌：每次轮换重新签发 7 天（滑动续期） */
 export const JWT_REFRESH_EXPIRY = '7d';
+/**
+ * 未勾选「记住我」的刷新令牌：登录后 24 小时绝对到期。
+ * 刷新只延续剩余时间、不会延长这个截止点，避免会话被无限续期。
+ */
+export const JWT_SESSION_EXPIRY = '24h';
 export const JWT_2FA_EXPIRY = '5m';
 
 /** 刷新令牌接口的错误码：区分「会话真的结束」与「临时故障，可重试」 */

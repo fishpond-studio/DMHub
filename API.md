@@ -235,6 +235,9 @@
 
 **Response（无 2FA）：** 设置 Cookie，返回 `{ accessToken, refreshToken, user }`
 
+`rememberMe: true` 时刷新令牌 7 天滑动续期；默认（false）使用会话级 Cookie，
+刷新令牌在登录后 24 小时绝对到期，刷新不会延长这个截止点。
+
 **Response（有 2FA）：** 返回 `{ requires2FA: true, tempToken }` — 需携带 tempToken 完成 2FA 验证
 
 **错误码：** 401 用户名或密码错误 | 403 账号已被禁用
@@ -242,6 +245,7 @@
 ### POST /auth/refresh
 
 刷新 Access Token。Refresh Token 通过 HttpOnly Cookie 自动携带，也可在 body 中传入。
+`REFRESH_TOKEN_REUSED` 只在令牌刚被其他请求消费的 60 秒宽限窗口内返回；查不到、已吊销或已过期的令牌返回 `REFRESH_TOKEN_INVALID` 并清除 Cookie。
 
 **Response:** `{ accessToken, refreshToken }`
 

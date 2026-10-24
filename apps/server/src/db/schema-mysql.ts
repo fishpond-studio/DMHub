@@ -268,6 +268,10 @@ export const refreshTokens = mysqlTable('refresh_tokens', {
   tokenHash: varchar('token_hash', { length: 255 }).notNull(),
   deviceInfo: varchar('device_info', { length: 255 }),
   expiresAt: ts('expires_at').notNull(),
+  /** 被轮换消费的时间；NULL 表示仍可用的当前令牌 */
+  rotatedAt: ts('rotated_at'),
+  /** 轮换后签发给客户端的后继令牌哈希，用于识别旧令牌被重放 */
+  replacedByHash: varchar('replaced_by_hash', { length: 255 }),
   createdAt: tsNow('created_at'),
 });
 

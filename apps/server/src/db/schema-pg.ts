@@ -277,6 +277,10 @@ export const refreshTokens = pgTable('refresh_tokens', {
   tokenHash: varchar('token_hash', { length: 255 }).notNull(),
   deviceInfo: varchar('device_info', { length: 255 }),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  /** 被轮换消费的时间；NULL 表示仍可用的当前令牌 */
+  rotatedAt: timestamp('rotated_at', { withTimezone: true }),
+  /** 轮换后签发给客户端的后继令牌哈希，用于识别旧令牌被重放 */
+  replacedByHash: varchar('replaced_by_hash', { length: 255 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -6,6 +6,7 @@ import { EXPIRY_CHECK_CRON, DEFAULT_EXPIRY_REMIND_DAYS } from '@dmhub/shared';
 import { triggerNotification } from '../services/notification.js';
 import { checkDomainSsl } from '../services/domain.js';
 import { runMonitorCycle, cleanupMonitorHistory } from '../services/monitor.js';
+import { cleanupRefreshTokens } from './refresh-rotation.js';
 
 let cronJob: cron.ScheduledTask | null = null;
 let monitorJob: cron.ScheduledTask | null = null;
@@ -44,6 +45,7 @@ export function startBackgroundJobs() {
       try {
         await cleanupMonitorHistory(MONITOR_HISTORY_DAYS);
         await cleanupOldLogs();
+        await cleanupRefreshTokens();
       } catch (err) {
         console.error('[Cron] Retention cleanup failed:', err);
       }
