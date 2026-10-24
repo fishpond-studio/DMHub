@@ -4,7 +4,8 @@ import { eq, or, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { users, inviteCodes, refreshTokens, teamSettings, userTokens } from '../db/schema.js';
 import { insertReturningOne } from '../db/helpers.js';
-import { signAccessToken, signRefreshToken, sign2FAToken, verifyToken } from '../lib/jwt.js';
+import { signAccessToken, signRefreshToken, sign2FAToken, verifyToken, refreshTokenExpiresAt, refreshExpiryForRotation } from '../lib/jwt.js';
+import type { RefreshPayload } from '../lib/jwt.js';
 import {
   RefreshTokenRejectedError,
   classifyStoredRefreshToken,
@@ -32,11 +33,13 @@ export async function storeRefreshToken(
 ) {
   const db = executor;
   const tokenHash = hashToken(rawToken);
+  // 以令牌自身的 exp 为准：记住我是 7 天滑动，未记住是 24 小时绝对到期，
+  // 数据库里的 expires_at 必须与 JWT 一致，否则会话列表会显示错误的有效期。
   await db.insert(refreshTokens).values({
     userId,
     tokenHash,
     deviceInfo: deviceInfo ? deviceInfo.slice(0, 255) : null,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    expiresAt: refreshTokenExpiresAt(rawToken) ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   });
 }
 
@@ -188,9 +191,9 @@ export async function login(
 export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) {
   const db = getDb();
 
-  let payload: { userId: string; remember?: boolean };
+  let payload: RefreshPayload;
   try {
-    payload = verifyToken(oldRefreshToken) as { userId: string; remember?: boolean };
+    payload = verifyToken(oldRefreshToken) as RefreshPayload;
   } catch {
     throw new RefreshTokenRejectedError(false, '刷新令牌无效或已过期');
   }
@@ -199,7 +202,8 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
     throw new RefreshTokenRejectedError(false, '无效的刷新令牌');
   }
 
-  // 刷新后保持登录时的选择：勾了「记住我」才继续签发持久 cookie
+  // 刷新后保持登录时的选择：勾了「记住我」才继续签发持久 cookie，
+  // 未勾选的会话沿用原令牌的绝对到期时间，刷新不会延长它。
   const remember = payload.remember === true;
 
   const tokenHash = hashToken(oldRefreshToken);
@@ -243,7 +247,7 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
   }
 
   const accessToken = signAccessToken(user.id, user.role);
-  const newRefreshToken = signRefreshToken(user.id, remember);
+  const newRefreshToken = signRefreshToken(user.id, remember, refreshExpiryForRotation(payload, remember));
   const newTokenHash = hashToken(newRefreshToken);
 
   await db.transaction(async (tx: DbExecutor) => {

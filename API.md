@@ -235,6 +235,9 @@
 
 **Response（无 2FA）：** 设置 Cookie，返回 `{ accessToken, refreshToken, user }`
 
+`rememberMe: true` 时刷新令牌 7 天滑动续期；默认（false）使用会话级 Cookie，
+刷新令牌在登录后 24 小时绝对到期，刷新不会延长这个截止点。
+
 **Response（有 2FA）：** 返回 `{ requires2FA: true, tempToken }` — 需携带 tempToken 完成 2FA 验证
 
 **错误码：** 401 用户名或密码错误 | 403 账号已被禁用

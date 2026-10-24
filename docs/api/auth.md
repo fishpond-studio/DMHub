@@ -39,6 +39,13 @@
 }
 ```
 
+`rememberMe` 决定刷新令牌的生命周期：
+
+- `true`：持久 Cookie（7 天），刷新时重新签发 7 天，属滑动续期。
+- `false`（默认）：会话级 Cookie，刷新令牌在登录后 **24 小时绝对到期**。
+  刷新只延续剩余时间，不会延长截止点；即使浏览器恢复了会话 Cookie，
+  超过 24 小时也必须重新登录。
+
 ### POST /api/auth/refresh
 
 通过 HttpOnly Cookie 中的 refresh_token 刷新 Access Token。
