@@ -1,5 +1,36 @@
 # 更新日志
 
+## [0.5.0] — 2026-10-24
+
+本版本聚焦 **认证安全加固**（刷新令牌语义、会话生命周期、依赖漏洞修复）、**注册必填邮箱** 与 **全站 i18n 中英双语**。
+
+### 亮点
+
+| 方向 | 说明 |
+|------|------|
+| 认证 | 刷新令牌改为标记轮换 + 重放检测，失效会话立即登出；非「记住我」会话 24 小时硬性到期 |
+| 安全 | 修复 1 个 Critical / 52 个 High 依赖漏洞，nodemailer / @fastify/static / @simplewebauthn/server 升级至受支持的大版本 |
+| 注册 | 邮箱改为必填，新用户与改绑邮箱均需验证码确认 |
+| 界面 | 全站 UI 接入 vue-i18n，支持中 / 英切换，覆盖模板、脚本、校验与对话框 |
+
+### 变更
+
+- **刷新令牌语义（#13 / #15）**：`refresh_tokens` 新增 `rotated_at`、`replaced_by_hash` 两列。轮换不再删除旧令牌，而是用一条原子 `UPDATE ... WHERE rotated_at IS NULL` 认领；只有 60 秒宽限窗口内再次出现的已消费令牌才返回 `REFRESH_TOKEN_REUSED`，查不到 / 已登出 / 已吊销 / 已过期 / 宽限后重放一律返回 `REFRESH_TOKEN_INVALID` 并清除 cookie，重放时撤销整条轮换链。
+- **会话绝对有效期（#14）**：未勾选「记住我」的刷新令牌登录后 24 小时硬性失效，轮换沿用原截止点不再延长；「记住我」仍保持 7 天滑动续期。数据库 `expires_at` 与 JWT `exp` 对齐，会话列表显示真实有效期。
+- **认证体验修复**：后台标签页不再误登出；登出后立刻撤销服务端会话；刷新失败时保留 cookie，避免瞬时故障演变为强制登出；「记住我」状态在多次刷新之间保持一致。
+- **注册与邮箱**：`registerSchema` 将邮箱改为必填；新用户注册与老用户改绑邮箱均需通过验证码确认后才能生效。
+- **界面与体验**：全部用户可见文案接入 `vue-i18n`（中文键值自然串），自动加载 `zh-CN` / `en` 语言包；修复本地化示例字符串中显示为真实点号的问题。
+- **安全依赖**：升级 `nodemailer` 至 `^10.2`、`@fastify/static` 至 `^10.1.6`、`@simplewebauthn/server` 至 `^13.3.3`，并按 semver 批量更新 axios、fastify、dompurify、mysql2、nanoid 等；强制 `postcss-selector-parser ^7.1.7` 修复二次方解析 DoS。
+- **测试**：新增 `auth-rotation.test.ts`（令牌状态分类与方言一致性）、`auth-rotation-mysql.test.ts`（MySQL/MariaDB 并发轮换集成测试，需 `TEST_MYSQL_URL`）、`auth-session-lifetime.test.ts`（24h / 7d 有效期与轮换截止点）。
+
+### Schema 变更
+
+- `refresh_tokens` 新增 `rotated_at`（timestamptz / timestamp(3)，可空）与 `replaced_by_hash`（varchar(255)，可空）。
+- 启动时 `ensureSchemaPatches` 会自动执行幂等 ALTER，已有部署升级无需手动迁移。
+- 回滚：删除两列即可，旧代码读取 NULL 值不会受影响。
+
+---
+
 ## [0.4.0] — 2026-10-11
 
 本版本聚焦 **出站请求与认证安全修复**、**富文本净化强化** 以及 **前端界面刷新与设计体系统一**。
