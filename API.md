@@ -1,6 +1,6 @@
 # DMHub API 文档
 
-**版本：0.4.0**
+**版本：0.5.0**
 
 所有 API 端点前缀为 `/api`（OIDC 简洁回调 `/oauth/oidc` 除外）。需认证的接口在请求头携带 `Authorization: Bearer <access_token>`。
 
@@ -205,13 +205,13 @@
 
 ### POST /auth/register
 
-注册新用户。邀请码开启时必填 `inviteCode`。
+注册新用户。注册必须提供合法邮箱；新注册用户默认标记为未验证，需后续通过邮箱验证码接口完成验证（若配置了 SMTP）。邀请码开启时必填 `inviteCode`。
 
 **Body:**
 ```json
 {
   "username": "string (3-64字符)",
-  "email": "string (可选)",
+  "email": "string (必填，合法邮箱格式)",
   "password": "string (≥8字符)",
   "confirmPassword": "string",
   "inviteCode": "string (邀请码开启时必填)"
@@ -245,7 +245,11 @@
 ### POST /auth/refresh
 
 刷新 Access Token。Refresh Token 通过 HttpOnly Cookie 自动携带，也可在 body 中传入。
-`REFRESH_TOKEN_REUSED` 只在令牌刚被其他请求消费的 60 秒宽限窗口内返回；查不到、已吊销或已过期的令牌返回 `REFRESH_TOKEN_INVALID` 并清除 Cookie。
+
+**轮换与重放检测机制：**
+- **标记轮换（Atomic claim）：** 轮换采用原子更新而不是直接删除旧令牌。
+- **重放检测（Replay attack detection）：** 查不到、已登出、已吊销或已过期的令牌均返回 `REFRESH_TOKEN_INVALID` 并清除 Cookie；只有在 60 秒宽限窗口（Grace period）内再次出现的已消费令牌返回 `REFRESH_TOKEN_REUSED`（多标签页并发刷新场景），超过宽限期重放将撤销整条轮换链。
+- **会话绝对到期：** 未勾选 `rememberMe` 时，刷新令牌在登录后 24 小时绝对到期，轮换只继承剩余有效时间而不滑动续期。
 
 **Response:** `{ accessToken, refreshToken }`
 
@@ -1007,13 +1011,78 @@ admin 查看全部，member 仅查看指派范围域名。
 
 ## 会话管理
 
-| 接口 | 方法 | 权限 | 说明 |
-|------|------|------|------|
-| `/auth/sessions` | GET | 登录 | 当前用户登录会话列表 |
-| `/auth/sessions/:id` | DELETE | 登录 | 注销指定会话（不能注销当前会话） |
-| `/auth/sessions` | DELETE | 登录 | 注销其他所有会话 |
-| `/team/sessions` | GET | admin | 全部用户会话列表 |
-| `/team/users/:userId/sessions` | DELETE | admin | 强制注销某用户全部会话 |
+### GET /auth/sessions 🔒
+
+获取当前用户的登录会话列表。已被轮换消费的旧令牌会自动过滤，仅展示活跃会话。
+
+**权限：** 登录用户
+
+**Response:**
+```json
+{
+  "sessions": [
+    {
+      "id": "uuid",
+      "userId": "uuid",
+      "deviceInfo": "Chrome 120 on Windows",
+      "expiresAt": "2026-01-02T00:00:00Z",
+      "createdAt": "2026-01-01T00:00:00Z",
+      "current": true
+    }
+  ]
+}
+```
+
+`expiresAt` 反映真实有效到期时间（未勾选 `rememberMe` 时固定为 24 小时绝对到期，勾选时为 7 天滑动过期）。
+
+### DELETE /auth/sessions/:id 🔒
+
+注销指定登录会话。不能注销当前正在使用的会话，尝试注销当前会话将返回 400 错误。
+
+**权限：** 登录用户
+
+**Response:** `{ "success": true }`
+
+**错误码：** 400 不能注销当前会话
+
+### DELETE /auth/sessions 🔒
+
+注销除当前会话外的所有其他活跃登录会话。
+
+**权限：** 登录用户
+
+**Response:** `{ "success": true }`
+
+### GET /team/sessions 🔒
+
+获取全团队全部用户的活跃会话列表。
+
+**权限：** admin
+
+**Response:**
+```json
+{
+  "sessions": [
+    {
+      "id": "uuid",
+      "userId": "uuid",
+      "username": "admin",
+      "deviceInfo": "Chrome 120 on Windows",
+      "expiresAt": "2026-01-02T00:00:00Z",
+      "createdAt": "2026-01-01T00:00:00Z",
+      "current": false
+    }
+  ]
+}
+```
+
+### DELETE /team/users/:userId/sessions 🔒
+
+强制注销指定用户的所有活跃会话。
+
+**权限：** admin
+
+**Response:** `{ "success": true }`
 
 ---
 
