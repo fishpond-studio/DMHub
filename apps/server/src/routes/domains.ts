@@ -25,8 +25,8 @@ import {
 } from '../services/dns-record.js';
 import { checkDnsPropagation, buildFqdn } from '../lib/dns-check.js';
 import { getDb } from '../db/index.js';
-import { domains, dnsRecords } from '../db/schema.js';
-import { eq, sql, and } from 'drizzle-orm';
+import { domains, dnsRecords, domainAssignments } from '../db/schema.js';
+import { eq, sql, and, inArray } from 'drizzle-orm';
 import { createDnsRecordSchema } from '@dmhub/shared';
 
 export async function domainRoutes(app: FastifyInstance) {
@@ -111,7 +111,7 @@ export async function domainRoutes(app: FastifyInstance) {
     }
   });
 
-  app.get('/groups', { preHandler: [authenticate] }, async () => {
+  app.get('/groups', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
     const db = getDb();
     const rows = await db
       .select({
@@ -119,16 +119,24 @@ export async function domainRoutes(app: FastifyInstance) {
         count: sql<number>`COUNT(*)`,
       })
       .from(domains)
-      .where(sql`${domains.groupName} IS NOT NULL`)
+      .where(and(
+        sql`${domains.groupName} IS NOT NULL`,
+        request.user!.role === 'admin' ? undefined : inArray(domains.id,
+          db.select({ domainId: domainAssignments.domainId }).from(domainAssignments)
+            .where(eq(domainAssignments.userId, request.user!.userId))),
+      ))
       .groupBy(domains.groupName);
     return { groups: rows.filter((r: { name: string }) => r.name).map((r: { name: string; count: number }) => ({ name: r.name, count: Number(r.count) })) };
   });
 
-  app.get('/tags', { preHandler: [authenticate] }, async () => {
+  app.get('/tags', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
     const db = getDb();
     const rows = await db
       .select({ tags: domains.tags })
-      .from(domains);
+      .from(domains)
+      .where(request.user!.role === 'admin' ? undefined : inArray(domains.id,
+        db.select({ domainId: domainAssignments.domainId }).from(domainAssignments)
+          .where(eq(domainAssignments.userId, request.user!.userId))));
     const tagCounts: Record<string, number> = {};
     for (const row of rows as Array<{ tags: string[] | null }>) {
       if (row.tags) {

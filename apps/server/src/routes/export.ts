@@ -4,6 +4,7 @@ import { requireDomainAccess } from '../middleware/domain-permission.js';
 import { getDb } from '../db/index.js';
 import { domains, dnsRecords } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
+import { matchesAnyPattern } from '../lib/subdomain-match.js';
 
 /**
  * RFC 5987 编码 Content-Disposition 文件名，防止中文文件名注入
@@ -138,7 +139,11 @@ export async function exportRoutes(app: FastifyInstance) {
     const query = request.query as { format?: string };
     const format = query.format ?? 'csv';
     const db = getDb();
-    const rows = await db.select().from(dnsRecords).where(eq(dnsRecords.domainId, domainId));
+    const allRows = await db.select().from(dnsRecords).where(eq(dnsRecords.domainId, domainId));
+    const patterns = (request.domainAssignments ?? []).map((a) => a.subdomainPattern);
+    const rows = request.user!.role === 'admin'
+      ? allRows
+      : allRows.filter((row: { name: string }) => matchesAnyPattern(row.name, patterns));
     const [domain] = await db.select({ name: domains.name }).from(domains).where(eq(domains.id, domainId)).limit(1);
     const domainName = domain?.name || 'domain';
 

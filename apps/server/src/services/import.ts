@@ -216,11 +216,19 @@ export async function importRecordsCsv(
   const proxiedIdx = header.indexOf('proxied');
 
   const existingRecords = await db
-    .select({ recordType: dnsRecords.recordType, name: dnsRecords.name })
+    .select({
+      recordType: dnsRecords.recordType,
+      name: dnsRecords.name,
+      value: dnsRecords.value,
+      priority: dnsRecords.priority,
+    })
     .from(dnsRecords)
     .where(eq(dnsRecords.domainId, domainId));
 
-  const existingSet = new Set(existingRecords.map((r: { recordType: string; name: string }) => `${r.recordType}:${r.name}`));
+  const existingSet = new Set(existingRecords.map(
+    (r: { recordType: string; name: string; value: string; priority: number | null }) =>
+      JSON.stringify([r.recordType, r.name, r.value, r.priority ?? null]),
+  ));
 
   let imported = 0;
   let skipped = 0;
@@ -245,12 +253,6 @@ export async function importRecordsCsv(
 
     if (allowedSubdomainPatterns && !matchesAnyPattern(name, allowedSubdomainPatterns)) {
       errors.push({ row: rowNum, message: `无权导入记录 "${name}"：该主机不在您被指派的子域名范围内` });
-      continue;
-    }
-
-    const recordKey = `${type}:${name}`;
-    if (existingSet.has(recordKey)) {
-      skipped++;
       continue;
     }
 
@@ -284,6 +286,12 @@ export async function importRecordsCsv(
 
       if (proxiedIdx !== -1 && row[proxiedIdx]) {
         input.proxied = row[proxiedIdx].toLowerCase() === 'true' || row[proxiedIdx] === '1';
+      }
+
+      const recordKey = JSON.stringify([type, name, value, input.priority ?? null]);
+      if (existingSet.has(recordKey)) {
+        skipped++;
+        continue;
       }
 
       await createRecord(userId, domainId, input, ipAddress, userAgent);

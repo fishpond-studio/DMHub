@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { eq, sql, desc, count, and, gte, lte, isNotNull, ne } from 'drizzle-orm';
+import { eq, sql, desc, count, and, gte, lte, isNotNull, ne, inArray } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { domains, dnsRecords, users, domainAssignments, operationLogs } from '../db/schema.js';
 import { authenticate } from '../middleware/auth.js';
+import { buildLogAccessCondition } from '../lib/log-access.js';
 
 export async function dashboardRoutes(app: FastifyInstance) {
   app.get('/stats', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
@@ -97,16 +98,15 @@ export async function dashboardRoutes(app: FastifyInstance) {
       .from(operationLogs)
       .where(and(...logConditions));
 
-    const typeWhereClause = domainIds
-      ? sql` WHERE ${dnsRecords.domainId} IN (${sql.join(domainIds.map((id) => sql`${id}`), sql`,`)})`
-      : sql``;
-    const typeRows = await db.execute(
-      sql`SELECT ${dnsRecords.recordType} as record_type, COUNT(*) as count FROM ${dnsRecords}${typeWhereClause} GROUP BY ${dnsRecords.recordType} ORDER BY count DESC`,
-    );
+    const typeRows: Array<{ recordType: string; count: number }> = await db
+      .select({ recordType: dnsRecords.recordType, count: count() })
+      .from(dnsRecords)
+      .where(domainIds ? inArray(dnsRecords.domainId, domainIds) : undefined)
+      .groupBy(dnsRecords.recordType)
+      .orderBy(desc(count()));
     const recordsByType: Record<string, number> = {};
-    const typeArray = Array.isArray(typeRows) ? typeRows : (typeRows as { rows: Array<{ record_type: string; count: string }> }).rows ?? [];
-    for (const row of typeArray) {
-      recordsByType[(row as { record_type: string; count: string }).record_type] = Number((row as { record_type: string; count: string }).count);
+    for (const row of typeRows) {
+      recordsByType[row.recordType] = Number(row.count);
     }
 
     return {
@@ -136,6 +136,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
         .from(domainAssignments)
         .where(eq(domainAssignments.userId, userId));
       domainIds = assigned.map((a: { domainId: string }) => a.domainId);
+      if (assigned.length === 0) return [];
     }
 
     const conditions = [
@@ -174,24 +175,12 @@ export async function dashboardRoutes(app: FastifyInstance) {
     const userId = request.user!.userId;
     const role = request.user!.role;
 
-    let domainIds: string[] | null = null;
-    if (role !== 'admin') {
-      const assigned = await db
-        .select({ domainId: domainAssignments.domainId })
-        .from(domainAssignments)
-        .where(eq(domainAssignments.userId, userId));
-      domainIds = assigned.map((a: { domainId: string }) => a.domainId);
-    }
-
-    const conditions: any[] = [];
-    if (domainIds) {
-      conditions.push(sql`${operationLogs.domainId} IN (${sql.join(domainIds.map((id) => sql`${id}`), sql`,`)})`);
-      conditions.push(isNotNull(operationLogs.domainId));
-    }
-
-    const whereClause = conditions.length > 0
-      ? and(...conditions)
-      : undefined;
+    const assignments = role === 'admin' ? [] : await db
+      .select({ domainId: domainAssignments.domainId, subdomainPattern: domainAssignments.subdomainPattern })
+      .from(domainAssignments)
+      .where(eq(domainAssignments.userId, userId));
+    if (role !== 'admin' && assignments.length === 0) return [];
+    const whereClause = buildLogAccessCondition(userId, role, assignments);
 
     const rows = await db
       .select({
@@ -236,19 +225,18 @@ export async function dashboardRoutes(app: FastifyInstance) {
       }
     }
 
-    const typeWhereClause = domainIds
-      ? sql` WHERE ${dnsRecords.domainId} IN (${sql.join(domainIds.map((id) => sql`${id}`), sql`,`)})`
-      : sql``;
-    const typeRows = await db.execute(
-      sql`SELECT ${dnsRecords.recordType} as record_type, COUNT(*) as count FROM ${dnsRecords}${typeWhereClause} GROUP BY ${dnsRecords.recordType} ORDER BY count DESC`,
-    );
+    const typeRows: Array<{ recordType: string; count: number }> = await db
+      .select({ recordType: dnsRecords.recordType, count: count() })
+      .from(dnsRecords)
+      .where(domainIds ? inArray(dnsRecords.domainId, domainIds) : undefined)
+      .groupBy(dnsRecords.recordType)
+      .orderBy(desc(count()));
 
     const labels: string[] = [];
     const data: number[] = [];
-    const typeArray = Array.isArray(typeRows) ? typeRows : (typeRows as { rows: Array<{ record_type: string; count: string }> }).rows ?? [];
-    for (const row of typeArray) {
-      labels.push((row as { record_type: string; count: string }).record_type);
-      data.push(Number((row as { record_type: string; count: string }).count));
+    for (const row of typeRows) {
+      labels.push(row.recordType);
+      data.push(Number(row.count));
     }
 
     return { labels, data };

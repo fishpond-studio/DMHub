@@ -11,6 +11,7 @@ import {
 import { lookupDomainExpiry } from '../lib/whois.js';
 import { logOperation } from '../lib/log.js';
 import { assertCreatableDomain, isValidDomain, resolvePublicAddress } from '../lib/ssrf-guard.js';
+import { matchesAnyPattern } from '../lib/subdomain-match.js';
 
 export async function listDomains(
   userId: string,
@@ -362,16 +363,22 @@ export async function searchDnsRecords(
   const q = query.trim();
   if (!q || q.length < 1) return { results: [] as const };
   const db = getDb();
-  const take = Math.min(Math.max(limit, 1), 100);
+  const take = Number.isFinite(limit) ? Math.min(Math.max(Math.floor(limit), 1), 100) : 50;
 
   let allowedDomainIds: string[] | null = null;
+  const patternsByDomain = new Map<string, string[]>();
   if (role !== 'admin') {
     const assigned = await db
-      .select({ domainId: domainAssignments.domainId })
+      .select({ domainId: domainAssignments.domainId, subdomainPattern: domainAssignments.subdomainPattern })
       .from(domainAssignments)
       .where(eq(domainAssignments.userId, userId));
-    allowedDomainIds = assigned.map((a: { domainId: string }) => a.domainId) as string[];
-    if (!allowedDomainIds || allowedDomainIds.length === 0) return { results: [] };
+    for (const assignment of assigned as Array<{ domainId: string; subdomainPattern: string }>) {
+      const patterns = patternsByDomain.get(assignment.domainId) ?? [];
+      patterns.push(assignment.subdomainPattern);
+      patternsByDomain.set(assignment.domainId, patterns);
+    }
+    allowedDomainIds = [...patternsByDomain.keys()];
+    if (allowedDomainIds.length === 0) return { results: [] };
   }
 
   const like = `%${q.replace(/[%_]/g, '\\$&')}%`;
@@ -395,7 +402,7 @@ export async function searchDnsRecords(
     );
   }
 
-  const rows = await db
+  const matchingRecords = db
     .select({
       id: dnsRecords.id,
       domainId: dnsRecords.domainId,
@@ -411,13 +418,28 @@ export async function searchDnsRecords(
     .from(dnsRecords)
     .innerJoin(domains, eq(dnsRecords.domainId, domains.id))
     .where(sql`${sql.join(dialectSafe.map((c) => sql`(${c})`), sql` AND `)}`)
-    .limit(take);
+    .orderBy(dnsRecords.id);
+
+  // Apply subdomain permissions before the result limit. Fetch bounded batches
+  // so unrelated sibling records cannot hide a later authorized match.
+  const rows: Array<Record<string, unknown>> = [];
+  const batchSize = role === 'admin' ? take : Math.max(take, 100);
+  for (let offset = 0; rows.length < take; offset += batchSize) {
+    const batch = await matchingRecords.limit(batchSize).offset(offset) as Array<Record<string, unknown>>;
+    for (const row of batch) {
+      if (role === 'admin' || matchesAnyPattern(row.name as string, patternsByDomain.get(row.domainId as string) ?? [])) {
+        rows.push(row);
+        if (rows.length === take) break;
+      }
+    }
+    if (batch.length < batchSize) break;
+  }
 
   // 精确值匹配（反查 IP）排前
   const qLower = q.toLowerCase();
-  const sorted = [...rows].sort((a: { value: string }, b: { value: string }) => {
-    const ae = a.value?.toLowerCase() === qLower ? 0 : 1;
-    const be = b.value?.toLowerCase() === qLower ? 0 : 1;
+  const sorted = [...rows].sort((a, b) => {
+    const ae = String(a.value ?? '').toLowerCase() === qLower ? 0 : 1;
+    const be = String(b.value ?? '').toLowerCase() === qLower ? 0 : 1;
     return ae - be;
   });
 

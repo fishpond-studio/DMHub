@@ -1,6 +1,7 @@
 import { eq, sql, desc } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { operationLogs, users, domainAssignments } from '../db/schema.js';
+import { getLogAccessCondition } from '../lib/log-access.js';
+import { operationLogs, users } from '../db/schema.js';
 
 export interface LogQueryFilters {
   action?: string;
@@ -26,33 +27,21 @@ export interface LogWithUser {
   username: string | null;
 }
 
-export async function queryLogs(
+async function queryLogPage(
   currentUserId: string,
   role: string,
   filters: LogQueryFilters,
+  maxPageSize = 200,
 ): Promise<{ logs: LogWithUser[]; total: number }> {
   const db = getDb();
   const page = Math.max(1, filters.page ?? 1);
-  const pageSize = Math.min(200, Math.max(1, filters.pageSize ?? 50));
+  const pageSize = Math.min(maxPageSize, Math.max(1, filters.pageSize ?? 50));
   const offset = (page - 1) * pageSize;
 
   const conditions = [];
 
-  if (role !== 'admin') {
-    const assignedDomainIds = await db
-      .select({ domainId: domainAssignments.domainId })
-      .from(domainAssignments)
-      .where(eq(domainAssignments.userId, currentUserId));
-    const allowedIds = assignedDomainIds.map((a: { domainId: string }) => a.domainId);
-
-    if (allowedIds.length === 0) {
-      return { logs: [], total: 0 };
-    }
-
-    conditions.push(
-      sql`${operationLogs.domainId} IN (${sql.join(allowedIds.map((id: string) => sql`${id}`), sql`,`)})`,
-    );
-  }
+  const accessCondition = await getLogAccessCondition(currentUserId, role);
+  if (accessCondition) conditions.push(accessCondition);
 
   if (filters.action) {
     conditions.push(eq(operationLogs.action, filters.action));
@@ -106,17 +95,21 @@ export async function queryLogs(
   return { logs: rows as LogWithUser[], total };
 }
 
+export async function queryLogs(currentUserId: string, role: string, filters: LogQueryFilters) {
+  return queryLogPage(currentUserId, role, filters);
+}
+
 /** 导出操作日志（CSV 文本），最多 5000 条 */
 export async function exportLogsCsv(
   currentUserId: string,
   role: string,
   filters: Omit<LogQueryFilters, 'page' | 'pageSize'>,
 ): Promise<string> {
-  const result = await queryLogs(currentUserId, role, {
+  const result = await queryLogPage(currentUserId, role, {
     ...filters,
     page: 1,
     pageSize: 5000,
-  });
+  }, 5000);
 
   const escape = (v: unknown) => {
     const s = v == null ? '' : String(v);

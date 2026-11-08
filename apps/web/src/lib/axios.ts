@@ -154,7 +154,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  if (accessToken) {
+  if (accessToken && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
   return config;

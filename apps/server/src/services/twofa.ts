@@ -147,11 +147,19 @@ export async function verify2FALogin(userId: string, method: 'totp' | 'backup' |
     username: users.username,
     email: users.email,
     role: users.role,
+    status: users.status,
+    twoFactorEnabled: users.twoFactorEnabled,
     twoFactorMethods: users.twoFactorMethods,
   }).from(users).where(eq(users.id, userId)).limit(1);
 
   if (!user) {
     throw new Error('用户不存在');
+  }
+  if (user.status === 'disabled') {
+    throw new Error('账号已被禁用');
+  }
+  if (!user.twoFactorEnabled || (method !== 'backup' && !user.twoFactorMethods?.includes(method))) {
+    throw new Error('该验证方式未启用');
   }
 
   if (method === 'totp') {
@@ -414,6 +422,15 @@ export async function generatePasskeyAuthOptions(userId: string, hostname?: stri
 
 export async function verifyPasskeyAuth(userId: string, response: any, hostname?: string, deviceInfo?: string, ipAddress?: string, userAgent?: string) {
   const db = getDb();
+  const [user] = await db.select({
+    id: users.id, username: users.username, email: users.email, role: users.role,
+    status: users.status, twoFactorEnabled: users.twoFactorEnabled, twoFactorMethods: users.twoFactorMethods,
+  }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) throw new Error('用户不存在');
+  if (user.status === 'disabled') throw new Error('账号已被禁用');
+  if (!user.twoFactorEnabled || !user.twoFactorMethods?.includes('passkey')) {
+    throw new Error('该验证方式未启用');
+  }
   const { rpID, origin } = await getWebAuthnConfig(hostname);
   const expectedChallenge = await getChallenge(userId);
   if (!expectedChallenge) throw new Error('验证已过期，请重新验证');
@@ -449,11 +466,6 @@ export async function verifyPasskeyAuth(userId: string, response: any, hostname?
     }).where(eq(userPasskeys.id, passkey.id));
 
     deleteChallenge(userId).catch(() => {});
-
-    const [user] = await db.select({
-      id: users.id, username: users.username, email: users.email, role: users.role,
-    }).from(users).where(eq(users.id, userId)).limit(1);
-    if (!user) throw new Error('用户不存在');
 
     const accessToken = signAccessToken(user.id, user.role);
     // 通行密钥登录同样签发 7 天持久 cookie，刷新令牌保持一致
