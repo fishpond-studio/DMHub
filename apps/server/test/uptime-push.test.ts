@@ -12,7 +12,13 @@ test('uptime pushes keep the full endpoint without duplicating its path', () => 
 });
 
 test('uptime configuration requires an HTTP endpoint with a push token', () => {
-  for (const url of ['ftp://monitor.example/api/push/abc', 'https://monitor.example', 'https://monitor.example/api/push/', 'https://user:password@monitor.example/api/push/abc']) {
+  for (const url of ['not-a-url', 'ftp://monitor.example/api/push/abc', 'https://user:password@monitor.example/api/push/abc']) {
     assert.throws(() => buildUptimePushUrl(url, 'up', 'OK'), /无效/);
+  }
+});
+
+test('legacy base URLs explain how to supply a complete push endpoint', () => {
+  for (const url of ['https://monitor.example', 'https://monitor.example/api/push/', 'https://monitor.example/prefix/']) {
+    assert.throws(() => buildUptimePushUrl(url, 'up', 'OK'), /完整 Push URL.*\/api\/push\/<token>/);
   }
 });

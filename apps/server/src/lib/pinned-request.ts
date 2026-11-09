@@ -1,8 +1,21 @@
 import http from 'node:http';
 import https from 'node:https';
 import net from 'node:net';
-import { Readable } from 'node:stream';
-import { createBrotliDecompress, createGunzip, createInflate } from 'node:zlib';
+import { pipeline, Readable, type Transform } from 'node:stream';
+import * as zlib from 'node:zlib';
+
+function decoderFor(encoding: string): (() => Transform) | undefined {
+  switch (encoding) {
+    case 'identity': return undefined;
+    case 'gzip': return zlib.createGunzip;
+    case 'deflate': return zlib.createInflate;
+    case 'br': return zlib.createBrotliDecompress;
+    case 'zstd':
+      // Node 20 does not expose zstd; keep importing this module safe there.
+      if (typeof zlib.createZstdDecompress === 'function') return zlib.createZstdDecompress;
+  }
+  throw new Error(`不支持的 Content-Encoding: ${encoding}`);
+}
 
 /** Keep the original Host header and TLS server name while pinning DNS. */
 export async function requestPinnedAddress(url: URL, address: string, init?: RequestInit): Promise<Response> {
@@ -36,14 +49,17 @@ export async function requestPinnedAddress(url: URL, address: string, init?: Req
         const hasBody = request.method !== 'HEAD' && ![204, 205, 304].includes(status);
         let stream: Readable = incoming;
         if (hasBody) {
-          const encoding = responseHeaders.get('content-encoding')?.toLowerCase();
-          const decoder = encoding === 'gzip' ? createGunzip()
-            : encoding === 'deflate' ? createInflate()
-            : encoding === 'br' ? createBrotliDecompress() : undefined;
-          if (decoder) {
-            incoming.on('error', (error) => decoder.destroy(error));
-            decoder.on('close', () => incoming.destroy());
-            stream = incoming.pipe(decoder);
+          const encoding = responseHeaders.get('content-encoding');
+          // Content codings are applied in header order and decoded in reverse.
+          const factories = encoding ? encoding.split(',').map((value) => decoderFor(value.trim().toLowerCase())).reverse() : [];
+          const decoders = factories.flatMap((factory) => factory ? [factory()] : []);
+          if (decoders.length > 0) {
+            stream = decoders[decoders.length - 1];
+            // Propagate decompression failures and consumer cancellation through
+            // every stage, including the original socket.
+            pipeline([incoming, ...decoders], () => {});
+            responseHeaders.delete('content-encoding');
+            responseHeaders.delete('content-length');
           }
         } else {
           incoming.resume();

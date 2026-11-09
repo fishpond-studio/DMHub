@@ -84,7 +84,11 @@ export function isPrivateIPv6(ip: string): boolean {
   // Only global unicast is routable here; exclude local, multicast,
   // translation and deprecated IPv4-compatible address ranges.
   if ((words[0] & 0xe000) !== 0x2000) return true;
-  if (words[0] === 0x2001 && words[1] === 0x0db8) return true;
+  if (words[0] === 0x2001) {
+    if (words[1] === 0x0db8) return true;
+    if (words[1] === 0x0002 && words[2] === 0) return true; // Benchmarking /48
+    if ((words[1] & 0xfff0) === 0x0010 || (words[1] & 0xfff0) === 0x0020) return true; // ORCHID /28
+  }
   if (words[0] === 0x2002) {
     return isPrivateIPv4(`${words[1] >>> 8}.${words[1] & 255}.${words[2] >>> 8}.${words[2] & 255}`);
   }

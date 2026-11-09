@@ -50,6 +50,17 @@ test('reserved IPv6 forms cannot disguise loopback or IPv4 private destinations'
   }
 });
 
+test('benchmarking and ORCHID prefixes are excluded at their CIDR boundaries', () => {
+  for (const address of ['2001:2::', '2001:2:0:ffff:ffff:ffff:ffff:ffff',
+    '2001:10::', '2001:1f:ffff:ffff:ffff:ffff:ffff:ffff',
+    '2001:20::', '2001:2f:ffff:ffff:ffff:ffff:ffff:ffff']) {
+    assert.equal(isPrivateOrReservedIP(address), true, address);
+  }
+  for (const address of ['2001:2:1::', '2001:f:ffff::', '2001:30::', '2001:4860:4860::8888']) {
+    assert.equal(isPrivateOrReservedIP(address), false, address);
+  }
+});
+
 test('safeFetch pins the connection to a checked IP and preserves the original host', async (t) => {
   publicDns(t);
   const calls = fakeTransport(t);

@@ -29,7 +29,8 @@ const fixture = [
   { id: 'root', domainId: 'domain-2', domainName: 'other.example.com', name: '@', value: 'public', notes: null },
 ];
 
-function mockSearch(t: TestContext, ownAssignments = assignments) {
+function mockSearch(t: TestContext, ownAssignments = assignments, records = fixture) {
+  const pages: Array<{ take: number; offset: number }> = [];
   t.mock.method(db, 'select', () => ({
     from(table: unknown) {
       if (table === domainAssignments) return { where: async () => ownAssignments };
@@ -42,10 +43,14 @@ function mockSearch(t: TestContext, ownAssignments = assignments) {
         orderBy() { return this; },
         limit(value: number) { take = value; return this; },
         offset(value: number) { offset = value; return this; },
-        then(resolve: (rows: typeof fixture) => unknown) { return Promise.resolve(fixture.slice(offset, offset + take)).then(resolve); },
+        then(resolve: (rows: typeof fixture) => unknown) {
+          pages.push({ take, offset });
+          return Promise.resolve(records.slice(offset, offset + take)).then(resolve);
+        },
       };
     },
   }));
+  return pages;
 }
 
 test('search filters sibling records by their own domain scope before limiting results', async (t) => {
@@ -55,17 +60,67 @@ test('search filters sibling records by their own domain scope before limiting r
   assert.deepEqual(result.results.map((row) => row.fqdn), ['blog.example.com', 'api.dev.example.com', 'other.example.com']);
   assert.ok(!JSON.stringify(result).includes('private-secret'));
   assert.ok(!JSON.stringify(result).includes('private-note'));
+  assert.equal(result.truncated, false);
 });
 
 test('search preserves administrator access and returns no results without assignments', async (t) => {
   mockSearch(t, []);
   assert.equal((await searchDnsRecords('admin-1', 'admin', 'example.com', 2)).results.length, 2);
-  assert.deepEqual(await searchDnsRecords('user-1', 'user', 'example.com', 10), { results: [] });
+  assert.deepEqual(await searchDnsRecords('user-1', 'user', 'example.com', 10), { results: [], truncated: false });
 });
 
 test('search uses a finite default for an invalid result limit', async (t) => {
   mockSearch(t);
   assert.equal((await searchDnsRecords('admin-1', 'admin', 'example.com', NaN)).results.length, 50);
+});
+
+test('search stops after 1000 candidates even when no record is authorized', async (t) => {
+  const records = Array.from({ length: 5000 }, (_, i) => ({ ...fixture[0], id: `private-${i}` }));
+  const pages = mockSearch(t, assignments, records);
+  const result = await searchDnsRecords('user-1', 'user', 'example.com', 50);
+  assert.deepEqual(result, { results: [], truncated: true });
+  assert.deepEqual(pages, Array.from({ length: 10 }, (_, i) => ({ take: 100, offset: i * 100 })));
+});
+
+test('search returns authorized partial results and marks the scan cap', async (t) => {
+  const records = Array.from({ length: 1001 }, (_, i) => ({ ...fixture[0], id: `private-${i}` }));
+  records[0] = fixture[120];
+  records[999] = fixture[121];
+  records[1000] = fixture[123];
+  const pages = mockSearch(t, assignments, records);
+  const result = await searchDnsRecords('user-1', 'user', 'example.com', 50);
+  assert.deepEqual(result.results.map((row) => row.id), ['blog', 'nested']);
+  assert.equal(result.truncated, true);
+  assert.equal(pages.length, 10);
+  assert.ok(!JSON.stringify(result).includes('private-secret'));
+});
+
+test('search reports complete results when candidates run out before the scan cap', async (t) => {
+  const pages = mockSearch(t);
+  const result = await searchDnsRecords('user-1', 'user', 'example.com', 50);
+  assert.equal(result.results.length, 3);
+  assert.equal(result.truncated, false);
+  assert.equal(pages.length, 2);
+  assert.deepEqual(await searchDnsRecords('user-1', 'user', ' '), { results: [], truncated: false });
+  assert.equal(pages.length, 2);
+});
+
+test('the search API exposes truncation even with no authorized matches', async (t) => {
+  const records = Array.from({ length: 1001 }, (_, i) => ({ ...fixture[0], id: `private-${i}` }));
+  mockSearch(t, assignments, records);
+  const app = Fastify();
+  app.addHook('onRoute', (route) => {
+    if (Array.isArray(route.preHandler)) route.preHandler = route.preHandler.filter((handler) => handler !== authenticate);
+  });
+  app.addHook('onRequest', async (request) => { request.user = { userId: 'user-1', role: 'user' }; });
+  await app.register(domainRoutes);
+  try {
+    const response = await app.inject({ method: 'GET', url: '/search/records?q=example.com&limit=50' });
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.json(), { results: [], truncated: true });
+  } finally {
+    await app.close();
+  }
 });
 
 async function readMetadata(t: TestContext, path: string, role: string) {

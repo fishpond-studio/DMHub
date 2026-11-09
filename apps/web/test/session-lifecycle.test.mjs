@@ -3,8 +3,9 @@ import { fileURLToPath, URL } from 'node:url';
 import test from 'node:test';
 import { createServer } from 'vite';
 import { createPinia, setActivePinia } from 'pinia';
+import { AxiosHeaders } from 'axios';
 
-const root = fileURLToPath(new URL('../', import.meta.url));
+const root = fileURLToPath(new URL('../', import.meta.url)).replace(/\\/g, '/');
 
 function deferred() {
   let resolve;
@@ -101,10 +102,12 @@ test('the API interceptor preserves explicit two-factor credentials', async (t) 
     axios: 'export default { create: () => globalThis.__dmhubSessionTest.api };',
     [`${root}src/router`]: 'export default {};',
   });
-  const twoFactor = state.request({ headers: { Authorization: 'Bearer temporary-token' } });
-  assert.equal(twoFactor.headers.Authorization, 'Bearer temporary-token');
-  const regular = state.request({ headers: {} });
-  assert.equal(regular.headers.Authorization, 'Bearer previous-session-token');
+  for (const name of ['Authorization', 'authorization', 'AUTHORIZATION']) {
+    const twoFactor = state.request({ headers: new AxiosHeaders({ [name]: 'Bearer temporary-token' }) });
+    assert.equal(twoFactor.headers.get('Authorization'), 'Bearer temporary-token');
+  }
+  const regular = state.request({ headers: new AxiosHeaders() });
+  assert.equal(regular.headers.get('Authorization'), 'Bearer previous-session-token');
 });
 
 async function notificationStore(t, api) {

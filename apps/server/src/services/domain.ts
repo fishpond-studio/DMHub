@@ -361,7 +361,7 @@ export async function searchDnsRecords(
   limit = 50,
 ) {
   const q = query.trim();
-  if (!q || q.length < 1) return { results: [] as const };
+  if (!q || q.length < 1) return { results: [] as const, truncated: false };
   const db = getDb();
   const take = Number.isFinite(limit) ? Math.min(Math.max(Math.floor(limit), 1), 100) : 50;
 
@@ -378,7 +378,7 @@ export async function searchDnsRecords(
       patternsByDomain.set(assignment.domainId, patterns);
     }
     allowedDomainIds = [...patternsByDomain.keys()];
-    if (allowedDomainIds.length === 0) return { results: [] };
+    if (allowedDomainIds.length === 0) return { results: [], truncated: false };
   }
 
   const like = `%${q.replace(/[%_]/g, '\\$&')}%`;
@@ -420,19 +420,27 @@ export async function searchDnsRecords(
     .where(sql`${sql.join(dialectSafe.map((c) => sql`(${c})`), sql` AND `)}`)
     .orderBy(dnsRecords.id);
 
-  // Apply subdomain permissions before the result limit. Fetch bounded batches
-  // so unrelated sibling records cannot hide a later authorized match.
+  // Apply permissions before the result limit, but cap all candidate rows read
+  // so a broad query outside the user's subdomain scope cannot scan indefinitely.
   const rows: Array<Record<string, unknown>> = [];
   const batchSize = role === 'admin' ? take : Math.max(take, 100);
-  for (let offset = 0; rows.length < take; offset += batchSize) {
-    const batch = await matchingRecords.limit(batchSize).offset(offset) as Array<Record<string, unknown>>;
+  const maxScan = Math.max(take * 10, 1000);
+  let scanned = 0;
+  let exhausted = false;
+  while (rows.length < take && scanned < maxScan) {
+    const fetchSize = Math.min(batchSize, maxScan - scanned);
+    const batch = await matchingRecords.limit(fetchSize).offset(scanned) as Array<Record<string, unknown>>;
+    scanned += batch.length;
     for (const row of batch) {
       if (role === 'admin' || matchesAnyPattern(row.name as string, patternsByDomain.get(row.domainId as string) ?? [])) {
         rows.push(row);
         if (rows.length === take) break;
       }
     }
-    if (batch.length < batchSize) break;
+    if (batch.length < fetchSize) {
+      exhausted = true;
+      break;
+    }
   }
 
   // 精确值匹配（反查 IP）排前
@@ -444,6 +452,7 @@ export async function searchDnsRecords(
   });
 
   return {
+    truncated: !exhausted && scanned >= maxScan && rows.length < take,
     results: sorted.map((r: Record<string, unknown>) => ({
       ...r,
       fqdn:

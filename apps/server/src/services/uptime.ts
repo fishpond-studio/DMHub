@@ -37,17 +37,10 @@ export async function getUptimePushUrl(): Promise<string | null> {
 export async function configureUptimePushUrl(pushUrl: string): Promise<{ configured: boolean }> {
   const db = getDb();
 
-  try {
-    const urlObj = buildUptimePushUrl(pushUrl, 'up', 'OK');
-    const safe = await isPublicDomain(urlObj.hostname);
-    if (!safe) {
-      throw new Error('不允许使用内网地址作为 Push URL');
-    }
-  } catch (err: unknown) {
-    if (err instanceof Error && err.message.includes('内网地址')) {
-      throw err;
-    }
-    throw new Error('无效的 Push URL');
+  const urlObj = buildUptimePushUrl(pushUrl, 'up', 'OK');
+  const safe = await isPublicDomain(urlObj.hostname);
+  if (!safe) {
+    throw new Error('不允许使用内网地址作为 Push URL');
   }
 
   try {
