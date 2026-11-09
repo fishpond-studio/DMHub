@@ -584,6 +584,7 @@ export default {
   "搜索主机、记录值、备注；输入 IP 可反查指向它的记录": "Search hosts, values, notes; enter an IP to find records pointing to it",
   "例如：www、1․2․3․4（反查 IP）、CDN、MX": "e.g. www, 1.2.3.4 (reverse IP lookup), CDN, MX",
   "没有匹配的记录": "No matching records",
+  "搜索结果可能不完整，请输入更精确的关键词后重试": "Search results may be incomplete. Try a more specific search term.",
   "已复制记录值": "Record value copied",
   "条（最多 50）": "records (max 50)",
   "搜索失败": "Search failed",

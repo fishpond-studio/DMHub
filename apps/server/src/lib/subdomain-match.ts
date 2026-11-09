@@ -15,15 +15,15 @@
  *   'a.b.dev'   → 多级子域名
  */
 
-function normalize(name: string): string {
+export function normalizeSubdomainName(name: string): string {
   const n = (name ?? '').trim().toLowerCase();
   if (!n || n === '@') return '';
   return n.replace(/\.$/, '');
 }
 
 export function matchesSubdomainPattern(recordName: string, pattern: string): boolean {
-  const name = normalize(recordName);
-  const pat = normalize(pattern);
+  const name = normalizeSubdomainName(recordName);
+  const pat = normalizeSubdomainName(pattern);
 
   if (pat === '*') return true;
   if (pat === '') return name === '';

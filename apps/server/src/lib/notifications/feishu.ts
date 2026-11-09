@@ -61,6 +61,7 @@ export const feishuChannel: NotificationChannel = {
       headers,
       body: jsonBody,
     });
+    await response.body?.cancel();
 
     if (!response.ok) {
       throw new Error(`Feishu webhook failed: ${response.status}`);

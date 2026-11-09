@@ -10,9 +10,9 @@ import {
 
 export async function monitorRoutes(app: FastifyInstance) {
   // 全局监控概览（已登录用户）
-  app.get('/summary', { preHandler: [authenticate] }, async (_request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/summary', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const summary = await getMonitorSummary();
+      const summary = await getMonitorSummary(request.user!.userId, request.user!.role);
       return summary;
     } catch (err: any) {
       return reply.status(500).send({ error: err.message || '获取监控概览失败' });

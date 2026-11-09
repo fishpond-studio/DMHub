@@ -238,12 +238,15 @@ export async function refreshAuth(oldRefreshToken: string, deviceInfo?: string) 
   // state.action === 'rotate' 时必然查到记录
   const stored = storedToken as StoredRefreshToken & { id: string; userId: string };
 
-  const [user] = await db.select({ id: users.id, role: users.role })
+  const [user] = await db.select({ id: users.id, role: users.role, status: users.status })
     .from(users).where(eq(users.id, stored.userId)).limit(1);
 
   if (!user) {
     // 用户已被删除，续期没有意义，让客户端直接登出
     throw new RefreshTokenRejectedError(false, '用户不存在');
+  }
+  if (user.status === 'disabled') {
+    throw new RefreshTokenRejectedError(false, '账号已被禁用');
   }
 
   const accessToken = signAccessToken(user.id, user.role);

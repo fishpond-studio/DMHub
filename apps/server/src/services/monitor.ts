@@ -1,9 +1,10 @@
-import { and, eq, gte, desc, lt } from 'drizzle-orm';
+import { and, eq, gte, desc, lt, inArray } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { domains, monitorChecks } from '../db/schema.js';
+import { domains, monitorChecks, domainAssignments } from '../db/schema.js';
 import { insertReturningOne } from '../db/helpers.js';
 import { triggerNotification } from './notification.js';
-import { getUptimePushUrl, extractPushTokenSafe } from './uptime.js';
+import { getUptimePushUrl } from './uptime.js';
+import { sendUptimePush } from '../lib/uptime-push.js';
 import { isPublicDomain, safeFetch } from '../lib/ssrf-guard.js';
 
 export interface MonitorCheckRow {
@@ -43,6 +44,7 @@ async function performHttpCheck(domainName: string): Promise<CheckOutcome> {
       method: 'GET',
       signal: controller.signal,
     });
+    await response.body?.cancel();
     clearTimeout(timeout);
     return {
       up: response.ok,
@@ -186,7 +188,7 @@ export interface MonitorSummary {
   domains: Array<{ id: string; name: string; status: string; monitorStatus: string | null; monitorResponseMs: number | null; monitorLastCheckedAt: string | null }>;
 }
 
-export async function getMonitorSummary(): Promise<MonitorSummary> {
+export async function getMonitorSummary(userId: string, role: string): Promise<MonitorSummary> {
   const db = getDb();
   const rows = await db
     .select({
@@ -198,7 +200,13 @@ export async function getMonitorSummary(): Promise<MonitorSummary> {
       monitorLastCheckedAt: domains.monitorLastCheckedAt,
     })
     .from(domains)
-    .where(eq(domains.monitorEnabled, true));
+    .where(and(
+      eq(domains.monitorEnabled, true),
+      role === 'admin' ? undefined : inArray(domains.id,
+        db.select({ domainId: domainAssignments.domainId }).from(domainAssignments)
+          .where(eq(domainAssignments.userId, userId)),
+      ),
+    ));
 
   const summary = { monitored: rows.length, up: 0, down: 0, unknown: 0, domains: [] as MonitorSummary['domains'] };
   for (const r of rows) {
@@ -236,12 +244,8 @@ async function pushToUptime(_domainName: string, outcome: CheckOutcome): Promise
   try {
     const pushUrl = await getUptimePushUrl();
     if (!pushUrl) return;
-    const token = extractPushTokenSafe(pushUrl);
-    if (!token) return;
     const status = outcome.up ? 'up' : 'down';
     const msg = outcome.up ? `${outcome.responseMs}ms` : (outcome.error || 'Failed');
-    await fetch(`${pushUrl.replace(/\/+$/, '')}/api/push/${token}?status=${status}&msg=${encodeURIComponent(msg)}`, {
-      method: 'GET',
-    }).catch(() => {});
+    await sendUptimePush(pushUrl, status, msg).catch(() => {});
   } catch {}
 }
