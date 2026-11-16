@@ -103,9 +103,19 @@ export function requireRecordWriteAccess(opts: { domainIdParam: string; recordId
 
     const namesToCheck: string[] = [];
 
-    const body = (request.body ?? {}) as { name?: unknown; recordIds?: unknown };
+    const body = (request.body ?? {}) as { name?: unknown; recordIds?: unknown; records?: unknown };
     if (typeof body.name === 'string') {
       namesToCheck.push(body.name);
+    }
+
+    // 批量创建必须逐条检查，顶层 name 不能代表 records 中的实际写入范围。
+    if (Array.isArray(body.records)) {
+      for (const record of body.records) {
+        if (!record || typeof record.name !== 'string') {
+          return reply.status(400).send({ error: '每条记录都必须提供记录名' });
+        }
+        namesToCheck.push(record.name);
+      }
     }
 
     // 批量操作防护：校验批量 recordIds 对应的所有解析记录均落在权限子域名范围内

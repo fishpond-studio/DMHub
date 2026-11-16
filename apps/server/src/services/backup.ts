@@ -7,6 +7,10 @@ import { logOperation } from '../lib/log.js';
 const APP_NAME = 'dmhub';
 const BACKUP_VERSION = 1;
 
+function recordKey(record: { recordType: string; name: string; value: string; priority: number | null }) {
+  return JSON.stringify([record.recordType, record.name, record.value, record.priority ?? null]);
+}
+
 export interface BackupPayload {
   app: string;
   version: number;
@@ -141,15 +145,20 @@ export async function importBackup(
     if (!domainId) continue;
 
     const existingRecords = await db
-      .select({ recordType: dnsRecords.recordType, name: dnsRecords.name })
+      .select({
+        recordType: dnsRecords.recordType,
+        name: dnsRecords.name,
+        value: dnsRecords.value,
+        priority: dnsRecords.priority,
+      })
       .from(dnsRecords)
       .where(eq(dnsRecords.domainId, domainId));
     const existingSet = new Set(
-      (existingRecords as any[]).map((r) => `${r.recordType}:${r.name}`),
+      (existingRecords as BackupPayload['domains'][number]['records']).map(recordKey),
     );
 
     for (const r of d.records || []) {
-      const key = `${r.recordType}:${r.name}`;
+      const key = recordKey(r);
       if (existingSet.has(key)) {
         recordsSkipped++;
         continue;

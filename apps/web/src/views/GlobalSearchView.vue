@@ -26,8 +26,11 @@
       </div>
 
       <div v-if="error" class="mb-4 text-sm text-destructive">{{ error }}</div>
+      <p v-if="truncated && !loading" role="status" class="mb-4 text-sm text-muted-foreground">
+        {{ $t('搜索结果可能不完整，请输入更精确的关键词后重试') }}
+      </p>
 
-      <div v-if="searched && !loading && results.length === 0" class="py-16 text-center text-muted-foreground">
+      <div v-if="searched && !loading && !error && !truncated && results.length === 0" class="py-16 text-center text-muted-foreground">
         {{ $t('没有匹配的记录') }}
       </div>
 
@@ -82,6 +85,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
+import type { SearchRecordsResponse } from '@/stores/domain'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -93,35 +97,27 @@ import { Search, Loader2 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n';
 const { t } = useI18n();
 
-interface SearchHit {
-  id: string
-  domainId: string
-  domainName: string
-  recordType: string
-  name: string
-  value: string
-  notes?: string | null
-  fqdn?: string
-}
-
 const route = useRoute()
 const router = useRouter()
 const q = ref('')
 const loading = ref(false)
 const searched = ref(false)
 const error = ref('')
-const results = ref<SearchHit[]>([])
+const truncated = ref(false)
+const results = ref<SearchRecordsResponse['results']>([])
 
 async function runSearch() {
   const query = q.value.trim()
   if (!query) return
   loading.value = true
   error.value = ''
+  truncated.value = false
   searched.value = true
   router.replace({ path: '/search', query: { q: query } })
   try {
-    const { data } = await api.get('/domains/search/records', { params: { q: query, limit: 50 } })
+    const { data } = await api.get<SearchRecordsResponse>('/domains/search/records', { params: { q: query, limit: 50 } })
     results.value = data.results || []
+    truncated.value = data.truncated === true
   } catch (err: any) {
     error.value = err.response?.data?.error || t('搜索失败')
     results.value = []

@@ -39,6 +39,7 @@ export const useNotificationStore = defineStore('notification', () => {
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectAttempts = 0;
   let started = false;
+  let sessionGeneration = 0;
 
   const unreadCount = computed(() => notifications.value.filter((n) => !n.read).length);
 
@@ -68,8 +69,10 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   async function fetchNotifications() {
+    const generation = sessionGeneration;
     try {
       const { data } = await api.get('/notifications');
+      if (generation !== sessionGeneration) return;
       const list: Notification[] = (data.notifications ?? []).map((n: Notification) => ({
         ...n,
         read: n.read ?? false,
@@ -81,8 +84,10 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   async function fetchConfigs() {
+    const generation = sessionGeneration;
     try {
       const { data } = await api.get('/notifications/configs');
+      if (generation !== sessionGeneration) return;
       configs.value = data.configs ?? [];
     } catch {
       /* keep existing */
@@ -160,6 +165,8 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   async function connectSSE() {
+    if (!started) return;
+    const generation = sessionGeneration;
     const token = getAccessToken();
     if (!token) return;
 
@@ -178,23 +185,29 @@ export const useNotificationStore = defineStore('notification', () => {
       const { data } = await api.post<{ ticket: string }>('/notifications/stream-ticket');
       ticket = data.ticket;
     } catch {
+      if (!started || generation !== sessionGeneration) return;
       startPolling();
       scheduleReconnect();
       return;
     }
+    // 票据请求完成前可能已登出或切换账号，不能再连接旧会话。
+    if (!started || generation !== sessionGeneration) return;
 
     const base = api.defaults.baseURL || '/api';
     const url = `${base}/notifications/stream?ticket=${encodeURIComponent(ticket)}`;
 
-    eventSource = new EventSource(url);
+    const source = new EventSource(url);
+    eventSource = source;
 
-    eventSource.onopen = () => {
+    source.onopen = () => {
+      if (source !== eventSource || generation !== sessionGeneration) return;
       connected.value = true;
       reconnectAttempts = 0;
       stopPolling();
     };
 
-    eventSource.onmessage = (event) => {
+    source.onmessage = (event) => {
+      if (source !== eventSource || generation !== sessionGeneration) return;
       try {
         const data = JSON.parse(event.data);
         if (data.event === 'connected') return;
@@ -215,9 +228,10 @@ export const useNotificationStore = defineStore('notification', () => {
       }
     };
 
-    eventSource.onerror = () => {
+    source.onerror = () => {
+      if (source !== eventSource || generation !== sessionGeneration) return;
       connected.value = false;
-      eventSource?.close();
+      source.close();
       eventSource = null;
       // 轮询兜底，同时按退避重连 SSE；标签页在后台时连接容易被浏览器/代理掐断
       startPolling();
@@ -238,7 +252,7 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   function startPolling() {
-    if (pollingTimer) return;
+    if (pollingTimer || !started) return;
     fetchNotifications();
     pollingTimer = setInterval(fetchNotifications, 30000);
   }
@@ -251,6 +265,7 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   function disconnect() {
+    sessionGeneration += 1;
     eventSource?.close();
     eventSource = null;
     connected.value = false;
@@ -261,13 +276,17 @@ export const useNotificationStore = defineStore('notification', () => {
       reconnectTimer = null;
     }
     reconnectAttempts = 0;
+    notifications.value = [];
+    configs.value = [];
   }
 
   /** 登录后启动：拉历史 + SSE */
   async function start() {
     if (started) return;
     started = true;
+    const generation = ++sessionGeneration;
     await fetchNotifications();
+    if (!started || generation !== sessionGeneration) return;
     await connectSSE();
   }
 

@@ -47,6 +47,7 @@ export const webhookChannel: NotificationChannel = {
       headers,
       body: jsonBody,
     });
+    await response.body?.cancel();
 
     if (!response.ok) {
       throw new Error(`Webhook failed: ${response.status}`);

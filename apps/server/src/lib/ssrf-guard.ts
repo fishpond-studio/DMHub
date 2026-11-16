@@ -4,6 +4,7 @@
  */
 import dns from 'dns';
 import net from 'net';
+import { requestPinnedAddress } from './pinned-request.js';
 
 /**
  * 将 IPv4 转换为无符号 32 位整型进行精准 CIDR 范围判断
@@ -67,31 +68,30 @@ export function isPrivateIPv4(ip: string): boolean {
 }
 
 export function isPrivateIPv6(ip: string): boolean {
-  const norm = ip.toLowerCase().trim();
+  if (!net.isIPv6(ip) || ip.includes('%')) return true;
+  // Canonicalization converts dotted IPv4 tails to hexadecimal words too.
+  const normalized = new URL(`http://[${ip}]/`).hostname.slice(1, -1);
+  const [left, right] = normalized.split('::');
+  const leading = left ? left.split(':') : [];
+  const trailing = right ? right.split(':') : [];
+  const words = (right === undefined ? leading : [
+    ...leading, ...Array(8 - leading.length - trailing.length).fill('0'), ...trailing,
+  ]).map((word) => parseInt(word, 16));
 
-  // loopback / unspecified
-  if (norm === '::' || norm === '::1' || /^0+(?::0+)*(:1)?$/.test(norm)) {
-    return true;
+  if (words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff) {
+    return isPrivateIPv4(`${words[6] >>> 8}.${words[6] & 255}.${words[7] >>> 8}.${words[7] & 255}`);
   }
-
-  // IPv4-mapped IPv6 address (e.g. ::ffff:127.0.0.1 or ::ffff:7f00:1)
-  const v4Mapped = norm.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
-  if (v4Mapped) {
-    return isPrivateIPv4(v4Mapped[1]);
+  // Only global unicast is routable here; exclude local, multicast,
+  // translation and deprecated IPv4-compatible address ranges.
+  if ((words[0] & 0xe000) !== 0x2000) return true;
+  if (words[0] === 0x2001) {
+    if (words[1] === 0x0db8) return true;
+    if (words[1] === 0x0002 && words[2] === 0) return true; // Benchmarking /48
+    if ((words[1] & 0xfff0) === 0x0010 || (words[1] & 0xfff0) === 0x0020) return true; // ORCHID /28
   }
-
-  // ULA (Unique Local Address fc00::/7 -> fc00... to fdff...)
-  if (/^f[cd][0-9a-f]{2}:/i.test(norm)) return true;
-
-  // Link-Local (fe80::/10 -> fe80... to febf...)
-  if (/^fe[89ab][0-9a-f]:/i.test(norm)) return true;
-
-  // Multicast (ff00::/8)
-  if (/^ff[0-9a-f]{2}:/i.test(norm)) return true;
-
-  // Documentation prefix (2001:db8::/32)
-  if (/^2001:0?db8:/i.test(norm)) return true;
-
+  if (words[0] === 0x2002) {
+    return isPrivateIPv4(`${words[1] >>> 8}.${words[1] & 255}.${words[2] >>> 8}.${words[2] & 255}`);
+  }
   return false;
 }
 
@@ -172,7 +172,10 @@ export async function safeValidateUrl(
     return { safe: false, reason: `仅支持 ${options.allowHttp ? 'HTTP/HTTPS' : 'HTTPS'} 协议` };
   }
 
-  const hostname = parsed.hostname.toLowerCase();
+  if (parsed.username || parsed.password) {
+    return { safe: false, reason: 'URL 不允许包含凭据' };
+  }
+  const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
   const safe = await isPublicDomain(hostname);
   if (!safe) {
     return { safe: false, reason: '目标地址为内网或保留地址' };
@@ -263,10 +266,10 @@ export async function safeFetch(
       throw new Error(`SSRF 拦截: ${val.reason || '不允许访问目标地址'} (${currentUrl})`);
     }
 
-    const res = await fetch(currentUrl, {
-      ...nextInit,
-      redirect: 'manual',
-    });
+    // Pin the connection to the validated address; fetch would resolve again.
+    const address = await resolvePublicAddress(val.url!.hostname.replace(/^\[|\]$/g, ''));
+    if (!address) throw new Error('SSRF 拦截: 目标地址为内网或保留地址');
+    const res = await requestPinnedAddress(val.url!, address, nextInit);
 
     if (res.status < 300 || res.status >= 400) {
       return res;
@@ -279,6 +282,7 @@ export async function safeFetch(
 
     redirectsCount++;
     if (redirectsCount > maxRedirects) {
+      await res.body?.cancel().catch(() => {});
       throw new Error(maxRedirects === 0
         ? 'SSRF 拦截: 该请求不允许跟随重定向'
         : 'SSRF 拦截: 重定向次数过多');

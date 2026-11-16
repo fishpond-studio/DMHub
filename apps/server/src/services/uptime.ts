@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { teamSettings, domains } from '../db/schema.js';
 import { isPublicDomain, safeFetch } from '../lib/ssrf-guard.js';
+import { buildUptimePushUrl, sendUptimePush } from '../lib/uptime-push.js';
 
 interface HealthCheckResult {
   up: boolean;
@@ -36,29 +37,17 @@ export async function getUptimePushUrl(): Promise<string | null> {
 export async function configureUptimePushUrl(pushUrl: string): Promise<{ configured: boolean }> {
   const db = getDb();
 
-  try {
-    const urlObj = new URL(pushUrl);
-    const safe = await isPublicDomain(urlObj.hostname);
-    if (!safe) {
-      throw new Error('不允许使用内网地址作为 Push URL');
-    }
-  } catch (err: unknown) {
-    if (err instanceof Error && err.message.includes('内网地址')) {
-      throw err;
-    }
-    throw new Error('无效的 Push URL');
+  const urlObj = buildUptimePushUrl(pushUrl, 'up', 'OK');
+  const safe = await isPublicDomain(urlObj.hostname);
+  if (!safe) {
+    throw new Error('不允许使用内网地址作为 Push URL');
   }
 
-  let testUrl = pushUrl.replace(/\/+$/, '');
-  if (!testUrl.includes('/api/push/')) {
-    testUrl = `${testUrl}/api/push/test`;
-  }
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    await safeFetch(testUrl, { method: 'GET', signal: controller.signal });
-    clearTimeout(timeout);
-  } catch {}
+    await sendUptimePush(pushUrl, 'up', 'OK');
+  } catch {
+    // Persist a valid endpoint even when the remote monitor is temporarily down.
+  }
   await db
     .update(teamSettings)
     .set({ uptimePushUrl: pushUrl, updatedAt: new Date() })
@@ -151,26 +140,14 @@ async function performHealthCheck(domainName: string): Promise<{
   const url = `https://${domainName}`;
   const start = Date.now();
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    const response = await fetch(url, {
+    const response = await safeFetch(url, {
       method: 'HEAD',
-      signal: controller.signal,
-      redirect: 'manual', // 阻止自动跟随重定向导致 SSRF 绕过
-    });
-    clearTimeout(timeout);
+      signal: AbortSignal.timeout(10000),
+    }, 0);
     const elapsed = Date.now() - start;
     const pushUrl = await getUptimePushUrl();
     if (pushUrl) {
-      const status = response.ok ? 'up' : 'down';
-      const pushToken = extractPushToken(pushUrl);
-      if (pushToken) {
-        try {
-          await fetch(`${pushUrl.replace(/\/+$/, '')}/api/push/${pushToken}?status=${status}&msg=${elapsed}ms`, {
-            method: 'GET',
-          }).catch(() => {});
-        } catch {}
-      }
+      await sendUptimePush(pushUrl, response.ok ? 'up' : 'down', `${elapsed}ms`).catch(() => {});
     }
     return {
       up: response.ok,
@@ -181,14 +158,7 @@ async function performHealthCheck(domainName: string): Promise<{
     const elapsed = Date.now() - start;
     const pushUrl = await getUptimePushUrl();
     if (pushUrl) {
-      const pushToken = extractPushToken(pushUrl);
-      if (pushToken) {
-        try {
-          await fetch(`${pushUrl.replace(/\/+$/, '')}/api/push/${pushToken}?status=down&msg=Connection+Failed`, {
-            method: 'GET',
-          }).catch(() => {});
-        } catch {}
-      }
+      await sendUptimePush(pushUrl, 'down', 'Connection Failed').catch(() => {});
     }
     return {
       up: false,
@@ -196,14 +166,4 @@ async function performHealthCheck(domainName: string): Promise<{
       statusCode: 0,
     };
   }
-}
-
-function extractPushToken(pushUrl: string): string | null {
-  const match = pushUrl.match(/\/api\/push\/([a-zA-Z0-9]+)/);
-  return match ? match[1] : null;
-}
-
-/** 供 monitor 服务复用的安全版本 */
-export function extractPushTokenSafe(pushUrl: string): string | null {
-  return extractPushToken(pushUrl);
 }

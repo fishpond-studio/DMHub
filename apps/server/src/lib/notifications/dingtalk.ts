@@ -52,6 +52,7 @@ export const dingtalkChannel: NotificationChannel = {
       headers,
       body: jsonBody,
     });
+    await response.body?.cancel();
 
     if (!response.ok) {
       throw new Error(`DingTalk webhook failed: ${response.status}`);

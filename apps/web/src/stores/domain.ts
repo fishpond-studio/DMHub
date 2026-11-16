@@ -41,6 +41,21 @@ export interface DnsRecord {
   updatedAt: string;
 }
 
+export interface SearchRecordsResponse {
+  results: Array<{
+    id: string;
+    domainId: string;
+    domainName: string;
+    recordType: string;
+    name: string;
+    value: string;
+    notes?: string | null;
+    fqdn?: string;
+  }>;
+  /** The candidate scan budget was reached before filling the result limit. */
+  truncated: boolean;
+}
+
 export interface CdnProxyInfo {
   supported: boolean;
   proxyRecordTypes: string[];
@@ -369,16 +384,8 @@ export const useDomainStore = defineStore('domain', () => {
   }
 
   async function searchRecords(q: string, limit = 50) {
-    const { data } = await api.get('/domains/search/records', { params: { q, limit } });
-    return data.results as Array<{
-      id: string;
-      domainId: string;
-      domainName: string;
-      recordType: string;
-      name: string;
-      value: string;
-      fqdn?: string;
-    }>;
+    const { data } = await api.get<SearchRecordsResponse>('/domains/search/records', { params: { q, limit } });
+    return data;
   }
 
   async function batchCheckExpiry(domainIds?: string[]) {

@@ -149,24 +149,27 @@ router.beforeEach(async (to) => {
   }
 
   if (isInitialized && !publicRoutes.has(to.name as string)) {
+    const { useAuthStore } = await import('@/stores/auth');
+    const authStore = useAuthStore();
     const token = getAccessToken();
     // 令牌缺失或已过期/即将过期时先续期，避免页面刚打开就撞上 401
     if (!token || needsRefresh(token)) {
       try {
         await refreshAccessToken();
-        const { useAuthStore } = await import('@/stores/auth');
-        const authStore = useAuthStore();
         authStore.token = getAccessToken();
-        await authStore.fetchUser();
       } catch (err) {
         // 只有服务端明确判定刷新令牌无效时才登出；
         // 网络抖动等临时故障保留登录态，等后续导航或主动刷新恢复
         if (err instanceof SessionExpiredError) {
-          const { useAuthStore } = await import('@/stores/auth');
-          useAuthStore().clearAuth();
+          authStore.clearAuth();
           return { name: 'login' };
         }
       }
+    }
+    // sessionStorage 只保存令牌；重新加载页面时仍需恢复用户资料与角色。
+    if (getAccessToken() && !authStore.user) {
+      await authStore.fetchUser();
+      if (!getAccessToken()) return { name: 'login' };
     }
   }
 

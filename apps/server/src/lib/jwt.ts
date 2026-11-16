@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { JWT_ACCESS_EXPIRY, JWT_REFRESH_EXPIRY, JWT_SESSION_EXPIRY, JWT_2FA_EXPIRY } from '@dmhub/shared';
@@ -39,9 +40,10 @@ export function signRefreshToken(
   remember = false,
   expiresIn: SignOptions['expiresIn'] = remember ? JWT_REFRESH_EXPIRY : JWT_SESSION_EXPIRY,
 ): string {
-  // 只在勾选时写入 claim：不勾选的令牌保持与旧版一致的载荷
+  // 只在勾选时写入 remember claim，兼容旧令牌缺少该字段的情况
   const payload = remember ? { userId, remember: true } : { userId };
-  return jwt.sign(payload, config.JWT_SECRET, { algorithm: 'HS256', expiresIn });
+  // 同一秒内登录或轮换也必须产生不同令牌，否则 token_hash 无法区分会话。
+  return jwt.sign(payload, config.JWT_SECRET, { algorithm: 'HS256', expiresIn, jwtid: randomUUID() });
 }
 
 /**

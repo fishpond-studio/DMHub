@@ -75,7 +75,7 @@ function memorySweep(): void {
     if (entry.expiresAt !== null && now > entry.expiresAt) memoryStore.delete(key);
   }
 }
-setInterval(memorySweep, 60_000);
+setInterval(memorySweep, 60_000).unref();
 
 async function withRedis<T>(fn: (client: Redis) => Promise<T>): Promise<T | null> {
   const client = await getRedis();
